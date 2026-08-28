@@ -51,3 +51,6 @@ tar -czf balance-blocks.tar.gz -C dist-sb .
 ```
 
 技术栈：React 19 + TypeScript + Vite 7 + Tailwind 3 + matter-js + zustand。
+
+> 说明：`package-lock.json` 未入库（依赖版本已在 package.json 钉死，首次 `npm install` 会重新生成）；
+> `public/og-cover.png`（社交分享封面）因二进制传输限制未入库，不影响构建与运行。
