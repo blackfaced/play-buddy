@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "rootDir": ".",
+    "outDir": "node_modules/.tmp-verify",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "scripts/verify-towers.ts",
+    "scripts/tune-salt.ts",
+    "scripts/grid-exp.ts",
+    "scripts/verify-win.ts",
+    "scripts/verify-difficulty.ts",
+    "scripts/verify-endless.ts",
+    "scripts/afk-sweep.ts",
+    "src/game/levels.ts",
+    "src/game/tower.ts",
+    "src/game/endless.ts",
+    "src/game/engine.ts",
+    "src/game/sound.ts",
+    "scripts/verify-studybuddy.ts",
+    "src/game/studyBuddy.ts"
+  ]
+}
