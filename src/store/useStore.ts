@@ -579,7 +579,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const s = get();
     const clamped = Math.max(0, Math.min(SB_REWARD_CAP_MS, Math.floor(reward)));
     if (home) setItem(`bb.reward.${s.curDate}`, String(clamped));
-    // 奖励提高有效上限后，可能把“今日上限已用完”的孩子解锁回来
+    // 奖励提高有效上限后，可能把"今日上限已用完"的孩子解锁回来
     const unlock =
       s.lock === 'cap' &&
       s.todayMs < dailyCapMs(s.capCuts, isHolidayKey(s.curDate)) + clamped;
@@ -837,7 +837,7 @@ export function fmtMinutes(ms: number): number {
   return Math.floor(ms / MIN);
 }
 
-/** 当日实际上限（假期/非假期基数 + 强制休息扣减 + 学习奖励）与“今天是否假期” */
+/** 当日实际上限（假期/非假期基数 + 强制休息扣减 + 学习奖励）与"今天是否假期" */
 export function useDailyCap(): {
   capMs: number;
   holiday: boolean;
