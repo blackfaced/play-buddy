@@ -209,12 +209,15 @@ export function PauseOverlay() {
           已暂停
         </motion.h2>
         <p className="mt-2 text-caption-warm text-ink-400">本次已经玩了 {fmtMs(sessionMs)}</p>
-        <div className="mt-5 flex gap-3">
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
           <GameButton icon={<Play />} onClick={resumeGame}>
             继续游戏
           </GameButton>
           <GameButton variant="secondary" icon={<RotateCcw />} onClick={startGame}>
             重新开始
+          </GameButton>
+          <GameButton variant="ghost" icon={<LayoutGrid />} onClick={goToMenu}>
+            回主页
           </GameButton>
         </div>
       </div>
