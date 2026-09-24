@@ -3,6 +3,7 @@ import { useStore, dateKeyOf } from '@/store/useStore';
 import { unlockAudio } from './sound';
 import { extraRowsForClears } from './levels';
 import { dailySeedFor } from './endless';
+import { logDiag } from '@/lib/diag';
 
 /** Singleton bridge between React UI, the physics engine and the zustand store. */
 
@@ -26,6 +27,7 @@ export function startGame(): void {
   lastStartAt = now;
   const s = useStore.getState();
   if (s.lock !== null) return; // locked by anti-addiction
+  logDiag('action', `startGame mode=${s.mode} level=${s.levelIdx} from=${s.phase}`);
   // retry from an endless/daily run keeps that mode (same day → same daily tower)
   if (s.mode !== 'level') {
     startEndless(s.mode === 'daily');
@@ -85,8 +87,11 @@ export function nextLevel(): void {
 /** Back to the level-select / start screen — default to the highest unlocked level. */
 export function goToMenu(): void {
   const s = useStore.getState();
+  logDiag('action', `goToMenu mode=${s.mode} from=${s.phase}`);
+  // 中途退出不结算：每日挑战/无尽的连续打卡与成绩只在 endRound 记录，
+  // 主动退出视为"没玩过这局"
   s.selectLevel(s.progress.unlocked - 1);
-  s.setPhase('idle');
+  s.setPhase('idle'); // GameCanvas 监听 phase='idle' → setStepping(false) 冻结物理
 }
 
 /** Start overlay primary action: jump to the highest unlocked level and play. */
@@ -99,6 +104,7 @@ export function continueGame(): void {
 export function pauseGame(): void {
   const s = useStore.getState();
   if (s.phase !== 'playing' && s.phase !== 'ready') return;
+  logDiag('action', 'pause');
   engine?.freeze();
   s.setPhase('paused');
 }
@@ -106,6 +112,7 @@ export function pauseGame(): void {
 export function resumeGame(): void {
   const s = useStore.getState();
   if (s.phase !== 'paused' || s.lock !== null) return;
+  logDiag('action', 'resume');
   s.setPhase('playing');
   engine?.unfreeze();
 }

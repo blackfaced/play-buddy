@@ -1,25 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Pause, RotateCcw, Info, AlertTriangle } from 'lucide-react';
+import { Play, Pause, RotateCcw, Info, AlertTriangle, Home } from 'lucide-react';
 import GameButton from './GameButton';
 import { useStore } from '@/store/useStore';
-import { startGame, togglePause } from '@/game/controller';
+import { startGame, togglePause, goToMenu } from '@/game/controller';
 
 export default function ControlBar() {
   const phase = useStore((s) => s.phase);
   const lock = useStore((s) => s.lock);
   const levelIdx = useStore((s) => s.levelIdx);
   const [confirming, setConfirming] = useState(false);
+  const [exitConfirming, setExitConfirming] = useState(false);
   const timer = useRef<number | null>(null);
+  const exitTimer = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
+      if (exitTimer.current) window.clearTimeout(exitTimer.current);
     };
   }, []);
 
   // cancel confirm when phase changes (e.g. game over)
   useEffect(() => setConfirming(false), [phase, lock]);
+  useEffect(() => setExitConfirming(false), [phase, lock]);
 
   // keyboard "R" restart (same inline confirm flow)
   useEffect(() => {
@@ -55,6 +59,18 @@ export default function ControlBar() {
   onMainRef.current = onMain;
 
   const pauseDisabled = phase === 'idle' || phase === 'over' || phase === 'clear' || lock !== null;
+
+  // 对局中退出回主页：两段式确认防误触（每日挑战中途退出不记成绩、不断打卡）
+  const onExit = () => {
+    if (!exitConfirming) {
+      setExitConfirming(true);
+      exitTimer.current = window.setTimeout(() => setExitConfirming(false), 3000);
+      return;
+    }
+    if (exitTimer.current) window.clearTimeout(exitTimer.current);
+    setExitConfirming(false);
+    goToMenu();
+  };
 
   return (
     <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
@@ -102,6 +118,11 @@ export default function ControlBar() {
       >
         玩法
       </GameButton>
+      {inRound && (
+        <GameButton variant="ghost" icon={exitConfirming ? <AlertTriangle /> : <Home />} onClick={onExit}>
+          {exitConfirming ? '确定退出？' : '退出'}
+        </GameButton>
+      )}
     </div>
   );
 }

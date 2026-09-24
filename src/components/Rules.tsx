@@ -1,5 +1,28 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MousePointerClick, Scale, ArrowDownToLine, ShieldCheck } from 'lucide-react';
+import { MousePointerClick, Scale, ArrowDownToLine, ShieldCheck, ClipboardCopy, Check } from 'lucide-react';
+import { copyDiagReport } from '@/lib/diag';
+
+/** 「复制诊断信息」——孩子遇到 bug 时家长点一下，把本地操作轨迹粘贴给开发者。
+ *  数据只在设备 localStorage，不上传任何服务器。 */
+function DiagCopyButton() {
+  const [state, setState] = useState<'idle' | 'ok' | 'fail'>('idle');
+  const onCopy = async () => {
+    const ok = await copyDiagReport();
+    setState(ok ? 'ok' : 'fail');
+    window.setTimeout(() => setState('idle'), 2500);
+  };
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      className="mx-auto mt-3 flex items-center gap-1.5 rounded-full bg-cream-100 px-3 py-1.5 text-caption-warm text-ink-400 transition-colors hover:bg-sand-200 hover:text-ink-600"
+    >
+      {state === 'ok' ? <Check className="h-3.5 w-3.5 text-sage-600" /> : <ClipboardCopy className="h-3.5 w-3.5" />}
+      {state === 'ok' ? '已复制，发给爸爸/妈妈吧' : state === 'fail' ? '复制失败，请再试一次' : '遇到问题？点我复制诊断信息（给家长）'}
+    </button>
+  );
+}
 
 const STEPS = [
   {
@@ -112,6 +135,7 @@ export default function Rules() {
             分钟，正确率太低不算哦）。适度游戏益脑，沉迷游戏伤身。
           </p>
         </motion.div>
+        <DiagCopyButton />
       </div>
     </section>
   );

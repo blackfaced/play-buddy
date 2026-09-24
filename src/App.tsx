@@ -5,6 +5,36 @@ import Marble from './pages/Marble';
 import { BreakToast, ForcedRestOverlay, DailyCapOverlay } from '@/components/HealthOverlays';
 import { useStore, dateKeyOf } from '@/store/useStore';
 import { probeStudyBuddy, fetchStudyReward } from '@/game/studyBuddy';
+import { logDiag, setDiagSnapshotProvider } from '@/lib/diag';
+
+/** 诊断：注册实时状态快照 + 记录阶段/锁定/模式变化（本地环形缓冲，不上传） */
+function useDiagnostics() {
+  useEffect(() => {
+    setDiagSnapshotProvider(() => {
+      const s = useStore.getState();
+      return {
+        phase: s.phase,
+        mode: s.mode,
+        level: s.levelIdx + 1,
+        lives: s.lives,
+        lock: s.lock,
+        todayMin: Math.floor(s.todayMs / 60000),
+        homeMode: s.homeMode,
+      };
+    });
+    let prev = useStore.getState();
+    logDiag('phase', `boot phase=${prev.phase} mode=${prev.mode}`);
+    const unsub = useStore.subscribe((s) => {
+      if (s.phase !== prev.phase) logDiag('phase', `${prev.phase} → ${s.phase} (mode=${s.mode})`);
+      if (s.mode !== prev.mode) logDiag('mode', `${prev.mode} → ${s.mode}`);
+      prev = s;
+    });
+    return () => {
+      unsub();
+      setDiagSnapshotProvider(() => ({}));
+    };
+  }, []);
+}
 
 /** Global anti-addiction clock: accrues wall-clock play time across ALL games
  *  on the site (balance blocks + marble track), only while the tab is visible. */
@@ -65,6 +95,7 @@ function useStudyBuddySync() {
 function HealthGate() {
   useAntiAddictionClock();
   useStudyBuddySync();
+  useDiagnostics();
   return (
     <>
       <ForcedRestOverlay />
