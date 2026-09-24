@@ -3,6 +3,7 @@ import { getItem, setItem, listKeys, removeItem, storageAvailable } from '@/lib/
 import { playBell } from '@/game/sound';
 import { LEVELS, starsFor } from '@/game/levels';
 import { reportGameSession, SB_REWARD_CAP_MS } from '@/game/studyBuddy';
+import { logDiag } from '@/lib/diag';
 
 export const MIN = 60_000;
 export const BREAK_EVERY_MS = 20 * MIN;
@@ -520,11 +521,13 @@ export const useStore = create<StoreState>((set, get) => ({
       if (todayMs >= dailyCapMs(capCuts, isHolidayKey(dk)) + rewardMs) {
         lock = 'cap';
         breakToastMin = null;
+        logDiag('lock', 'cap（今日上限）');
       } else if (streakMs >= REST_AFTER_MS) {
         lock = 'rest';
         restUntil = now + REST_LEN_MS;
         restDone = false;
         breakToastMin = null;
+        logDiag('lock', 'rest（连续25分钟强制休息）');
         // 被系统强制休息一次 → 当日总上限 -15 分钟（主动休息不受罚）
         capCuts += 1;
         setItem(`bb.capcuts.${dk}`, String(capCuts));
@@ -576,7 +579,7 @@ export const useStore = create<StoreState>((set, get) => ({
     const s = get();
     const clamped = Math.max(0, Math.min(SB_REWARD_CAP_MS, Math.floor(reward)));
     if (home) setItem(`bb.reward.${s.curDate}`, String(clamped));
-    // 奖励提高有效上限后，可能把"今日上限已用完"的孩子解锁回来
+    // 奖励提高有效上限后，可能把“今日上限已用完”的孩子解锁回来
     const unlock =
       s.lock === 'cap' &&
       s.todayMs < dailyCapMs(s.capCuts, isHolidayKey(s.curDate)) + clamped;
@@ -680,6 +683,10 @@ export const useStore = create<StoreState>((set, get) => ({
 
   endRound: (u) => {
     const s = get();
+    logDiag(
+      'end',
+      `${s.mode} ${u.outcome} score=${u.score} depth=${Math.round(u.meters * 10) / 10}m roundMs=${Math.round(u.roundMs / 1000)}s`,
+    );
 
     // ---- endless / daily challenge: score = depth; no stars/unlocks ----
     if (s.mode !== 'level') {
@@ -830,7 +837,7 @@ export function fmtMinutes(ms: number): number {
   return Math.floor(ms / MIN);
 }
 
-/** 当日实际上限（假期/非假期基数 + 强制休息扣减 + 学习奖励）与"今天是否假期" */
+/** 当日实际上限（假期/非假期基数 + 强制休息扣减 + 学习奖励）与“今天是否假期” */
 export function useDailyCap(): {
   capMs: number;
   holiday: boolean;
