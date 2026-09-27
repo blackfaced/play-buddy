@@ -502,6 +502,7 @@ export class GameEngine {
       preSettle(this.engine, this.blocks, this.hero, seg0.rows + seg1.rows);
       if (this.endlessOpeningStable() || attempt >= 8) break;
     }
+
     this.heroY0 = this.hero.position.y;
     this.respawnY = seg0.baseY - seg0.rows * CELL; // tower top edge
     this.lives = ENDLESS_LIVES;
