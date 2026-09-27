@@ -1,298 +1,207 @@
-import Matter from 'matter-js';
-import { playPop, playPopCrisp, playTok, playChime, playJingle, playBoop, playTick, playTimeout, playWindChime, playCoin, playHeartbeat, playSaved, playRumble, setRolling, setWind } from './sound';
-import { generateTower, VARIANTS_PER_LEVEL, LEVELS, CELL, COLS, TILE_X, levelTimeLimitMs, layerColor, ICE_COLOR, mulberry32, type BlockKind } from './levels';
-import {
-  WORLD_W,
-  WORLD_H,
-  BEAM_W,
-  BEAM_H,
-  BEAM_X,
-  BEAM_Y,
-  BEAM_TOP,
-  HEX_R,
-  HEX_HALF_H,
-  PX_PER_M,
-  SENSOR_Y,
-  CHECKPOINT_BONUS_SEC,
-  heroSpawnY,
-  checkpointYs,
-  createPhysicsEngine,
-  createStatics,
-  createBlocks,
-  createHero,
-  preSettle,
-  stepPhysics,
-  PHYS_DT,
-  LANDING_ASSIST,
-  perchWobbleTick,
-  type CreatedBlock,
-  type LocalCell,
-} from './tower';
-import { EndlessTower, ENDLESS_GEN_AHEAD_PX, ENDLESS_LIVES, type EndlessSegment } from './endless';
+s spent >10 rows below the banked anchor (endless deep-stall
+   *  terminator: a hero stuck far below its checkpoint — e.g. riding the floor
+   *  net without ever climbing back onto blocks — is a failed run, end it) */
+  private heroDeepMs = 0;
+  /** per-death diagnostics, headless only */
+  readonly debugDeaths: string[] = [];
+  private overAt = 0;
+  private overWaitMs = 0; // celebration / slow-mo length before onGameOver fires
+  private overPending: false | 'over' | 'clear' = false;
+  private overReason: 'fall' | 'timeout' = 'fall';
+  private landed = false; // current round cleared by landing on the beam
+  private converted = 0; // remaining blocks auto-converted on a landing clear
+  private convertBonus = 0; // score granted by conversion (+50/block)
+  private convertQueue: { body: Matter.Body; at: number }[] = [];
+  private lastConvertPopSnd = 0;
+  private culled = 0; // blocks that escaped the world (fell off) this round
+  private auditAt = 0; // last unsupported-block audit timestamp
+  private unsupportedStreak = new Map<number, number>(); // consecutive motionless-unsupported audits per block (wedge-buster)
+  private slickUntil = new Map<number, { until: number; friction: number }>(); // wedge-buster: temporary friction break + restore bookkeeping
+  private landMs = 0; // sustained "calm at the bottom" timer
+  private lastDt = 16.666; // frame dt of the latest tick
+  private simT = 0; // latest update() timestamp (single clock for game logic)
+  private platformBounceT0 = -10000;
+  private bounceDone = false; // one happy cloud bounce per round
+  private levelIdx = 0;
+  private attempt = -1; // first newRound(0) → attempt 0 (variant 0)
+  private beamW = BEAM_W; // level-dependent landing beam width
+  private beamLeft = BEAM_X - BEAM_W / 2;
+  private beamRight = BEAM_X + BEAM_W / 2;
+  // ---- endless mode (每日挑战 / 自由无尽) ----
+  private mode: 'level' | 'endless' = 'level';
+  private endTower: EndlessTower | null = null; // seeded segment iterator
+  private endSeed = 0;
+  private endDaily = false; // daily challenge (records) vs free practice
+  private endFloor: Matter.Body | null = null; // moving static floor holding the tower base
+  private frontierY = BEAM_TOP; // world y of the generated world's bottom edge
+  private lives = ENDLESS_LIVES;
+  private respawnY = 0; // last checkpoint line crossed (respawn anchor)
+  private nextCheckpointY = 0; // endless: next line to append as the frontier descends
+  private timeLimitMs = 0;
+  private bonusTimeMs = 0; // +3s per checkpoint crossed
+  private roundCoins = 0; // +1 per block, +5 per checkpoint
+  private lastSecLeft = -1;
+  private timeBonus = 0;
+  private heroY0 = heroSpawnY(LEVELS[0].rows);
+  private lastProgress = 0;
+  private squashT = -1000;
+  private blinkT0 = 0;
+  private nextBlink = 2500;
+  private reducedMotion = false;
+  private dpr = 1;
+  /* ---- thrill FX state ---- */
+  private shakeMag = 0; // screen-shake amplitude (world px), decays in render
+  private shakeT0 = -10000;
+  private slowmoUntil = 0; // simT when the near-miss slow-mo ends
+  private lastSlowmoAt = -10000; // rate limit: ≤1 slow-mo per second
+  private slowmoActive = false;
+  private zoomFx = 1; // camera drama zoom (slow-mo push-in / edge warning)
+  private zoomFxTarget = 1;
+  private edgeWarn = false; // hero parked near the platform edge
+  private cascadeCount = 0; // unclicked blocks dropped within the chain window
+  private lastCascadeAt = -10000;
+  /** deterministic per-round RNG for the narrow-perch wobble (keeps headless
+   *  difficulty runs reproducible; seeded in newRound from level/attempt) */
+  private wobbleRng: () => number = mulberry32(1);
+  /** continuous calm-on-narrow-perch time (ms); drives the wobble ramp so a
+   *  hero briefly pausing mid-descent is never nudged */
+  private perchMs = 0;
 
-export { WORLD_W, WORLD_H };
-
-export type RoundOutcome = 'clear' | 'fall' | 'timeout';
-
-const REMOVE_COOLDOWN = 40; // just a double-fire guard — rapid combos must not be eaten
-const COMBO_WINDOW = 1500;
-const CLICK_TOL = 8; // px of forgiveness around a block (covers chamfer + wobble)
-const HOVER_TOL = 2;
-
-/** Hero center y that counts as "at the bottom" (resting on the cloud beam, minus chamfer slack).
- *  The HUD progress rail reaches 100% on exactly this line. */
-const LAND_LINE_Y = BEAM_TOP - HEX_HALF_H - 8;
-const LAND_CALM_SPEED = 1.5; // hero must be slower than this…
-const LAND_HOLD_MS = 300; // …for this long (no grazing/bounce false positives)
-const CONVERT_SCORE = 50; // points per remaining block auto-converted on a landing clear
-const CONVERT_COINS = 1; // coins per converted block (same as a manual removal)
-
-const CONFETTI_COLORS = ['#7ED957', '#F5D64B', '#F0A83C', '#E05545', '#A6D6EF'];
-const CHECKPOINT_RED = '#E05545';
-const COIN_GOLD = '#E8A93D';
-
-/* ================= seamless scenery =================
- * The whole descent is ONE continuous picture: every backdrop element is a
- * pure function of world altitude (never of screen position), so scrolling
- * the camera can never break, repeat or reset the pattern.
- *
- *  - sky gradient: color stops indexed by ABSOLUTE world y — the canvas is
- *    filled by sampling the world altitude at the current view top/bottom;
- *  - far ridge + far clouds: parallax layer (0.45×) in "layer space"
- *    (yLayer = yWorld mapped through camY·f) whose content spans the entire
- *    camera travel of the current tower;
- *  - near clouds: a second, closer parallax layer (0.72×) with bigger puffs;
- *  - hills + cloud-sea mist: world-space (1×), hugging the platform zone so
- *    the bottom of the descent never shows empty/out-of-canvas sky.
- */
-
-/** world y of the "ground" (just below the cloud-platform legs) */
-const GROUND_Y = 916;
-const FAR_F = 0.45;
-const NEAR_F = 0.72;
-
-/** sky gradient stops: world y → rgb (deeper blue up high → pale haze near ground) */
-const SKY_STOPS: [number, [number, number, number]][] = [
-  [-900, [108, 188, 236]],
-  [-350, [140, 210, 244]],
-  [80, [171, 224, 248]],
-  [450, [201, 235, 251]],
-  [800, [228, 244, 246]],
-  [916, [238, 247, 239]],
-];
-
-function skyColorAt(wy: number): string {
-  let i = 0;
-  while (i < SKY_STOPS.length - 2 && wy > SKY_STOPS[i + 1][0]) i++;
-  const [y0, c0] = SKY_STOPS[i];
-  const [y1, c1] = SKY_STOPS[i + 1];
-  const t = Math.max(0, Math.min(1, (wy - y0) / (y1 - y0)));
-  const c = c0.map((v, k) => Math.round(v + (c1[k] - v) * t));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
-}
-
-interface SceneryCloud {
-  /** horizontal seed (fraction of the wrap span) */
-  fx: number;
-  /** vertical seed (fraction of the layer's camera-travel range) */
-  fy: number;
-  s: number;
-  speed: number;
-}
-
-interface Scenery {
-  farClouds: SceneryCloud[];
-  nearClouds: SceneryCloud[];
-  ridgePhase: [number, number, number];
-  sparkles: { x: number; fy: number; r: number; ph: number }[];
-}
-
-/** fixed seeded layout — identical every session, so the world is consistent */
-const SCENERY: Scenery = (() => {
-  const rng = mulberry32(20250721);
-  const farClouds: SceneryCloud[] = [];
-  for (let i = 0; i < 9; i++) farClouds.push({ fx: rng(), fy: rng(), s: 0.45 + rng() * 0.6, speed: 2 + rng() * 3 });
-  const nearClouds: SceneryCloud[] = [];
-  for (let i = 0; i < 6; i++) nearClouds.push({ fx: rng(), fy: rng(), s: 0.8 + rng() * 0.75, speed: 3 + rng() * 4 });
-  const ridgePhase: [number, number, number] = [rng() * Math.PI * 2, rng() * Math.PI * 2, rng() * Math.PI * 2];
-  const sparkles: Scenery['sparkles'] = [];
-  for (let i = 0; i < 14; i++) sparkles.push({ x: 30 + rng() * (WORLD_W - 60), fy: rng(), r: 1.1 + rng() * 1.7, ph: rng() * Math.PI * 2 });
-  return { farClouds, nearClouds, ridgePhase, sparkles };
-})();
-
-export interface RoundStats {
-  outcome: RoundOutcome;
-  score: number;
-  meters: number;
-  removed: number;
-  /** remaining blocks auto-converted to score/coins on a landing clear */
-  converted: number;
-  /** score bonus granted by conversion (+50 per block) */
-  convertBonus: number;
-  /** true when the clear came from the hero landing on the beam (vs full clear) */
-  landed: boolean;
-  maxCombo: number;
-  roundMs: number;
-  timeLeftMs: number;
-  timeBonus: number;
-  /** coins earned this round (blocks +1, checkpoints +5) — star bonus added by the store */
-  coins: number;
-}
-
-export interface LiveStats {
-  score: number;
-  meters: number;
-  removed: number;
-  /** blocks auto-converted so far during a landing-clear celebration */
-  converted: number;
-  combo: number;
-  maxCombo: number;
-  roundMs: number;
-  coins: number;
-  /** hero descent progress 0 (tower top) → 1 (beam) */
-  progress: number;
-  /** checkpoint bonus seconds accrued (ms) */
-  bonusMs: number;
-  /** endless mode: lives left (always 3 in level mode — HUD reads it only in endless) */
-  lives: number;
-}
-
-export interface EngineCallbacks {
-  onLive: (s: LiveStats) => void;
-  onGameOver: (s: RoundStats) => void;
-  onReady: () => void;
-}
-
-interface BlockMeta {
-  color: string;
-  row: number;
-  topRow: number;
-  cells: LocalCell[];
-  kind: BlockKind;
-  /** structural "key" block — removing it may collapse the tower (visual warning) */
-  key: boolean;
-  speckles: { x: number; y: number; r: number }[];
-}
-
-interface Ghost {
-  x: number;
-  y: number;
-  angle: number;
-  cells: LocalCell[];
-  color: string;
-  kind: BlockKind;
-  t0: number;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  color: string;
-  t0: number;
-  life: number;
-  kind: 'dust' | 'confetti';
-  rot: number;
-  vr: number;
-  gravity: number;
-}
-
-interface FloatText {
-  x: number;
-  y: number;
-  text: string;
-  t0: number;
-  life: number;
-  color: string;
-  size: number;
-}
-
-interface Checkpoint {
-  y: number;
-  hit: boolean;
-  hitAt: number;
-}
-
-/* ---------- color helpers ---------- */
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '');
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-}
-function shade(color: string, pct: number): string {
-  let rgb: [number, number, number];
-  if (color.startsWith('rgb(')) {
-    rgb = color.slice(4, -1).split(',').map(Number) as [number, number, number];
-  } else {
-    rgb = hexToRgb(color);
+  constructor(canvas: HTMLCanvasElement, cb: EngineCallbacks, opts?: { headless?: boolean }) {
+    this.canvas = canvas;
+    this.headless = opts?.headless ?? false;
+    if (!this.headless) {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('no 2d context');
+      this.ctx = ctx;
+    }
+    this.cb = cb;
+    this.engine = createPhysicsEngine();
+    this.reducedMotion =
+      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.pointerFine =
+      typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
+    Matter.Events.on(this.engine, 'collisionStart', (e) => this.onCollisions(e));
+    Matter.Events.on(this.engine, 'collisionActive', (e) => this.onHeroContact(e));
+    this.buildWorld();
+    if (!this.headless) this.raf = requestAnimationFrame(this.loop);
   }
-  const t = pct > 0 ? 255 : 0;
-  const p = Math.abs(pct) / 100;
-  const f = (c: number) => Math.round(c + (t - c) * p);
-  return `rgb(${f(rgb[0])},${f(rgb[1])},${f(rgb[2])})`;
-}
-function seededRand(seed: number): () => number {
-  let s = seed * 9301 + 49297;
-  return () => {
-    s = (s * 9301 + 49297) % 233280;
-    return s / 233280;
-  };
-}
 
-type EngineState = 'idle' | 'playing' | 'over';
+  /* ================= world building ================= */
 
-export class GameEngine {
-  private canvas: HTMLCanvasElement;
-  private ctx: CanvasRenderingContext2D | null = null;
-  private headless: boolean;
-  private cb: EngineCallbacks;
-  private engine: Matter.Engine;
-  private blocks: Matter.Body[] = [];
-  private meta = new Map<number, BlockMeta>();
-  private hero!: Matter.Body;
-  private raf = 0;
-  private lastFrame = 0;
-  private acc = 0;
-  private state: EngineState = 'idle';
-  private stepping = false;
-  private inputOn = false;
-  private destroyed = false;
+  private buildWorld(): void {
+    if (this.mode === 'endless') {
+      this.buildEndlessWorld();
+      return;
+    }
+    this.clearWorldBodies();
 
-  private camY = 0;
-  private camX = 0; // world x at the left edge of the view (tower stays centered)
-  private camMin = 0;
-  private camMax = 0;
-  private zoom = 1; // world unit → css px scale
-  private viewW = WORLD_W; // world units visible
-  private viewH = WORLD_H;
-  private cssW = WORLD_W;
-  private cssH = WORLD_H;
-  private extraRows = 0; // replay-growth bonus rows for the current round
-  private introT0 = 0;
-  private ghosts: Ghost[] = [];
-  private particles: Particle[] = [];
-  private floats: FloatText[] = [];
-  private checkpoints: Checkpoint[] = [];
-  private hovered: Matter.Body | null = null;
-  private cursorId: number | null = null;
-  private pointerFine = true;
+    // tower from the deterministic, stability-verified level spec
+    const spec = generateTower(this.levelIdx, this.attempt % VARIANTS_PER_LEVEL, this.extraRows);
+    this.beamW = spec.beamW;
+    this.beamLeft = BEAM_X - spec.beamW / 2;
+    this.beamRight = BEAM_X + spec.beamW / 2;
+    Matter.Composite.add(this.engine.world, createStatics(spec.beamW));
 
-  private maxMeters = 0;
-  private bonus = 0;
-  private removed = 0;
-  private combo = 0;
-  private maxCombo = 0;
-  private lastRemoveAt = 0;
-  private comboActive = false;
-  private lastComboAt = 0;
-  private lastEmitAt = 0;
-  private lastMilestone = 0;
-  private roundMs = 0;
-  /** ms since the hero last touched anything (endless runaway-fall gate) */
-  private heroAirMs = 0;  /** ms since the hero last had CALM contact (touching & speed<2) — endless
-   *  world extension only happens while the hero is "in control" */
-  private heroCalmMs = 0;
-  /** which endless fall rule fired (headless debugging) */
-  private lastFallRule = '';
-  /** sustained m
+    this.heroY0 = heroSpawnY(spec.rows);
+    this.checkpoints = checkpointYs(spec.rows).map((y) => ({ y, hit: false, hitAt: 0 }));
+    for (const c of createBlocks(spec)) this.registerBlock(c, spec.rows);
+
+    // hexagon hero
+    this.hero = createHero(spec);
+    Matter.Composite.add(this.engine.world, this.hero);
+
+    // pre-settle the tower so it starts stable (no sag on wake)
+    preSettle(this.engine, this.blocks, this.hero, spec.rows);
+    this.introT0 = performance.now();
+    this.updateCamBounds();
+  }
+
+  private clearWorldBodies(): void {
+    Matter.Composite.clear(this.engine.world, false, true);
+    this.blocks = [];
+    this.meta.clear();
+    this.ghosts = [];
+    this.particles = [];
+    this.floats = [];
+    this.hovered = null;
+    this.cursorId = null;
+    this.endFloor = null;
+    this.endTower = null;
+  }
+
+  /** Register one created block body (visual meta + world insert). */
+  private registerBlock(c: CreatedBlock, rows: number): void {
+    const base = layerColor(c.topRow, rows);
+    const color = c.kind === 'ice' ? ICE_COLOR : c.kind === 'heavy' ? shade(base, -22) : base;
+    const rand = seededRand(c.body.id);
+    const speckles: { x: number; y: number; r: number }[] = [];
+    for (const cell of c.cells) {
+      for (let i = 0; i < 2; i++) {
+        speckles.push({
+          x: cell.x + (rand() - 0.5) * (cell.w - 14),
+          y: cell.y + (rand() - 0.5) * (cell.h - 14),
+          r: 1 + rand() * 1.4,
+        });
+      }
+    }
+    this.meta.set(c.body.id, { color, row: c.row, topRow: c.topRow, cells: c.cells, kind: c.kind, key: c.key === true, speckles });
+    this.blocks.push(c.body);
+    Matter.Composite.add(this.engine.world, c.body);
+  }
+
+  /* ================= endless world ================= */
+
+  /**
+   * Endless world: two stacked segments up front (so the hero always has
+   * tower below it), a moving static floor holding the base, checkpoint
+   * lines every 3 rows forever, and NO landing beam / countdown.
+   */
+  private buildEndlessWorld(): void {
+    // 开局两段塔稳定性筛选。无尽模式用的是随机变体（关卡模式的塔全部经过
+    // 盐值筛选，无尽没有），个别种子的开局顶部区域不稳：玩家还没点就塌方
+    // 滚球（"无尽进去就滚了然后失败"）。这里按与实玩一致的方式实测开局：
+    // 只唤醒 hero 附近（beginPlay 在无尽模式同样是局部唤醒），静置 3 秒，
+    // 顶部区域稳才接受，否则换一组种子序列重掷。每个 attempt 的种子由
+    // endSeed 确定性派生 → 每日挑战依旧全员同塔。
+    let seg0!: EndlessSegment;
+    let seg1!: EndlessSegment;
+    for (let attempt = 0; ; attempt++) {
+      this.clearWorldBodies();
+      const tower = new EndlessTower(((this.endSeed * 2654435761 + attempt * 974711) % 2147483647) || 1);
+      this.endTower = tower; // clearWorldBodies() 会把它置空
+      seg0 = tower.next();
+      seg1 = tower.next();
+      for (const c of createBlocks(seg0.spec, seg0.baseY)) this.registerBlock(c, seg0.rows);
+      for (const c of createBlocks(seg1.spec, seg1.baseY)) this.registerBlock(c, seg1.rows);
+      this.frontierY = tower.frontierY;
+
+      // frontier floor: wide static slab the generated world stands on. It
+      // descends one segment whenever the tower extends (extendEndless).
+      // friction/chamfer mirror the level-mode beam EXACTLY — a 0.55-friction
+      // floor lets a ~50-row stack micro-slip laterally until it popcorns
+      // (measured: full collapse during preSettle). 必须保持 560 通宽：窄地板
+      // 会让 100+ 层拼接塔的基座积木从边缘滑落自塌（验证过）。塔侧坠落的
+      // "死区骑行"由 endlessFallCheck 的偏出塔身规则负责，不靠地板宽度。
+      this.endFloor = Matter.Bodies.rectangle(BEAM_X, this.frontierY + 12, 560, 24, {
+        isStatic: true,
+        chamfer: { radius: 6 },
+        friction: 1.5,
+        label: 'beam',
+      });
+      Matter.Composite.add(this.engine.world, this.endFloor);
+
+      // no landing beam in endless: park the beam window far away so
+      // heroSupport / perchWobble / edge-warn never mistake it for a perch
+      this.beamW = 0;
+      this.beamLeft = Number.MAX_SAFE_INTEGER / 4;
+      this.beamRight = Number.MAX_SAFE_INTEGER / 4 + 1;
+
+      // hero on the tower top, tune frozen at the starting level (the hero
+      // FEEL doesn't change mid-run; only the tower gets harder)
+      this.hero = createHero(seg0.spec, seg0.baseY);
+      Matter.Composite.add(this.engine.world, this.hero);
+
+      preSettle(this.engine, this.blocks, this.hero, seg0.rows + seg1.rows);
+      if (this.endlessOpeningStable() || attempt >= 8) break;
+    }
