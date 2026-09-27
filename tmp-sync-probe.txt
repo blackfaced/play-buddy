@@ -1,207 +1,246 @@
-s spent >10 rows below the banked anchor (endless deep-stall
-   *  terminator: a hero stuck far below its checkpoint — e.g. riding the floor
-   *  net without ever climbing back onto blocks — is a failed run, end it) */
-  private heroDeepMs = 0;
-  /** per-death diagnostics, headless only */
-  readonly debugDeaths: string[] = [];
-  private overAt = 0;
-  private overWaitMs = 0; // celebration / slow-mo length before onGameOver fires
-  private overPending: false | 'over' | 'clear' = false;
-  private overReason: 'fall' | 'timeout' = 'fall';
-  private landed = false; // current round cleared by landing on the beam
-  private converted = 0; // remaining blocks auto-converted on a landing clear
-  private convertBonus = 0; // score granted by conversion (+50/block)
-  private convertQueue: { body: Matter.Body; at: number }[] = [];
-  private lastConvertPopSnd = 0;
-  private culled = 0; // blocks that escaped the world (fell off) this round
-  private auditAt = 0; // last unsupported-block audit timestamp
-  private unsupportedStreak = new Map<number, number>(); // consecutive motionless-unsupported audits per block (wedge-buster)
-  private slickUntil = new Map<number, { until: number; friction: number }>(); // wedge-buster: temporary friction break + restore bookkeeping
-  private landMs = 0; // sustained "calm at the bottom" timer
-  private lastDt = 16.666; // frame dt of the latest tick
-  private simT = 0; // latest update() timestamp (single clock for game logic)
-  private platformBounceT0 = -10000;
-  private bounceDone = false; // one happy cloud bounce per round
-  private levelIdx = 0;
-  private attempt = -1; // first newRound(0) → attempt 0 (variant 0)
-  private beamW = BEAM_W; // level-dependent landing beam width
-  private beamLeft = BEAM_X - BEAM_W / 2;
-  private beamRight = BEAM_X + BEAM_W / 2;
-  // ---- endless mode (每日挑战 / 自由无尽) ----
-  private mode: 'level' | 'endless' = 'level';
-  private endTower: EndlessTower | null = null; // seeded segment iterator
-  private endSeed = 0;
-  private endDaily = false; // daily challenge (records) vs free practice
-  private endFloor: Matter.Body | null = null; // moving static floor holding the tower base
-  private frontierY = BEAM_TOP; // world y of the generated world's bottom edge
-  private lives = ENDLESS_LIVES;
-  private respawnY = 0; // last checkpoint line crossed (respawn anchor)
-  private nextCheckpointY = 0; // endless: next line to append as the frontier descends
-  private timeLimitMs = 0;
-  private bonusTimeMs = 0; // +3s per checkpoint crossed
-  private roundCoins = 0; // +1 per block, +5 per checkpoint
-  private lastSecLeft = -1;
-  private timeBonus = 0;
-  private heroY0 = heroSpawnY(LEVELS[0].rows);
-  private lastProgress = 0;
-  private squashT = -1000;
-  private blinkT0 = 0;
-  private nextBlink = 2500;
-  private reducedMotion = false;
-  private dpr = 1;
-  /* ---- thrill FX state ---- */
-  private shakeMag = 0; // screen-shake amplitude (world px), decays in render
-  private shakeT0 = -10000;
-  private slowmoUntil = 0; // simT when the near-miss slow-mo ends
-  private lastSlowmoAt = -10000; // rate limit: ≤1 slow-mo per second
-  private slowmoActive = false;
-  private zoomFx = 1; // camera drama zoom (slow-mo push-in / edge warning)
-  private zoomFxTarget = 1;
-  private edgeWarn = false; // hero parked near the platform edge
-  private cascadeCount = 0; // unclicked blocks dropped within the chain window
-  private lastCascadeAt = -10000;
-  /** deterministic per-round RNG for the narrow-perch wobble (keeps headless
-   *  difficulty runs reproducible; seeded in newRound from level/attempt) */
-  private wobbleRng: () => number = mulberry32(1);
-  /** continuous calm-on-narrow-perch time (ms); drives the wobble ramp so a
-   *  hero briefly pausing mid-descent is never nudged */
-  private perchMs = 0;
+this.heroY0 = this.hero.position.y;
+    this.respawnY = seg0.baseY - seg0.rows * CELL; // tower top edge
+    this.lives = ENDLESS_LIVES;
 
-  constructor(canvas: HTMLCanvasElement, cb: EngineCallbacks, opts?: { headless?: boolean }) {
-    this.canvas = canvas;
-    this.headless = opts?.headless ?? false;
-    if (!this.headless) {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('no 2d context');
-      this.ctx = ctx;
-    }
-    this.cb = cb;
-    this.engine = createPhysicsEngine();
-    this.reducedMotion =
-      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.pointerFine =
-      typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches;
-    Matter.Events.on(this.engine, 'collisionStart', (e) => this.onCollisions(e));
-    Matter.Events.on(this.engine, 'collisionActive', (e) => this.onHeroContact(e));
-    this.buildWorld();
-    if (!this.headless) this.raf = requestAnimationFrame(this.loop);
-  }
+    this.checkpoints = [];
+    this.nextCheckpointY = this.respawnY + 3 * CELL;
+    this.extendCheckpoints();
 
-  /* ================= world building ================= */
-
-  private buildWorld(): void {
-    if (this.mode === 'endless') {
-      this.buildEndlessWorld();
-      return;
-    }
-    this.clearWorldBodies();
-
-    // tower from the deterministic, stability-verified level spec
-    const spec = generateTower(this.levelIdx, this.attempt % VARIANTS_PER_LEVEL, this.extraRows);
-    this.beamW = spec.beamW;
-    this.beamLeft = BEAM_X - spec.beamW / 2;
-    this.beamRight = BEAM_X + spec.beamW / 2;
-    Matter.Composite.add(this.engine.world, createStatics(spec.beamW));
-
-    this.heroY0 = heroSpawnY(spec.rows);
-    this.checkpoints = checkpointYs(spec.rows).map((y) => ({ y, hit: false, hitAt: 0 }));
-    for (const c of createBlocks(spec)) this.registerBlock(c, spec.rows);
-
-    // hexagon hero
-    this.hero = createHero(spec);
-    Matter.Composite.add(this.engine.world, this.hero);
-
-    // pre-settle the tower so it starts stable (no sag on wake)
-    preSettle(this.engine, this.blocks, this.hero, spec.rows);
     this.introT0 = performance.now();
     this.updateCamBounds();
   }
 
-  private clearWorldBodies(): void {
-    Matter.Composite.clear(this.engine.world, false, true);
-    this.blocks = [];
-    this.meta.clear();
-    this.ghosts = [];
-    this.particles = [];
-    this.floats = [];
-    this.hovered = null;
-    this.cursorId = null;
-    this.endFloor = null;
-    this.endTower = null;
-  }
-
-  /** Register one created block body (visual meta + world insert). */
-  private registerBlock(c: CreatedBlock, rows: number): void {
-    const base = layerColor(c.topRow, rows);
-    const color = c.kind === 'ice' ? ICE_COLOR : c.kind === 'heavy' ? shade(base, -22) : base;
-    const rand = seededRand(c.body.id);
-    const speckles: { x: number; y: number; r: number }[] = [];
-    for (const cell of c.cells) {
-      for (let i = 0; i < 2; i++) {
-        speckles.push({
-          x: cell.x + (rand() - 0.5) * (cell.w - 14),
-          y: cell.y + (rand() - 0.5) * (cell.h - 14),
-          r: 1 + rand() * 1.4,
-        });
-      }
+  /**
+   * 开局塔自检：唤醒 hero 附近 12 层（与 beginPlay 的局部唤醒范围一致），
+   * 静置 3 秒，顶部区域必须稳住。检测结束后复位 hero、重新冻结被唤醒的
+   * 邻里（更深的积木从未被唤醒），玩家无感知。
+   */
+  private endlessOpeningStable(): boolean {
+    const hero = this.hero;
+    if (!hero) return false;
+    const hx = hero.position.x;
+    const hy = hero.position.y;
+    const near = this.blocks.filter((b) => Math.abs(b.position.y - hy) <= 12 * CELL);
+    const snap = near.map((b) => ({ x: b.position.x, y: b.position.y }));
+    for (const b of near) Matter.Sleeping.set(b, false);
+    Matter.Sleeping.set(hero, false);
+    for (let i = 0; i < 180; i++) stepPhysics(this.engine); // 3 s idle
+    let maxDisp = 0;
+    let maxSpeed = 0;
+    near.forEach((b, i) => {
+      maxDisp = Math.max(maxDisp, Math.hypot(b.position.x - snap[i].x, b.position.y - snap[i].y));
+      maxSpeed = Math.max(maxSpeed, b.speed);
+    });
+    const heroDrift = Math.hypot(hero.position.x - hx, hero.position.y - hy);
+    const heroSpeed = hero.speed;
+    // 复位 hero + 重新冻结被唤醒的邻里（同 preSettle 的收尾）
+    Matter.Body.setPosition(hero, { x: hx, y: hy });
+    Matter.Body.setVelocity(hero, { x: 0, y: 0 });
+    Matter.Body.setAngularVelocity(hero, 0);
+    Matter.Sleeping.set(hero, true);
+    for (const b of near) {
+      Matter.Body.setVelocity(b, { x: 0, y: 0 });
+      Matter.Body.setAngularVelocity(b, 0);
+      Matter.Sleeping.set(b, true);
     }
-    this.meta.set(c.body.id, { color, row: c.row, topRow: c.topRow, cells: c.cells, kind: c.kind, key: c.key === true, speckles });
-    this.blocks.push(c.body);
-    Matter.Composite.add(this.engine.world, c.body);
+    return maxDisp < 20 && maxSpeed < 1.0 && heroDrift < 24 && heroSpeed < 0.5;
   }
-
-  /* ================= endless world ================= */
 
   /**
-   * Endless world: two stacked segments up front (so the hero always has
-   * tower below it), a moving static floor holding the base, checkpoint
-   * lines every 3 rows forever, and NO landing beam / countdown.
+   * 延展段离线自检：候选段单独落在 frontier 地板上（摩擦 1.5，同正式地板）
+   * 是否自稳。个别随机变体段自身会在静置中垮塌，拼接后会牵连正在下潜的
+   * 玩家；在 scratch 引擎里预先实测，不达标就换下一个变体，live 世界里的
+   * hero / 旧塔完全不受影响。
    */
-  private buildEndlessWorld(): void {
-    // 开局两段塔稳定性筛选。无尽模式用的是随机变体（关卡模式的塔全部经过
-    // 盐值筛选，无尽没有），个别种子的开局顶部区域不稳：玩家还没点就塌方
-    // 滚球（"无尽进去就滚了然后失败"）。这里按与实玩一致的方式实测开局：
-    // 只唤醒 hero 附近（beginPlay 在无尽模式同样是局部唤醒），静置 3 秒，
-    // 顶部区域稳才接受，否则换一组种子序列重掷。每个 attempt 的种子由
-    // endSeed 确定性派生 → 每日挑战依旧全员同塔。
-    let seg0!: EndlessSegment;
-    let seg1!: EndlessSegment;
-    for (let attempt = 0; ; attempt++) {
-      this.clearWorldBodies();
-      const tower = new EndlessTower(((this.endSeed * 2654435761 + attempt * 974711) % 2147483647) || 1);
-      this.endTower = tower; // clearWorldBodies() 会把它置空
-      seg0 = tower.next();
-      seg1 = tower.next();
-      for (const c of createBlocks(seg0.spec, seg0.baseY)) this.registerBlock(c, seg0.rows);
-      for (const c of createBlocks(seg1.spec, seg1.baseY)) this.registerBlock(c, seg1.rows);
-      this.frontierY = tower.frontierY;
+  private segmentSelfStable(seg: EndlessSegment): boolean {
+    const eng = createPhysicsEngine();
+    const blocks = createBlocks(seg.spec, seg.baseY).map((c) => c.body);
+    const floor = Matter.Bodies.rectangle(BEAM_X, seg.baseY + 12, 560, 24, {
+      isStatic: true,
+      chamfer: { radius: 6 },
+      friction: 1.5,
+      label: 'beam',
+    });
+    Matter.Composite.add(eng.world, [floor, ...blocks]);
+    const snap = blocks.map((b) => ({ x: b.position.x, y: b.position.y }));
+    preSettle(eng, blocks, floor, seg.rows);
+    for (const b of blocks) Matter.Sleeping.set(b, false);
+    for (let i = 0; i < 120; i++) stepPhysics(eng); // 2 s idle
+    let maxDisp = 0;
+    let maxSpeed = 0;
+    blocks.forEach((b, i) => {
+      maxDisp = Math.max(maxDisp, Math.hypot(b.position.x - snap[i].x, b.position.y - snap[i].y));
+      maxSpeed = Math.max(maxSpeed, b.speed);
+    });
+    Matter.Engine.clear(eng);
+    return maxDisp < 20 && maxSpeed < 1.0;
+  }
 
-      // frontier floor: wide static slab the generated world stands on. It
-      // descends one segment whenever the tower extends (extendEndless).
-      // friction/chamfer mirror the level-mode beam EXACTLY — a 0.55-friction
-      // floor lets a ~50-row stack micro-slip laterally until it popcorns
-      // (measured: full collapse during preSettle). 必须保持 560 通宽：窄地板
-      // 会让 100+ 层拼接塔的基座积木从边缘滑落自塌（验证过）。塔侧坠落的
-      // "死区骑行"由 endlessFallCheck 的偏出塔身规则负责，不靠地板宽度。
-      this.endFloor = Matter.Bodies.rectangle(BEAM_X, this.frontierY + 12, 560, 24, {
-        isStatic: true,
-        chamfer: { radius: 6 },
-        friction: 1.5,
-        label: 'beam',
-      });
-      Matter.Composite.add(this.engine.world, this.endFloor);
-
-      // no landing beam in endless: park the beam window far away so
-      // heroSupport / perchWobble / edge-warn never mistake it for a perch
-      this.beamW = 0;
-      this.beamLeft = Number.MAX_SAFE_INTEGER / 4;
-      this.beamRight = Number.MAX_SAFE_INTEGER / 4 + 1;
-
-      // hero on the tower top, tune frozen at the starting level (the hero
-      // FEEL doesn't change mid-run; only the tower gets harder)
-      this.hero = createHero(seg0.spec, seg0.baseY);
-      Matter.Composite.add(this.engine.world, this.hero);
-
-      preSettle(this.engine, this.blocks, this.hero, seg0.rows + seg1.rows);
-      if (this.endlessOpeningStable() || attempt >= 8) break;
+  /** Append the next seeded segment below the frontier and drop the floor. */
+  private extendEndless(): void {
+    const tower = this.endTower;
+    if (!tower || !this.endFloor) return;
+    const oldFrontier = this.frontierY;
+    // 延展段离线筛选：个别随机变体段自身不稳，拼上去会垮塌牵连玩家
+    let seg = tower.next();
+    for (let tries = 0; tries < 6 && !this.segmentSelfStable(seg); tries++) seg = tower.next();
+    for (const c of createBlocks(seg.spec, seg.baseY)) this.registerBlock(c, seg.rows);
+    this.frontierY = seg.baseY;
+    Matter.Body.setPosition(this.endFloor, { x: BEAM_X, y: this.frontierY + 12 });
+    this.extendCheckpoints();
+    // wake the seam neighborhood: blocks that slept on the floor now rest
+    // on the new segment's flush top — let them re-bed gently (new blocks
+    // spawn awake on their own)
+    for (const b of this.blocks) {
+      if (b.position.y > oldFrontier - 5 * CELL) Matter.Sleeping.set(b, false);
     }
+    this.updateCamBounds();
+  }
+
+  /** checkpoint lines every 3 rows, appended as the frontier descends */
+  private extendCheckpoints(): void {
+    while (this.nextCheckpointY <= this.frontierY - 20) {
+      this.checkpoints.push({ y: this.nextCheckpointY, hit: false, hitAt: 0 });
+      this.nextCheckpointY += 3 * CELL;
+    }
+  }
+
+  /**
+   * Endless fall check: the hero is lost when it fell below EVERY remaining
+   * block (off the tower's side/bottom edge) or escaped far off the sides.
+   * Resting on the frontier floor after a fully-cleared shaft is SAFE — the
+   * next segment arrives and the descent continues.
+   */
+  private endlessFallCheck(bx: number, by: number): boolean {
+    if (bx < TILE_X - 130 || bx > TILE_X + COLS * CELL + 130) return true;
+    // 偏出塔身且已落到地板高度 = 坠落。地板兜底只救"中线清空井"的下潜；
+    // 没有这条，滚出塔侧的 hero 会被每段新塔循环"接住-又落空"永远往下带
+    // （"失败后一直往下掉结束不了"）。
+    if (by > this.frontierY - CELL && Math.abs(bx - BEAM_X) > (COLS * CELL) / 2 + 6) return true;
+    let lowest = this.frontierY - CELL; // hero on the floor sits above this line
+    for (const b of this.blocks) {
+      const m = b.bounds.max.y;
+      if (m > lowest) lowest = m;
+    }
+    return by > lowest + CELL * 1.5;
+  }
+
+  /**
+   * Endless: is the hero currently resting on a tower block (vs airborne or
+   * sitting on the frontier floor net)? Geometric check — independent of
+   * collision events, so it stays true even when the hero fell asleep.
+   */
+  private heroOnBlock(): boolean {
+    const h = this.hero;
+    const hb = h.position.y + HEX_HALF_H;
+    for (const b of this.blocks) {
+      if (Math.abs(b.bounds.min.y - hb) > 8) continue;
+      if (h.position.x < b.bounds.min.x - HEX_R || h.position.x > b.bounds.max.x + HEX_R) continue;
+      return true;
+    }
+    return false;
+  }
+
+  /** Lose one life; respawn at the last checkpoint, or end the run at 0. */
+  private loseLife(t: number): void {
+    // headless debugging: remember the state that killed the hero
+    if (this.headless && this.hero) {
+      this.debugDeaths.push(
+        `rule=${this.lastFallRule} y=${this.hero.position.y.toFixed(0)} x=${this.hero.position.x.toFixed(0)} ` +
+          `speed=${this.hero.speed.toFixed(1)} airMs=${this.heroAirMs.toFixed(0)} respawnY=${this.respawnY.toFixed(0)} ` +
+          `depthRows=${((this.hero.position.y - this.heroY0) / CELL).toFixed(1)} blocks=${this.blocks.length}`,
+      );
+    }
+    this.lives -= 1;
+    if (this.lives <= 0) {
+      this.overPending = 'over';
+      this.overReason = 'fall';
+      this.overAt = t;
+      this.overWaitMs = 500;
+      this.engine.timing.timeScale = 0.35;
+      playBoop();
+      setRolling(0);
+      setWind(0);
+      this.emitLive();
+      return;
+    }
+    this.respawnHero();
+    this.addFloat(this.hero.position.x, this.hero.position.y - 56, `失误！还剩 ${this.lives} 条命`, CHECKPOINT_RED, 26, 1200);
+    playHeartbeat();
+    this.shakeMag = 6;
+    this.shakeT0 = t;
+    // snap the camera to the respawn point (can be far above the fall)
+    this.camY = this.clampCamY(this.hero.position.y - this.viewH * 0.42);
+    this.emitLive();
+  }
+
+  /**
+   * Respawn the hero at the last crossed checkpoint line: on the widest
+   * surviving support right around the line (tower keeps its current
+   * state); if the shaft there is stripped bare, the frontier floor catches
+   * the hero and the next segment arrives immediately.
+   */
+  private respawnHero(): void {
+    // widest surviving support right around the checkpoint line…
+    let best: Matter.Body | null = null;
+    for (const b of this.blocks) {
+      const top = b.bounds.min.y;
+      if (top < this.respawnY - 2 * CELL || top > this.respawnY + 6 * CELL) continue;
+      const w = b.bounds.max.x - b.bounds.min.x;
+      if (!best || w > best.bounds.max.x - best.bounds.min.x) best = b;
+    }
+    if (!best) {
+      // …shaft stripped bare at the line: walk DOWNWARD to the first
+      // surviving support (bounded), else the frontier floor catches the hero
+      let lowestTop = Infinity;
+      for (const b of this.blocks) {
+        const top = b.bounds.min.y;
+        if (top < this.respawnY || top > this.respawnY + 25 * CELL) continue;
+        if (top < lowestTop) {
+          lowestTop = top;
+          best = b;
+        }
+      }
+    }
+    let x = BEAM_X;
+    let y = this.respawnY - HEX_HALF_H - 2;
+    if (best) {
+      x = (best.bounds.min.x + best.bounds.max.x) / 2;
+      y = best.bounds.min.y - HEX_HALF_H - 2;
+    } else {
+      y = this.frontierY - HEX_HALF_H - 2; // bare world: the floor catches the hero
+    }
+    Matter.Body.setPosition(this.hero, { x, y });
+    Matter.Body.setVelocity(this.hero, { x: 0, y: 0 });
+    Matter.Body.setAngularVelocity(this.hero, 0);
+    Matter.Body.setAngle(this.hero, 0);
+    Matter.Sleeping.set(this.hero, false);
+    this.perchMs = 0;
+    this.heroAirMs = 0;
+    this.heroCalmMs = 0;
+    this.heroDeepMs = 0;
+  }
+
+  /* ================= public control ================= */
+
+  totalBlocks(): number {
+    return this.blocks.length + this.removed + this.converted + this.culled;
+  }
+
+  /** effective time limit for the current round (base + replay-growth rows) */
+  roundLimitMs(): number {
+    return this.timeLimitMs;
+  }
+
+  newRound(levelIdx?: number, extraRows = 0): void {
+    if (levelIdx !== undefined) {
+      if (levelIdx !== this.levelIdx) this.attempt = 0;
+      else this.attempt += 1; // next retry plays the next verified variant
+      this.levelIdx = levelIdx;
+    }
+    this.mode = 'level';
+    this.extraRows = extraRows;
+    this.resetRoundState();
+    this.timeLimitMs = levelTimeLimitMs(this.levelIdx, this.extraRows);
+    // deterministic per-round wobble stream (level, variant attempt, growth)
+    this.
