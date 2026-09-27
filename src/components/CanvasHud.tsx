@@ -29,7 +29,7 @@ export function LevelBanner() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -12, opacity: 0 }}
           transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-          className="pointer-events-none absolute left-1/2 top-2.5 -translate-x-1/2 select-none font-display text-[30px] leading-none text-white [text-shadow:0_2px_0_rgba(30,90,140,.45),0_3px_10px_rgba(30,90,140,.35)]"
+          className="pointer-events-none absolute left-1/2 top-2.5 -translate-x-1/2 select-none whitespace-nowrap font-display text-[clamp(21px,5.6vw,30px)] leading-none text-white [text-shadow:0_2px_0_rgba(30,90,140,.45),0_3px_10px_rgba(30,90,140,.35)]"
           aria-hidden="true"
         >
           {text}
