@@ -312,6 +312,8 @@ export class GameEngine {
   private lastConvertPopSnd = 0;
   private culled = 0; // blocks that escaped the world (fell off) this round
   private auditAt = 0; // last unsupported-block audit timestamp
+  private unsupportedStreak = new Map<number, number>(); // consecutive motionless-unsupported audits per block (wedge-buster)
+  private slickUntil = new Map<number, { until: number; friction: number }>(); // wedge-buster: temporary friction break + restore bookkeeping
   private landMs = 0; // sustained "calm at the bottom" timer
   private lastDt = 16.666; // frame dt of the latest tick
   private simT = 0; // latest update() timestamp (single clock for game logic)
@@ -500,7 +502,6 @@ export class GameEngine {
       preSettle(this.engine, this.blocks, this.hero, seg0.rows + seg1.rows);
       if (this.endlessOpeningStable() || attempt >= 8) break;
     }
-
     this.heroY0 = this.hero.position.y;
     this.respawnY = seg0.baseY - seg0.rows * CELL; // tower top edge
     this.lives = ENDLESS_LIVES;
@@ -818,6 +819,8 @@ export class GameEngine {
     this.heroAirMs = 0;
     this.heroCalmMs = 0;
     this.heroDeepMs = 0;
+    this.unsupportedStreak.clear();
+    this.slickUntil.clear();
   }
 
   beginPlay(): void {
@@ -1136,36 +1139,99 @@ export class GameEngine {
       this.mode === 'endless'
         ? this.blocks.filter((b) => Math.abs(b.position.y - this.hero.position.y) <= 900)
         : this.blocks;
-    for (const b of near) {
-      if (!b.isSleeping) continue;
-      let supported = false;
-      // level mode: beam/leg zone is y>780 (beam top 788); endless: the
-      // (descending) frontier floor plays that role
-      const groundLine = this.mode === 'endless' ? this.frontierY - 4 : 780;
+    // level mode: beam/leg zone is y>780 (beam top 788); endless: the
+    // (descending) frontier floor plays that role
+    const groundLine = this.mode === 'endless' ? this.frontierY - 4 : 780;
+    const hasSupport = (b: Matter.Body): boolean => {
       for (const pb of partsOf(b)) {
         const bb = pb.bounds;
-        if (bb.max.y > groundLine) {
-          supported = true; // beam / leg zone (or frontier floor in endless)
-          break;
-        }
+        if (bb.max.y > groundLine) return true; // beam / leg zone (or frontier floor in endless)
         if (Math.abs(heroBounds.min.y - bb.max.y) <= GAP + 20 && Math.min(heroBounds.max.x, bb.max.x) - Math.max(heroBounds.min.x, bb.min.x) > OVERLAP) {
-          supported = true; // riding on the hero
-          break;
+          return true; // riding on the hero
         }
         for (const o of near) {
           if (o.id === b.id) continue;
           for (const po of partsOf(o)) {
             const ob = po.bounds;
             if (Math.abs(ob.min.y - bb.max.y) <= GAP && Math.min(ob.max.x, bb.max.x) - Math.max(ob.min.x, bb.min.x) > OVERLAP) {
-              supported = true;
-              break;
+              return true;
             }
           }
-          if (supported) break;
         }
-        if (supported) break;
       }
-      if (!supported) Matter.Sleeping.set(b, false);
+      return false;
+    };
+
+    // 无尽模式维持原始行为（只唤醒失去支撑的睡眠块）。楔住克星曾在无尽
+    // 启用过集群唤醒+去摩擦，实测让 hero 脚下的积木被打滑、谨慎下潜回归
+    // 显著变难（固定种子 130/108/89 层 → 77/34/27 层）——深塔里悬空的
+    // 代价是视觉瑕疵，而打滑会害死 hero，代价不对等，故只在关卡模式启用。
+    if (this.mode === 'endless') {
+      for (const b of near) {
+        if (!b.isSleeping) continue;
+        if (!hasSupport(b)) Matter.Sleeping.set(b, false);
+      }
+      return;
+    }
+
+    // 楔住克星（关卡模式，"积木悬空不掉"修复）：悬空积木往往不是孤立的，
+    // 而是倾斜后和邻居互相卡住（侧向摩擦/边角互锁）。只唤醒它自己时，邻居
+    // 还在睡、接触求解器把旧平衡焊死，它蠕动不到 0.5s（sleepThreshold 30）
+    // 又重新睡着，于是永远悬空（实测：第 86/87/88/91 关均可复现）。阶梯式
+    // 处置：连续 WEDGE_STREAK 次审计（≈0.75s）仍悬空且几乎不动 → 全塔唤醒
+    // （等同 beginPlay 开局状态，≤50 层安全有界；顽固互锁可能延伸到 3 格
+    // 半径之外——第 44 关个案局部唤醒无效）；连续 WEDGE_STREAK_HARD 次
+    // （≈2s）→ 全醒 + 接触圈暂时去摩擦打破静摩擦（第 61 关"斜撑"个案：
+    // -100° 斜搭在单点顶角上，全醒 10s 也解不开，去摩擦才滑落），1.5s 后
+    // 恢复原摩擦，还卡着就 ~2s 后再来一轮，直到落稳或坠落。
+    const WEDGE_STREAK = 3;
+    const WEDGE_STREAK_HARD = 8;
+    const STILL_SPEED = 0.3; // faster than this it's honestly falling, not stuck
+    const hero = this.hero;
+    for (const b of near) {
+      const supported = hasSupport(b);
+      if (supported || (!b.isSleeping && b.speed >= STILL_SPEED)) {
+        this.unsupportedStreak.delete(b.id); // fine, or honestly falling
+        continue;
+      }
+      Matter.Sleeping.set(b, false);
+      const streak = (this.unsupportedStreak.get(b.id) ?? 0) + 1;
+      this.unsupportedStreak.set(b.id, streak);
+      if (streak >= WEDGE_STREAK) {
+        for (const o of near) Matter.Sleeping.set(o, false);
+      }
+      if (streak >= WEDGE_STREAK_HARD) {
+        // 去摩擦作用于悬空块的接触圈，但 hero 正踩着（hero 底≈积木顶）的
+        // 积木绝不打滑——落脚点滑了会害死 hero（实测：粗放的英雄邻域豁免
+        // 会把修复一并豁免掉，楔住本就发生在玩家点击处即 hero 附近）。
+        // 还卡着就重置阶梯 ~2s 后重试
+        const hb = hero.bounds;
+        for (const o of near) {
+          if (Math.hypot(o.position.x - b.position.x, o.position.y - b.position.y) > 2.5 * CELL) continue;
+          const heroRides = partsOf(o).some(
+            (po) =>
+              Math.abs(hb.max.y - po.bounds.min.y) <= GAP + 4 &&
+              Math.min(hb.max.x, po.bounds.max.x) - Math.max(hb.min.x, po.bounds.min.x) > OVERLAP,
+          );
+          if (heroRides) continue;
+          if (!this.slickUntil.has(o.id)) this.slickUntil.set(o.id, { until: this.simT + 1500, friction: o.friction });
+          else this.slickUntil.get(o.id)!.until = this.simT + 1500;
+          Matter.Body.set(o, 'friction', 0.02);
+        }
+        this.unsupportedStreak.set(b.id, 0);
+      }
+    }
+    // prune streaks of removed blocks
+    for (const id of [...this.unsupportedStreak.keys()]) {
+      if (!near.some((b) => b.id === id)) this.unsupportedStreak.delete(id);
+    }
+    // restore friction after the slick window (or if the block is gone)
+    for (const [id, s] of [...this.slickUntil]) {
+      const b = this.blocks.find((x) => x.id === id);
+      if (!b || this.simT >= s.until) {
+        if (b) Matter.Body.set(b, 'friction', s.friction);
+        this.slickUntil.delete(id);
+      }
     }
   }
 
