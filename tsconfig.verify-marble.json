@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "rootDir": ".",
+    "outDir": "node_modules/.tmp-verify-marble",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "types": ["node"]
+  },
+  "include": [
+    "scripts/verify-marble.ts",
+    "scripts/debug-marble.ts",
+    "src/marble/levels.ts",
+    "src/marble/physics.ts"
+  ]
+}
