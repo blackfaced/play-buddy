@@ -19,6 +19,7 @@ import {
   reportGameSession,
   isHomeMode,
   isFusionEnabled,
+  resolveRewardCapMs,
   SB_REWARD_CAP_MS,
   SB_REWARD_PER_SESSION_MS,
   type SBFetch,
@@ -175,6 +176,25 @@ async function main() {
   check('开关开启时会打 /api/apps', probeLog.length > 0);
   check('开关开启时算出 3 局 × 5min = 15min（受日封顶 10min 约束）', r7?.rewardMs === SB_REWARD_CAP_MS);
   check('开关开启时聚合正确率正常计算（3 应用共 30 题对 27 题）', r7?.accuracy === 27 / 30);
+
+  // ---- 5. 日封顶环境变量 ----
+  console.log('\n[5] 奖励日封顶环境变量');
+  const cap = (v: unknown, expectMin: number, label: string) =>
+    check(label, resolveRewardCapMs(v === undefined ? {} : { VITE_SB_REWARD_CAP_MIN: v }) === expectMin * MIN);
+  cap(undefined, 10, '未设置 → 默认 10 分钟');
+  cap('', 10, '空字符串 → 默认 10 分钟');
+  cap('10', 10, '"10" → 10 分钟');
+  cap('15', 15, '"15" → 15 分钟（家长要的）');
+  cap(' 15 ', 15, '带空格的 "15" → 15 分钟');
+  cap('30', 30, '"30" → 30 分钟');
+  cap(15, 15, '数字 15 → 15 分钟');
+  cap('0', 10, '"0" → 回落默认（不能把奖励全掐死）');
+  cap('-5', 10, '负数 → 回落默认');
+  cap('abc', 10, '非数字 → 回落默认');
+  cap('NaN', 10, '"NaN" → 回落默认');
+  cap('Infinity', 10, '"Infinity" → 回落默认');
+  cap('1.5', 1.5, '"1.5" → 保留 1.5 分钟（90 秒）');
+  check('默认 10 分钟 = 2 局 × 5 分钟', SB_REWARD_CAP_MS === 10 * MIN);
 
   console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);
