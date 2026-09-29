@@ -105,7 +105,63 @@ token 大约 1 分钟内就会被判过期（我们实测 `eo_time` 编码的时
 
 ---
 
-## 六、本地部署到 study-buddy（Mac mini）
+## 六、部署通道（不限于 EdgeOne）
+
+本项目**构建产物是纯静态的**（`dist/` = 若干 HTML + 一个 JS + 一个 CSS），**任何静态托管服务都能直接用**，不依赖任何后端。
+
+### 通用三步
+
+```bash
+git clone https://github.com/blackfaced/play-buddy.git
+cd play-buddy
+npm install
+npm run build:static          # 产物在 dist/，直接可托管
+```
+
+然后把 `dist/` 丢给任意静态托管平台即可。平台无关的关键点：
+
+- **构建命令**：`npm run build:static`（不是 `build` —— 后者会探测 `/api/apps` 并白等 2.5s 超时）
+- **输出目录**：`dist`
+- **环境变量**：`VITE_STUDY_BUDDY_ENABLED=false`（`build:static` 已经带了，手动构建时需显式设置）
+- **不需要**后端、数据库、备案、VPS
+
+### 当前使用的通道
+
+| 通道 | 生产 | 测试 | 备注 |
+|---|---|---|---|
+| Kimi 部署（主通道） | `main` | `staging` | 域名稳定，认领固定项目后每次覆盖更新 |
+| EdgeOne Pages | `play-buddy-1hsirbvf.edgeone.cool` | `play-buddy-test-dzv7t2mx.zh-cn.edgeone.cool` | 备选，⚠️ 免费二级域名有访问限制 |
+
+**用 Kimi 部署时，只需告诉它：**
+> 部署 `blackfaced/play-buddy` 仓库的 `staging` 分支，构建命令 `npm run build:static`，输出目录 `dist`。
+
+首次部署后**务必让它认领（claim）到固定账号** —— 未认领的匿名项目每次部署可能新建，导致链接变化。认领后即为覆盖更新，链接永久不变。
+
+### 免登录快速预览（任意通道都适用）
+
+改了东西想立刻看效果，不等正式部署（**3 小时有效**，只用于临时预览）：
+
+```bash
+npm run build:static
+PAGES_SOURCE=skills edgeone makers deploy ./dist --anonymous --json
+```
+
+返回带签名的 URL：
+
+```
+https://<name>-<hash>.edgeone.cool?eo_token=...&eo_time=...
+```
+
+**三条硬规则**：
+1. **URL 不能截断** —— 去掉 `?eo_token=...` 就 401。转述给用户时必须带完整 query string。
+2. 平台通过 Set-Cookie 传递凭证（`Max-Age=10800`，3 小时），浏览器自动带上；**curl 测必须手动加** `-H "Cookie: eo_token=...; eo_time=..."`，否则 401。
+3. 不是长期方案。长期访问仍需固定项目（Kimi 认领）或备案域名。
+
+需 `edgeone` CLI：`npm install -g edgeone@latest`。
+
+---
+
+## 七、本地部署到 study-buddy（Mac mini）
 
 仅在「在家」模式需要 —— 保留学习换时长和错题同步。
 
@@ -118,7 +174,7 @@ tar -czf play-buddy.tar.gz -C dist-sb .
 
 ---
 
-## 七、常见问题
+## 八、常见问题
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
@@ -131,7 +187,7 @@ tar -czf play-buddy.tar.gz -C dist-sb .
 
 ---
 
-## 八、给 AI 协作者的部署检查清单
+## 九、给 AI 协作者的部署检查清单
 
 拿到本仓库的 EdgeOne 部署任务时，按此顺序确认：
 
