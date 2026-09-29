@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { getItem, setItem, listKeys, removeItem, storageAvailable } from '@/lib/storage';
 import { playBell } from '@/game/sound';
 import { LEVELS, starsFor } from '@/game/levels';
-import { reportGameSession, SB_REWARD_CAP_MS } from '@/game/studyBuddy';
+import { creditBonus, REWARD_CAP_MS } from '@/lib/reward';
 import { logDiag } from '@/lib/diag';
 
 export const MIN = 60_000;
@@ -300,8 +300,7 @@ interface StoreState {
   lastTick: number;
   capCuts: number; // 今日强制休息触发次数（每次当日上限 -15 分钟）
   lastVisibleAt: number; // 最近一次页面可见的时间（主动休息判定）
-  rewardMs: number; // 今日学习奖励时长（study-buddy 在家模式；只放宽每日上限）
-  homeMode: boolean; // 是否探测到 study-buddy API（true = 在家融合模式）
+  rewardMs: number; // 今日学习奖励时长（本机入账，学习类游戏通关获得；只放宽每日上限）
   storageOk: boolean;
 
   // ---- settings ----
@@ -349,8 +348,9 @@ interface StoreState {
 
   // ---- actions ----
   tick: () => void;
-  /** 同步 study-buddy 学习奖励：home=false 表示 API 不可达（纯玩模式，保留已有奖励） */
-  setStudyStatus: (home: boolean, rewardMs: number) => void;
+  /** 学习类游戏通关后入账奖励时长（本机，日封顶 REWARD_CAP_MS）。
+   *  返回实际入账毫秒数（今日已封顶时为 0），供结算界面如实展示。 */
+  addStudyBonus: (deltaMs: number) => number;
   dismissBreakToast: () => void;
   closeRest: () => void;
   toggleSound: () => void;
@@ -431,7 +431,6 @@ export const useStore = create<StoreState>((set, get) => ({
   capCuts: capCuts0,
   lastVisibleAt: now0,
   rewardMs: reward0,
-  homeMode: false,
   storageOk: storageAvailable,
 
   soundOn: getItem('bb.sound') !== 'off',
@@ -483,7 +482,7 @@ export const useStore = create<StoreState>((set, get) => ({
       roundsToday = 0;
       lastBreakMin = -1;
       capCuts = 0;
-      rewardMs = 0; // 学习奖励按日重算（下次同步时由 study-buddy 数据回填）
+      rewardMs = 0; // 学习奖励按日重算（本机入账，跨天清零）
       if (lock === 'cap') lock = null;
       if (lock === 'rest' && restUntil <= now) {
         lock = null;
@@ -575,19 +574,17 @@ export const useStore = create<StoreState>((set, get) => ({
     });
   },
 
-  setStudyStatus: (home, reward) => {
+  addStudyBonus: (deltaMs) => {
     const s = get();
-    const clamped = Math.max(0, Math.min(SB_REWARD_CAP_MS, Math.floor(reward)));
-    if (home) setItem(`bb.reward.${s.curDate}`, String(clamped));
+    const { totalMs, creditedMs } = creditBonus(s.rewardMs, deltaMs, REWARD_CAP_MS);
+    if (creditedMs <= 0) return 0;
+    setItem(`bb.reward.${s.curDate}`, String(totalMs));
     // 奖励提高有效上限后，可能把"今日上限已用完"的孩子解锁回来
     const unlock =
-      s.lock === 'cap' &&
-      s.todayMs < dailyCapMs(s.capCuts, isHolidayKey(s.curDate)) + clamped;
-    set({
-      homeMode: home,
-      ...(home ? { rewardMs: clamped } : {}),
-      ...(unlock ? { lock: null } : {}),
-    });
+      s.lock === 'cap' && s.todayMs < dailyCapMs(s.capCuts, isHolidayKey(s.curDate)) + totalMs;
+    logDiag('reward', `学习奖励入账 +${Math.round(creditedMs / 1000)}s（今日累计 ${Math.round(totalMs / 60000)}min）`);
+    set({ rewardMs: totalMs, ...(unlock ? { lock: null } : {}) });
+    return creditedMs;
   },
 
   dismissBreakToast: () => set({ breakToastMin: null }),
@@ -741,8 +738,6 @@ export const useStore = create<StoreState>((set, get) => ({
           newHistBest,
         },
       });
-      // 在家模式：上报本局到 study-buddy 家长看板（纯玩模式下为 no-op）
-      reportGameSession({ durationMs: u.roundMs });
       return;
     }
 
@@ -816,8 +811,6 @@ export const useStore = create<StoreState>((set, get) => ({
       roundCoins: u.coins,
       lastCoinsEarned: coinsEarned,
     });
-    // 在家模式：上报本局到 study-buddy 家长看板（纯玩模式下为 no-op）
-    reportGameSession({ durationMs: u.roundMs });
   },
 }));
 
@@ -842,12 +835,11 @@ export function useDailyCap(): {
   capMs: number;
   holiday: boolean;
   rewardMs: number;
-  homeMode: boolean;
+  rewardCapMs: number;
 } {
   const capCuts = useStore((s) => s.capCuts);
   const curDate = useStore((s) => s.curDate);
   const rewardMs = useStore((s) => s.rewardMs);
-  const homeMode = useStore((s) => s.homeMode);
   const holiday = isHolidayKey(curDate);
-  return { capMs: dailyCapMs(capCuts, holiday) + rewardMs, holiday, rewardMs, homeMode };
+  return { capMs: dailyCapMs(capCuts, holiday) + rewardMs, holiday, rewardMs, rewardCapMs: REWARD_CAP_MS };
 }
