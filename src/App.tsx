@@ -2,9 +2,10 @@ import { useEffect } from 'react';
 import { Routes, Route } from 'react-router';
 import Home from './pages/Home';
 import Marble from './pages/Marble';
+import MathIsland from './mathisland/MathIsland';
 import { BreakToast, ForcedRestOverlay, DailyCapOverlay } from '@/components/HealthOverlays';
 import { useStore, dateKeyOf } from '@/store/useStore';
-import { probeStudyBuddy, fetchStudyReward } from '@/game/studyBuddy';
+import { probeStudyBuddy, fetchStudyReward, FUSION_ENABLED } from '@/game/studyBuddy';
 import { logDiag, setDiagSnapshotProvider } from '@/lib/diag';
 
 /** 诊断：注册实时状态快照 + 记录阶段/锁定/模式变化（本地环形缓冲，不上传） */
@@ -54,9 +55,14 @@ function useAntiAddictionClock() {
 }
 
 /** study-buddy 融合：在家（API 可达）时同步"学习换时长"奖励；
- *  在外（静态部署）探测失败，自动退回纯玩模式。 */
+ *  在外（静态部署）探测失败，自动退回纯玩模式。
+ *  构建期用 VITE_STUDY_BUDDY_ENABLED=false 可彻底关闭（连探测都不发）。 */
 function useStudyBuddySync() {
   useEffect(() => {
+    if (!FUSION_ENABLED) {
+      useStore.getState().setStudyStatus(false, 0);
+      return;
+    }
     let disposed = false;
     let syncing = false;
     const sync = async () => {
@@ -111,6 +117,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/marble" element={<Marble />} />
+        <Route path="/math" element={<MathIsland />} />
       </Routes>
       <HealthGate />
     </>

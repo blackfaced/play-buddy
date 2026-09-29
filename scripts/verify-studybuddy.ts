@@ -18,6 +18,7 @@ import {
   fetchStudyReward,
   reportGameSession,
   isHomeMode,
+  isFusionEnabled,
   SB_REWARD_CAP_MS,
   SB_REWARD_PER_SESSION_MS,
   type SBFetch,
@@ -138,6 +139,42 @@ async function main() {
   await probeStudyBuddy(mockFetch({ '/api/apps': APPS })); // 切回在家模式
   reportGameSession({ durationMs: 65_000 }, mockFetch({ '/api/game/session': { sessionId: 1 } }, log));
   check('在家模式发出 1 条 POST /api/game/session', log.length === 1 && log[0] === 'POST /api/game/session');
+
+  // ---- 4. 环境变量开关 ----
+  console.log('\n[4] 融合层环境变量开关');
+  const t0 = (v: Record<string, unknown>, expect: boolean, label: string) =>
+    check(label, isFusionEnabled(v) === expect);
+
+  t0({}, true, '未设置 → 开启（维持既有行为）');
+  t0({ VITE_STUDY_BUDDY_ENABLED: '' }, true, '空字符串 → 开启');
+  t0({ VITE_STUDY_BUDDY_ENABLED: 'true' }, true, '"true" → 开启');
+  t0({ VITE_STUDY_BUDDY_ENABLED: 'false' }, false, '"false" → 关闭');
+  t0({ VITE_STUDY_BUDDY_ENABLED: 'FALSE' }, false, '"FALSE"（大写）→ 关闭');
+  t0({ VITE_STUDY_BUDDY_ENABLED: ' false ' }, false, '带空格的 "false" → 关闭');
+  t0({ VITE_STUDY_BUDDY_ENABLED: '0' }, false, '"0" → 关闭');
+  t0({ VITE_STUDY_BUDDY_ENABLED: 'off' }, false, '"off" → 关闭');
+  t0({ VITE_STUDY_BUDDY_ENABLED: 'no' }, false, '"no" → 关闭');
+  t0({ VITE_STUDY_BUDDY_ENABLED: true }, true, '布尔 true → 开启');
+  t0({ VITE_STUDY_BUDDY_ENABLED: false }, false, '布尔 false → 关闭');
+
+  // 开关开启时 fetchStudyReward 照常走网络并算出奖励
+  const probeLog: string[] = [];
+  const r7 = await fetchStudyReward(
+    TODAY,
+    mockFetch(
+      {
+        '/api/apps': APPS,
+        '/api/game/daily?days=1&appId=candy-math-island': daily(TODAY, 2, 10, 9),
+        '/api/game/daily?days=1&appId=multiplication-drill': daily(TODAY, 1, 10, 9),
+        '/api/game/daily?days=1&appId=write': daily(TODAY, 1, 10, 9),
+      },
+      probeLog,
+    ),
+  );
+  check('开关开启时 fetchStudyReward 正常返回', r7 !== null);
+  check('开关开启时会打 /api/apps', probeLog.length > 0);
+  check('开关开启时算出 3 局 × 5min = 15min（受日封顶 10min 约束）', r7?.rewardMs === SB_REWARD_CAP_MS);
+  check('开关开启时聚合正确率正常计算（3 应用共 30 题对 27 题）', r7?.accuracy === 27 / 30);
 
   console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);
