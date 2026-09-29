@@ -1,11 +1,11 @@
 # play-buddy · 孩子的游戏乐园
 
 给孩子的小游戏合集，与 [study-buddy](https://github.com/blackfaced/study-buddy) 配套：
-学习找 study-buddy，玩耍找 play-buddy。
+学习找 study-buddy，玩耍找 play-buddy。构建产物为纯静态，任意静态托管可用；
+在家与 study-buddy 联动（学习换时长、错题同步），在外纯玩。
 
-> 📦 部署到 EdgeOne Pages（生产 / 测试双站）见 **[docs/deploy.md](docs/deploy.md)**；
-> 实际踩过的坑与排查记录见 **[docs/deploy-notes.md](docs/deploy-notes.md)**。
-> ⚠️ 免费二级域名有访问限制，长期外网访问需绑定已备案的自定义域名。
+> 📦 **部署**（生产 `main` / 测试 `staging`）见 **[docs/deploy.md](docs/deploy.md)**；
+> 踩过的坑与排查记录见 **[docs/deploy-notes.md](docs/deploy-notes.md)**。
 >
 > 🤖 **AI 协作者请先读 [AGENTS.md](AGENTS.md)** —— 项目结构、部署约定、测试命令、已知陷阱都在里面。
 

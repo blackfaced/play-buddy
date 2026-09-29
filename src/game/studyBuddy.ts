@@ -5,7 +5,7 @@
 // 同一个构建产物跑两种环境：
 //   在家 — 由 study-buddy 的 Express 托管在 /games/balance-blocks/，
 //          /api/* 同源可达 → 开启"学习换时长"奖励 + 游玩会话上报
-//   在外 — 静态部署（EdgeOne 等，无 API），所有调用静默失败 → 纯玩模式
+//   在外 — 静态托管（无 study-buddy API），所有调用静默失败 → 纯玩模式
 //
 // 开关（构建期环境变量，Vite 只暴露 VITE_ 前缀）：
 //   VITE_STUDY_BUDDY_ENABLED=false → 彻底关闭融合层：不探测、不请求，

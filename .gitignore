@@ -7,6 +7,6 @@ dist-sb/
 .env.*.local
 !/.env.example
 
-# EdgeOne CLI 生成的本地状态（含匿名 token）
+# 部署 CLI 生成的本地状态（可能含访问 token，切勿提交）
 .edgeone/
 edgeone.json

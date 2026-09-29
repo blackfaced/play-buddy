@@ -35,20 +35,10 @@ play-buddy/
 | 通道 | 生产 | 测试 |
 |---|---|---|
 | **Kimi 部署（主通道）** | `main` | `staging` |
-| EdgeOne Pages（备选） | `play-buddy` | `play-buddy-test` |
 
 要部署时告诉对方：**仓库 `blackfaced/play-buddy` + 分支 + `npm run build:static` + 输出 `dist`**。
 
-| | 生产 | 测试 |
-|---|---|---|
-| 分支 | `main` | `staging` |
-| 用途 | 给孩子正式用 | 开发验证 |
-
-两分支各对应一个稳定链接。**Kimi 那边首次部署后务必 claim 到固定账号**，之后是覆盖更新而非新建。
-
 ⚠️ **构建命令一律 `npm run build:static`**（不是 `build` —— 后者会探测 `/api/apps`，白等 2.5s 超时）。
-
-⚠️ **EdgeOne 免费二级域名有访问限制**：平台赠送的 `*.edgeone.cool` 裸访问 401，只能用 Preview 临时链接（3 小时）。**这是平台合规限制，不是构建问题** —— 遇到 401 不用改构建配置。长期访问需绑定已 ICP 备案的自定义域名。
 
 家里 Mac mini 部署用 `npm run build`（保留学习换时长），构建 base 为 `/games/balance-blocks/`。
 
