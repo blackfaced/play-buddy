@@ -41,6 +41,7 @@ export function isFusionEnabled(env: Record<string, unknown> = {}): boolean {
  * `define` 把构建期 env 写进去。Node 单测下该点不存在 → 默认开启。
  */
 declare const __STUDY_BUDDY_ENABLED__: string | undefined;
+declare const __SB_REWARD_CAP_MIN__: string | undefined;
 
 export const FUSION_ENABLED = ((): boolean => {
   try {
@@ -58,7 +59,35 @@ export const SB_APP_ID = 'balance-blocks';
 /** study-buddy 的孩子档案 id（单孩子家庭部署固定为 default） */
 export const SB_CHILD_ID = 'default';
 export const SB_REWARD_PER_SESSION_MS = 5 * MIN;
-export const SB_REWARD_CAP_MS = 10 * MIN;
+
+/** 默认日封顶 10 分钟；可用 VITE_SB_REWARD_CAP_MIN 覆盖（家长可调到 15） */
+export const SB_REWARD_CAP_DEFAULT_MIN = 10;
+
+/**
+ * 日封顶分钟数。抽出成纯函数便于单测；env 形如 { VITE_SB_REWARD_CAP_MIN: '15' }。
+ * 取值非法（≤0 / 非数字）时回落到默认 10，不静默产生 0 上限把奖励全掐死。
+ */
+export function resolveRewardCapMs(env: Record<string, unknown> = {}): number {
+  const raw = env.VITE_SB_REWARD_CAP_MIN;
+  if (raw === undefined || raw === null || raw === '') return SB_REWARD_CAP_DEFAULT_MIN * MIN;
+  const n = Number(String(raw).trim());
+  if (!Number.isFinite(n) || n <= 0) return SB_REWARD_CAP_DEFAULT_MIN * MIN;
+  return Math.round(n * MIN);
+}
+/** 日封顶毫秒数，同样经 define 注入（Node 单测下不存在 → 取默认 10 分钟） */
+export const SB_REWARD_CAP_MS = ((): number => {
+  try {
+    if (typeof __STUDY_BUDDY_ENABLED__ !== 'undefined' || typeof __SB_REWARD_CAP_MIN__ !== 'undefined') {
+      return resolveRewardCapMs({
+        VITE_SB_REWARD_CAP_MIN: typeof __SB_REWARD_CAP_MIN__ === 'undefined' ? '' : __SB_REWARD_CAP_MIN__,
+      });
+    }
+  } catch {
+    /* 未注入 → 默认值 */
+  }
+  return resolveRewardCapMs();
+})();
+
 export const SB_MIN_ACCURACY = 0.6;
 const PROBE_TIMEOUT_MS = 2500;
 

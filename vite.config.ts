@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       __STUDY_BUDDY_ENABLED__: JSON.stringify(studyBuddyFlag),
+      __SB_REWARD_CAP_MIN__: JSON.stringify(env.VITE_SB_REWARD_CAP_MIN ?? ""),
     },
   }
 })
