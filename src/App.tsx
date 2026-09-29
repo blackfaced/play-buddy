@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Routes, Route } from 'react-router';
 import Home from './pages/Home';
 import Marble from './pages/Marble';
+import MathIsland from './mathisland/MathIsland';
 import { BreakToast, ForcedRestOverlay, DailyCapOverlay } from '@/components/HealthOverlays';
 import { useStore, dateKeyOf } from '@/store/useStore';
 import { probeStudyBuddy, fetchStudyReward } from '@/game/studyBuddy';
@@ -111,6 +112,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/marble" element={<Marble />} />
+        <Route path="/math" element={<MathIsland />} />
       </Routes>
       <HealthGate />
     </>
