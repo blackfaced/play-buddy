@@ -1179,16 +1179,23 @@ export class GameEngine {
     // 而是倾斜后和邻居互相卡住（侧向摩擦/边角互锁）。只唤醒它自己时，邻居
     // 还在睡、接触求解器把旧平衡焊死，它蠕动不到 0.5s（sleepThreshold 30）
     // 又重新睡着，于是永远悬空（实测：第 86/87/88/91 关均可复现）。阶梯式
-    // 处置：连续 WEDGE_STREAK 次审计（≈0.75s）仍悬空且几乎不动 → 全塔唤醒
-    // （等同 beginPlay 开局状态，≤50 层安全有界；顽固互锁可能延伸到 3 格
-    // 半径之外——第 44 关个案局部唤醒无效）；连续 WEDGE_STREAK_HARD 次
-    // （≈2s）→ 全醒 + 接触圈暂时去摩擦打破静摩擦（第 61 关"斜撑"个案：
-    // -100° 斜搭在单点顶角上，全醒 10s 也解不开，去摩擦才滑落），1.5s 后
-    // 恢复原摩擦，还卡着就 ~2s 后再来一轮，直到落稳或坠落。
-    const WEDGE_STREAK = 3;
-    const WEDGE_STREAK_HARD = 8;
+    // 处置，全部局部化（绝不整塔唤醒——见 WEDGE_STREAK_WIDE 注释）：
+    //   ≈0.75s 仍悬空且几乎不动 → 唤醒 3 格邻域（楔住集群）
+    //   ≈1.5s → 唤醒 6 格邻域（第 44 关：互锁延伸超过 3 格）
+    //   ≈2.25s → 接触圈 2.5 格内暂时去摩擦 1.5s（第 61 关"斜撑"个案：-100°
+    //     斜搭在单点顶角上，光唤醒来不及解开，去摩擦才滑落），重置阶梯循环
+    const WEDGE_STREAK = 3; // ≈0.75 s stuck → wake the wedge cluster
+    const WEDGE_STREAK_WIDE = 6; // ≈1.5 s → wider cluster (interlocks span >3 cells)
+    const WEDGE_STREAK_HARD = 9; // ≈2.25 s → friction break (leaning-peg case)
     const STILL_SPEED = 0.3; // faster than this it's honestly falling, not stuck
     const hero = this.hero;
+    const wakeCluster = (b: Matter.Body, radius: number) => {
+      for (const o of near) {
+        if (Math.abs(o.position.x - b.position.x) <= radius && Math.abs(o.position.y - b.position.y) <= radius) {
+          Matter.Sleeping.set(o, false);
+        }
+      }
+    };
     for (const b of near) {
       const supported = hasSupport(b);
       if (supported || (!b.isSleeping && b.speed >= STILL_SPEED)) {
@@ -1196,10 +1203,21 @@ export class GameEngine {
         continue;
       }
       Matter.Sleeping.set(b, false);
-      const streak = (this.unsupportedStreak.get(b.id) ?? 0) + 1;
+      // 下潜井道保护：hero 正下方 ±4 格宽的区域是它的落脚点通道——楔住在
+      // 井道里的积木"看着像普通积木"且会被当作落脚点（实测 L50 谨慎 bot
+      // 提前捅掉井道楔住块后全灭）。井道外（上方残留、两侧伸出）的悬空
+      // 积木清掉永远安全，正常升级阶梯；井道内的冻结阶梯、保持基线单体
+      // 唤醒，等 hero 爬过去（不再在井道内）后自然会被清理。
+      const inShaft =
+        b.position.y > hero.position.y - 2 * CELL && Math.abs(b.position.x - hero.position.x) <= 4 * CELL;
+      const streak = Math.min((this.unsupportedStreak.get(b.id) ?? 0) + 1, inShaft ? WEDGE_STREAK - 1 : 99);
       this.unsupportedStreak.set(b.id, streak);
-      if (streak >= WEDGE_STREAK) {
-        for (const o of near) Matter.Sleeping.set(o, false);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (streak >= WEDGE_STREAK && (globalThis as any).process?.env?.BB_DEBUG_WEDGE) {
+        console.log(
+          `[wedge] t=${Math.round(this.simT)} id=${b.id} streak=${streak} b=(${Math.round(b.position.x)},${Math.round(b.position.y)}) ` +
+            `hero=(${Math.round(hero.position.x)},${Math.round(hero.position.y)}) dist=${Math.round(Math.hypot(b.position.x - hero.position.x, b.position.y - hero.position.y))}`,
+        );
       }
       if (streak >= WEDGE_STREAK_HARD) {
         // 去摩擦作用于悬空块的接触圈，但 hero 正踩着（hero 底≈积木顶）的
@@ -1220,6 +1238,13 @@ export class GameEngine {
           Matter.Body.set(o, 'friction', 0.02);
         }
         this.unsupportedStreak.set(b.id, 0);
+      } else if (streak >= WEDGE_STREAK_WIDE) {
+        // 顽固楔住的互锁结构可能延伸到 3 格之外（第 44 关个案），扩到 6 格。
+        // 不要全塔唤醒：对局中惊醒整座塔会让深堆沉降一次性释放（蠕动→倾覆），
+        // 谨慎下潜的 hero 会被自己脚下的坍塌害死（难度回归实测 L30/L50）。
+        wakeCluster(b, 6 * CELL);
+      } else if (streak >= WEDGE_STREAK) {
+        wakeCluster(b, 3 * CELL);
       }
     }
     // prune streaks of removed blocks
