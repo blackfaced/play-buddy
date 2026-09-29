@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "CommonJS",
-    "moduleResolution": "node",
     "rootDir": ".",
     "outDir": "node_modules/.tmp-verify",
     "esModuleInterop": true,
@@ -10,7 +9,8 @@
     "strict": true,
     "types": [
       "node"
-    ]
+    ],
+    "moduleResolution": "node10"
   },
   "include": [
     "scripts/verify-towers.ts",
@@ -27,6 +27,8 @@
     "src/game/sound.ts",
     "scripts/verify-studybuddy.ts",
     "src/game/studyBuddy.ts",
-    "scripts/probe-floaters.ts"
+    "scripts/probe-floaters.ts",
+    "scripts/verify-math-island.ts",
+    "src/mathisland/generate.ts"
   ]
 }
