@@ -30,16 +30,27 @@ play-buddy/
 
 **先读 [docs/deploy.md](docs/deploy.md)。** 摘要：
 
+构建产物是**纯静态**的（`dist/` = HTML + JS + CSS），**任何静态托管都能用**，不依赖后端。
+
+| 通道 | 生产 | 测试 |
+|---|---|---|
+| **Kimi 部署（主通道）** | `main` | `staging` |
+| EdgeOne Pages（备选） | `play-buddy` | `play-buddy-test` |
+
+要部署时告诉对方：**仓库 `blackfaced/play-buddy` + 分支 + `npm run build:static` + 输出 `dist`**。
+
 | | 生产 | 测试 |
 |---|---|---|
 | 分支 | `main` | `staging` |
-| EdgeOne 项目 | `play-buddy` | `play-buddy-test` |
 | 用途 | 给孩子正式用 | 开发验证 |
 
-- EdgeOne Pages 两个项目**各绑一个分支作为生产分支**，链接永久稳定
-- **外网部署构建命令一律 `npm run build:static`**（不是 `build` —— 后者会探测 `/api/apps`，白等 2.5s 超时）
-- ⚠️ **免费二级域名有访问限制**：平台赠送的 `*.edgeone.cool` 只能通过 Preview 按钮的临时链接访问（实测 token 约 60 秒即失效）。长期外网访问需绑定已 ICP 备案的自定义域名。遇到 401 不用改构建配置。
-- 家里 Mac mini 部署用 `npm run build`（保留学习换时长），构建 base 为 `/games/balance-blocks/`
+两分支各对应一个稳定链接。**Kimi 那边首次部署后务必 claim 到固定账号**，之后是覆盖更新而非新建。
+
+⚠️ **构建命令一律 `npm run build:static`**（不是 `build` —— 后者会探测 `/api/apps`，白等 2.5s 超时）。
+
+⚠️ **EdgeOne 免费二级域名有访问限制**：平台赠送的 `*.edgeone.cool` 裸访问 401，只能用 Preview 临时链接（3 小时）。**这是平台合规限制，不是构建问题** —— 遇到 401 不用改构建配置。长期访问需绑定已 ICP 备案的自定义域名。
+
+家里 Mac mini 部署用 `npm run build`（保留学习换时长），构建 base 为 `/games/balance-blocks/`。
 
 ## 环境变量
 
@@ -75,30 +86,6 @@ npm run verify:marble
 **TDD：先写 verify 脚本并确认它失败，再实现。**
 
 新增纯逻辑模块（题目生成、计分、关卡）优先放进独立文件以便无头验证 —— 参考 `src/mathisland/generate.ts` 的做法：纯函数、不碰 DOM，可以跑几万轮。
-
-## 快速预览（免登录，3 小时有效）
-
-改了东西想先看看效果，不必等 EdgeOne 构建：
-
-```bash
-npm run build:static
-PAGES_SOURCE=skills edgeone makers deploy ./dist --anonymous --json
-```
-
-`--anonymous` 免登录建一个临时项目，**返回带签名的 URL**：
-
-```
-https://<name>-<hash>.edgeone.cool?eo_token=...&eo_time=...
-```
-
-**三条硬规则**：
-1. **URL 绝对不能截断** —— 去掉 `?eo_token=...` 就 401。转述给用户时必须带完整 query string。
-2. 平台把 token 写进 Cookie（`Max-Age=10800`，3 小时），浏览器会自动带上；用 curl 测必须手动加 `-H "Cookie: eo_token=...; eo_time=..."`，否则 401。
-3. 3 小时后失效，重新跑一次部署命令拿新链接。**这不是长期方案**，长期访问见上面的备案域名说明。
-
-参数：`-n` / `-e` 在匿名模式下被忽略（项目名自动生成）。
-
-需要 `edgeone` CLI：`npm install -g edgeone@latest`。相关 skill 已装在 `/workspace/.skills/makers-*`。
 
 ## Gotchas
 
