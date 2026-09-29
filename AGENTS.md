@@ -76,6 +76,30 @@ npm run verify:marble
 
 新增纯逻辑模块（题目生成、计分、关卡）优先放进独立文件以便无头验证 —— 参考 `src/mathisland/generate.ts` 的做法：纯函数、不碰 DOM，可以跑几万轮。
 
+## 快速预览（免登录，3 小时有效）
+
+改了东西想先看看效果，不必等 EdgeOne 构建：
+
+```bash
+npm run build:static
+PAGES_SOURCE=skills edgeone makers deploy ./dist --anonymous --json
+```
+
+`--anonymous` 免登录建一个临时项目，**返回带签名的 URL**：
+
+```
+https://<name>-<hash>.edgeone.cool?eo_token=...&eo_time=...
+```
+
+**三条硬规则**：
+1. **URL 绝对不能截断** —— 去掉 `?eo_token=...` 就 401。转述给用户时必须带完整 query string。
+2. 平台把 token 写进 Cookie（`Max-Age=10800`，3 小时），浏览器会自动带上；用 curl 测必须手动加 `-H "Cookie: eo_token=...; eo_time=..."`，否则 401。
+3. 3 小时后失效，重新跑一次部署命令拿新链接。**这不是长期方案**，长期访问见上面的备案域名说明。
+
+参数：`-n` / `-e` 在匿名模式下被忽略（项目名自动生成）。
+
+需要 `edgeone` CLI：`npm install -g edgeone@latest`。相关 skill 已装在 `/workspace/.skills/makers-*`。
+
 ## Gotchas
 
 - **`src/game/studyBuddy.ts` 不能用 `import.meta`** —— `verify:studybuddy` 用 CommonJS 编译（`tsconfig.verify.json`），那个模式下 `import.meta` 是 TS1343 语法错误。环境变量经 `vite.config.ts` 的 `define` 注入为 `globalThis` 常量。改这个文件必须跑 `npm run verify:studybuddy`。
