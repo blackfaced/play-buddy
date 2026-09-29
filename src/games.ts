@@ -49,6 +49,16 @@ export const GAMES: GameEntry[] = [
     accentSoft: '#F3E0D3',
   },
   {
+    id: 'write',
+    path: '/write',
+    title: '字的构造台',
+    emoji: '🖌',
+    tagline: '先看清字长什么样，再在纸上写',
+    category: 'study',
+    accent: '#5A7A4A',
+    accentSoft: '#E9F0E2',
+  },
+  {
     id: 'mul',
     path: '/mul',
     title: '乘法大冒险',

@@ -31,6 +31,9 @@
     "scripts/verify-reward.ts",
     "src/lib/reward.ts",
     "scripts/verify-mul-drill.ts",
-    "src/muldrill/pick-gen.ts"
+    "src/muldrill/pick-gen.ts",
+    "scripts/verify-write.ts",
+    "src/write/structure.ts",
+    "src/write/strokes.ts"
   ]
 }
