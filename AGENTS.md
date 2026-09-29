@@ -72,6 +72,10 @@ play-buddy/
 ## Conventions
 
 - **不改 `src/components/ui/`** —— shadcn 生成，需要时用 `npx shadcn add <组件>` 重新生成
+- **新游戏一律在 `src/games.ts` 登记** —— 不要再去 `Overlays.tsx` 手写推广卡，
+  那边只有回大厅链接，登记表是唯一入口。还没到学习进度的游戏加 `hidden: true`：
+  代码落地、路由可直达（`/games.ts` 注释里写了 `visibleGames()` 过滤），
+  大厅不展示。e2e 要同时断言"大厅看不到"和"路由仍可达"。
 - **新游戏做成自包含模块**（像 `marble/` 和 `mathisland/` 那样自带存档和音效），不侵入 `useStore`。主 store 只管全局防沉迷时钟和时长。加完在 `src/games.ts` 注册一行，标明 `study` / `play`。
 - **学习类游戏通关调 `useStore.getState().addStudyBonus(bonusMs)`** —— 返回实际入账毫秒数（受日封顶截断），结算界面要展示实际入账，而不是只展示名义奖励。
 - **游戏内计时与防沉迷计时是两回事** —— 防沉迷是**限制总屏幕时间**，游戏内倒计时是**催促本轮**。两者同屏出现会互相打架（一个说"还剩 18 分钟能玩"，一个说"这轮还剩 4 分钟"，孩子大概率两个一起无视）。设计时先想清楚这条。

@@ -4,6 +4,7 @@ import Lobby from './pages/Lobby';
 import Home from './pages/Home';
 import Marble from './pages/Marble';
 import MathIsland from './mathisland/MathIsland';
+import MulDrill from './muldrill/MulDrill';
 import { BreakToast, ForcedRestOverlay, DailyCapOverlay } from '@/components/HealthOverlays';
 import { useStore } from '@/store/useStore';
 import { logDiag, setDiagSnapshotProvider } from '@/lib/diag';
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/blocks" element={<Home />} />
         <Route path="/marble" element={<Marble />} />
         <Route path="/math" element={<MathIsland />} />
+        <Route path="/mul" element={<MulDrill />} />
       </Routes>
       <HealthGate />
     </>
