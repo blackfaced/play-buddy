@@ -130,6 +130,15 @@ export function StartOverlay() {
           <span className="text-[14px] font-extrabold text-[#4E8C3F]">🎯 新游戏 · 弹珠轨道</span>
           <span className="text-[11px] font-semibold text-ink-500">搭轨道 · 引弹珠 · 40 关</span>
         </Link>
+        {/* 新游戏入口：糖果口算岛（学 · 换时长） */}
+        <Link
+          to="/math"
+          className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#E8956B]/60 bg-[#FFF3E6] px-3 py-3 text-center transition-colors hover:border-[#E8956B]"
+          aria-label="新游戏：糖果口算岛，100 以内加减法，答得快换游戏时长"
+        >
+          <span className="text-[14px] font-extrabold text-[#B85C38]">🍭 学习 · 糖果口算岛</span>
+          <span className="text-[11px] font-semibold text-ink-500">100 以内加减 · 18 题一关</span>
+        </Link>
         {!storageOk ? (
           <p className="mt-3 text-caption-warm font-bold text-status-yellow">
             当前浏览器无法保存游戏进度（可能处于隐私/无痕模式）
