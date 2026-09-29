@@ -6,6 +6,8 @@
 > 📦 部署到 EdgeOne Pages（生产 / 测试双站）见 **[docs/deploy.md](docs/deploy.md)**；
 > 实际踩过的坑与排查记录见 **[docs/deploy-notes.md](docs/deploy-notes.md)**。
 > ⚠️ 免费二级域名有访问限制，长期外网访问需绑定已备案的自定义域名。
+>
+> 🤖 **AI 协作者请先读 [AGENTS.md](AGENTS.md)** —— 项目结构、部署约定、测试命令、已知陷阱都在里面。
 
 ## 游戏
 
