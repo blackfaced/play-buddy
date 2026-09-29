@@ -6,10 +6,8 @@ import { inspectAttr } from 'plugin-inspect-react-code'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   // 注入构建期环境变量到 globalThis，供不依赖 import.meta 的模块读取
-  // （src/game/studyBuddy.ts 在 CommonJS 的 verify 脚本里不能用 import.meta）
+  // （src/lib/reward.ts 在 CommonJS 的 verify 脚本里不能用 import.meta）
   const env = loadEnv(mode, process.cwd(), "VITE_")
-  const studyBuddyFlag =
-    process.env.VITE_STUDY_BUDDY_ENABLED ?? env.VITE_STUDY_BUDDY_ENABLED ?? ""
 
   return {
     base: './',
@@ -23,8 +21,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      __STUDY_BUDDY_ENABLED__: JSON.stringify(studyBuddyFlag),
-      __SB_REWARD_CAP_MIN__: JSON.stringify(env.VITE_SB_REWARD_CAP_MIN ?? ""),
+      __REWARD_CAP_MIN__: JSON.stringify(env.VITE_REWARD_CAP_MIN ?? ""),
     },
   }
 })

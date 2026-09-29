@@ -25,10 +25,10 @@
     "src/game/endless.ts",
     "src/game/engine.ts",
     "src/game/sound.ts",
-    "scripts/verify-studybuddy.ts",
-    "src/game/studyBuddy.ts",
     "scripts/probe-floaters.ts",
     "scripts/verify-math-island.ts",
-    "src/mathisland/generate.ts"
+    "src/mathisland/generate.ts",
+    "scripts/verify-reward.ts",
+    "src/lib/reward.ts"
   ]
 }
