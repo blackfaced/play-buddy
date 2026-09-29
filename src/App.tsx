@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { Routes, Route } from 'react-router';
+import Lobby from './pages/Lobby';
 import Home from './pages/Home';
 import Marble from './pages/Marble';
 import MathIsland from './mathisland/MathIsland';
 import { BreakToast, ForcedRestOverlay, DailyCapOverlay } from '@/components/HealthOverlays';
-import { useStore, dateKeyOf } from '@/store/useStore';
-import { probeStudyBuddy, fetchStudyReward, FUSION_ENABLED } from '@/game/studyBuddy';
+import { useStore } from '@/store/useStore';
 import { logDiag, setDiagSnapshotProvider } from '@/lib/diag';
 
 /** 诊断：注册实时状态快照 + 记录阶段/锁定/模式变化（本地环形缓冲，不上传） */
@@ -20,7 +20,7 @@ function useDiagnostics() {
         lives: s.lives,
         lock: s.lock,
         todayMin: Math.floor(s.todayMs / 60000),
-        homeMode: s.homeMode,
+        rewardMin: Math.floor(s.rewardMs / 60000),
       };
     });
     let prev = useStore.getState();
@@ -38,7 +38,7 @@ function useDiagnostics() {
 }
 
 /** Global anti-addiction clock: accrues wall-clock play time across ALL games
- *  on the site (balance blocks + marble track), only while the tab is visible. */
+ *  on the site (blocks + marble + math island + future ones), only while the tab is visible. */
 function useAntiAddictionClock() {
   useEffect(() => {
     const id = window.setInterval(() => useStore.getState().tick(), 1000);
@@ -54,53 +54,9 @@ function useAntiAddictionClock() {
   }, []);
 }
 
-/** study-buddy 融合：在家（API 可达）时同步"学习换时长"奖励；
- *  在外（静态部署）探测失败，自动退回纯玩模式。
- *  构建期用 VITE_STUDY_BUDDY_ENABLED=false 可彻底关闭（连探测都不发）。 */
-function useStudyBuddySync() {
-  useEffect(() => {
-    if (!FUSION_ENABLED) {
-      useStore.getState().setStudyStatus(false, 0);
-      return;
-    }
-    let disposed = false;
-    let syncing = false;
-    const sync = async () => {
-      if (syncing) return;
-      syncing = true;
-      try {
-        const home = await probeStudyBuddy();
-        if (disposed) return;
-        if (!home) {
-          useStore.getState().setStudyStatus(false, 0);
-          return;
-        }
-        const r = await fetchStudyReward(dateKeyOf(Date.now()));
-        if (disposed) return;
-        // 奖励拉取异常按 0 处理（仍是在家模式，会话上报保持可用）
-        useStore.getState().setStudyStatus(true, r ? r.rewardMs : 0);
-      } finally {
-        syncing = false;
-      }
-    };
-    void sync();
-    const id = window.setInterval(() => void sync(), 5 * 60_000);
-    const onVis = () => {
-      if (document.visibilityState === 'visible') void sync();
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => {
-      disposed = true;
-      window.clearInterval(id);
-      document.removeEventListener('visibilitychange', onVis);
-    };
-  }, []);
-}
-
-/** Health overlays are global so they also cover the marble game. */
+/** Health overlays are global so they cover every game on the site. */
 function HealthGate() {
   useAntiAddictionClock();
-  useStudyBuddySync();
   useDiagnostics();
   return (
     <>
@@ -115,7 +71,8 @@ export default function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Lobby />} />
+        <Route path="/blocks" element={<Home />} />
         <Route path="/marble" element={<Marble />} />
         <Route path="/math" element={<MathIsland />} />
       </Routes>

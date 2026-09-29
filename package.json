@@ -13,10 +13,9 @@
     "verify:endless": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-endless.js",
     "verify:difficulty": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-difficulty.js",
     "verify:marble": "tsc -p tsconfig.verify-marble.json && node node_modules/.tmp-verify-marble/scripts/verify-marble.js",
-    "verify:studybuddy": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-studybuddy.js",
     "verify:floaters": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/probe-floaters.js",
     "verify:math-island": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-math-island.js",
-    "build:static": "tsc -b && VITE_STUDY_BUDDY_ENABLED=false vite build"
+    "verify:reward": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-reward.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

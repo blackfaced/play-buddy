@@ -65,7 +65,7 @@ function HealthContent() {
   const restUntil = useStore((s) => s.restUntil);
   const nowMs = useStore((s) => s.nowMs);
 
-  const { capMs, holiday, rewardMs, homeMode } = useDailyCap();
+  const { capMs, holiday, rewardMs, rewardCapMs } = useDailyCap();
   const tier = statusTierOf(todayMs, lock, capMs);
   const capCuts = useStore((s) => s.capCuts);
   const capFrac = Math.min(1, todayMs / capMs);
@@ -96,11 +96,9 @@ function HealthContent() {
         <div className="mt-1 text-caption-warm text-ink-400">
           {capped ? '今日已达上限，明天再来吧' : `今日上限 ${fmtMinutes(capMs)} 分钟（${capNote}）`}
         </div>
-        {homeMode && (
-          <div className="mt-1 text-caption-warm text-ink-400">
-            🏠 已连接 study-buddy：完成学习游戏可赚游戏时长（每局 +5 分钟，每日最多 +10 分钟）
-          </div>
-        )}
+        <div className="mt-1 text-caption-warm text-ink-400">
+          🍬 玩学习类游戏可赚游戏时长：今日已得 +{fmtMinutes(rewardMs)} / {fmtMinutes(rewardCapMs)} 分钟
+        </div>
         <div className="mt-2 h-1 overflow-hidden rounded-full bg-sand-200">
           <div
             className={cn('h-full rounded-full transition-[width] duration-300', tierBar)}
