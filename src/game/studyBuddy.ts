@@ -239,3 +239,95 @@ export function reportGameSession(r: SessionReport, f: SBFetch = defaultFetch): 
     /* 静默失败 */
   }
 }
+
+export interface StudySessionReport {
+  /** study-buddy apps registry 里的 id（如 "multiplication-drill"） */
+  appId: string;
+  durationMs: number;
+  totalQuestions: number;
+  correctCount: number;
+}
+
+/**
+ * 上报一局**学习类**游戏的会话（乘法大冒险等），POST /api/game/session。
+ *
+ * 为什么需要单独一个函数：fetchStudyReward() 遍历 /api/apps 拿到全部
+ * 学习 app，逐个查 /api/game/daily?appId=<id> 累加局数与正确率。
+ * study-buddy 侧已把 "multiplication-drill" 登记为 ready，play-buddy
+ * 的 fetchStudyReward 也会去查它 —— 但若迁入 play-buddy 的这局不回传，
+ * 该 appId 的日统计恒为 0，这个学习源就等于从奖励池里消失了。
+ * （同类问题也影响 candy-math-island：它迁入后没有回传。）
+ *
+ * 与 reportGameSession 的区别只在 appId 和题数口径：物理游戏没有题数
+ * 概念记 1/1；学习游戏如实上报 totalQuestions / correctCount，
+ * 正确率要参与"正确率 <60% 不发奖"的判定，填 1/1 会虚高。
+ *
+ * 仅在家模式发送，任何时候静默失败。
+ */
+export function reportStudySession(r: StudySessionReport, f: SBFetch = defaultFetch): void {
+  if (!reachable) return;
+  if (!r.appId || r.appId === SB_APP_ID) return; // 防自反馈，与奖励排除口径一致
+  try {
+    const now = Date.now();
+    const durationSec = Math.max(1, Math.round(r.durationMs / 1000));
+    const totalQuestions = Math.max(1, Math.floor(r.totalQuestions));
+    const correctCount = Math.min(
+      totalQuestions,
+      Math.max(0, Math.floor(r.correctCount)),
+    );
+    void f('/api/game/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        childId: SB_CHILD_ID,
+        appId: r.appId,
+        durationSec,
+        totalQuestions,
+        correctCount,
+        startedAt: now - Math.max(0, Math.round(r.durationMs)),
+        endedAt: now,
+      }),
+    }).catch(() => {
+      /* 静默失败：上报只是看板锦上添花 */
+    });
+  } catch {
+    /* 静默失败 */
+  }
+}
+
+export interface StudyMistakeReport {
+  appId: string;
+  problem: string;
+  userAnswer: string;
+  correctAnswer: string;
+  errorType: string;
+}
+
+/**
+ * 上报一道错题到共享错题账本，POST /api/game/mistake。
+ * 乘法大冒险的错因分类固定为 "multiply"，与 study-buddy 服务端约定一致。
+ * 同样只在在家模式发送、静默失败。
+ */
+export function reportStudyMistake(r: StudyMistakeReport, f: SBFetch = defaultFetch): void {
+  if (!reachable) return;
+  if (!r.appId || r.appId === SB_APP_ID) return;
+  try {
+    void f('/api/game/mistake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        childId: SB_CHILD_ID,
+        appId: r.appId,
+        problem: r.problem,
+        userAnswer: r.userAnswer,
+        correctAnswer: r.correctAnswer,
+        errorType: r.errorType,
+        source: r.appId,
+      }),
+    }).catch(() => {
+      /* 静默失败 */
+    });
+  } catch {
+    /* 静默失败 */
+  }
+}

@@ -29,6 +29,8 @@
     "src/game/studyBuddy.ts",
     "scripts/probe-floaters.ts",
     "scripts/verify-math-island.ts",
-    "src/mathisland/generate.ts"
+    "src/mathisland/generate.ts",
+    "scripts/verify-mul-drill.ts",
+    "src/muldrill/pick-gen.ts"
   ]
 }

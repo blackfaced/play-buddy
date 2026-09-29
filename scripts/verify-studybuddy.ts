@@ -10,6 +10,8 @@
  *     - draft 状态的应用不计
  *     - 任一接口异常 → null（按纯玩处理，不猜数据）
  *  3. 上报：纯玩模式下 reportGameSession 不发出任何请求
+ *  3b. 学习类上报：迁入 play-buddy 的学习游戏（乘法大冒险）必须回传
+ *      session + mistake，否则该 appId 在奖励池里贡献恒为 0
  *
  * Run:  ./node_modules/.bin/tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-studybuddy.js
  */
@@ -17,6 +19,8 @@ import {
   probeStudyBuddy,
   fetchStudyReward,
   reportGameSession,
+  reportStudySession,
+  reportStudyMistake,
   isHomeMode,
   isFusionEnabled,
   resolveRewardCapMs,
@@ -196,8 +200,66 @@ async function main() {
   cap('1.5', 1.5, '"1.5" → 保留 1.5 分钟（90 秒）');
   check('默认 10 分钟 = 2 局 × 5 分钟', SB_REWARD_CAP_MS === 10 * MIN);
 
+  // ---- 6. 学习类上报（乘法大冒险） ----
+  // 迁入 play-buddy 的学习游戏必须回传，否则该 appId 在 /api/game/daily
+  // 恒为 0，fetchStudyReward 的奖励池里这个源就消失了。
+  console.log('\n[6] 学习类会话/错题上报');
+  {
+    const log2: string[] = [];
+    const f2 = mockFetch({ '/api/game/session': { sessionId: 1 }, '/api/game/mistake': { id: 1 } }, log2);
+
+    // 先切到纯玩模式，验证静默
+    await probeStudyBuddy(mockFetch({ '/api/apps': 'ERR' }));
+    reportStudySession({ appId: 'multiplication-drill', durationMs: 60_000, totalQuestions: 12, correctCount: 10 }, f2);
+    reportStudyMistake({ appId: 'multiplication-drill', problem: '7 × 8 = ?', userAnswer: '54', correctAnswer: '56', errorType: 'multiply' }, f2);
+    check('纯玩模式下学习类上报也不发请求', log2.length === 0);
+
+    // 在家模式：两条都发
+    await probeStudyBuddy(mockFetch({ '/api/apps': APPS }));
+    reportStudySession({ appId: 'multiplication-drill', durationMs: 60_000, totalQuestions: 12, correctCount: 10 }, f2);
+    check('在家模式发 POST /api/game/session', log2.length === 1 && log2[0] === 'POST /api/game/session');
+    reportStudyMistake({ appId: 'multiplication-drill', problem: '7 × 8 = ?', userAnswer: '54', correctAnswer: '56', errorType: 'multiply' }, f2);
+    check('在家模式发 POST /api/game/mistake', log2.length === 2 && log2[1] === 'POST /api/game/mistake');
+
+    // 载荷校验：题数原样上报（正确率参与 <60% 不发奖判定）
+    const bodies: string[] = [];
+    const f3: SBFetch = async (_u, init) => { bodies.push(String(init?.body)); return { ok: true, json: async () => ({}) }; };
+    await probeStudyBuddy(mockFetch({ '/api/apps': APPS }));
+    reportStudySession({ appId: 'multiplication-drill', durationMs: 60_000, totalQuestions: 12, correctCount: 10 }, f3);
+    const s = JSON.parse(bodies[0]);
+    check('session 载荷 appId 正确', s.appId === 'multiplication-drill');
+    check('session 载荷 childId=default', s.childId === 'default');
+    check('session 载荷 totalQuestions=12', s.totalQuestions === 12);
+    check('session 载荷 correctCount=10', s.correctCount === 10);
+    check('session 载荷 durationSec=60', s.durationSec === 60);
+
+    // 边界：题数不能是 0（服务端要求 >0），correct 不能超过 total
+    bodies.length = 0;
+    reportStudySession({ appId: 'multiplication-drill', durationMs: 1_000, totalQuestions: 0, correctCount: 5 }, f3);
+    const b = JSON.parse(bodies[0]);
+    check('totalQuestions 下限夹到 1', b.totalQuestions === 1);
+    check('correctCount 不超过 totalQuestions', b.correctCount <= b.totalQuestions);
+    reportStudySession({ appId: 'multiplication-drill', durationMs: 500, totalQuestions: 3, correctCount: 9 }, f3);
+    check('correctCount 超界被夹住', JSON.parse(bodies[1]).correctCount === 3);
+    check('durationSec 下限夹到 1', JSON.parse(bodies[1]).durationSec === 1);
+
+    // 防自反馈：不能用 balance-blocks 自己的 id 上报学习局
+    const before = bodies.length;
+    reportStudySession({ appId: 'balance-blocks', durationMs: 60_000, totalQuestions: 5, correctCount: 5 }, f3);
+    reportStudySession({ appId: '', durationMs: 60_000, totalQuestions: 5, correctCount: 5 }, f3);
+    check('拒绝用 balance-blocks / 空 appId 上报（防自反馈）', bodies.length === before);
+
+    // 错题载荷
+    bodies.length = 0;
+    reportStudyMistake({ appId: 'multiplication-drill', problem: '7 × 8 = ?', userAnswer: '54', correctAnswer: '56', errorType: 'multiply' }, f3);
+    const m = JSON.parse(bodies[0]);
+    check('mistake 载荷 problem 原样', m.problem === '7 × 8 = ?');
+    check('mistake 载荷 errorType=multiply', m.errorType === 'multiply');
+    check('mistake 载荷 source=appId', m.source === 'multiplication-drill');
+    check('mistake 载荷 childId=default', m.childId === 'default');
+  }
+
   console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);
 }
-
 void main();

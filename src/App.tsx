@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router';
 import Home from './pages/Home';
 import Marble from './pages/Marble';
 import MathIsland from './mathisland/MathIsland';
+import MulDrill from './muldrill/MulDrill';
 import { BreakToast, ForcedRestOverlay, DailyCapOverlay } from '@/components/HealthOverlays';
 import { useStore, dateKeyOf } from '@/store/useStore';
 import { probeStudyBuddy, fetchStudyReward, FUSION_ENABLED } from '@/game/studyBuddy';
@@ -38,7 +39,8 @@ function useDiagnostics() {
 }
 
 /** Global anti-addiction clock: accrues wall-clock play time across ALL games
- *  on the site (balance blocks + marble track), only while the tab is visible. */
+ *  on the site (balance blocks / marble / math island / multiplication drill),
+ *  only while the tab is visible. */
 function useAntiAddictionClock() {
   useEffect(() => {
     const id = window.setInterval(() => useStore.getState().tick(), 1000);
@@ -118,6 +120,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/marble" element={<Marble />} />
         <Route path="/math" element={<MathIsland />} />
+        <Route path="/mul" element={<MulDrill />} />
       </Routes>
       <HealthGate />
     </>

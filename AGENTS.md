@@ -5,7 +5,7 @@
 孩子的游戏乐园。React 19 + TypeScript + Vite 7 + Tailwind 3 + zustand + matter-js。
 
 与 [study-buddy](https://github.com/blackfaced/study-buddy) 配套：**学习找 study-buddy，玩耍找 play-buddy**。
-分工边界：拍错题、写字、错题账本、家长看板属于 study-buddy；积木、弹珠、口算岛这类游戏属于本仓库。
+分工边界：拍错题、写字、错题账本、家长看板属于 study-buddy；积木、弹珠、口算岛、乘法大冒险这类游戏属于本仓库。
 **加新游戏前先看 `study-buddy/web/games/` 有没有同类实现，别重复造。**
 
 ## Repo layout
@@ -18,6 +18,7 @@ play-buddy/
 │   ├── game/          # 积木游戏核心：engine/levels/tower/controller/sound
 │   ├── marble/        # 弹珠轨道（自包含：自带 levels/physics）
 │   ├── mathisland/    # 糖果口算岛（自包含：generate.ts 纯函数 + MathIsland.tsx）
+│   ├── muldrill/      # 乘法大冒险（自包含：pick-gen.ts 纯函数 + MulDrill.tsx）
 │   ├── store/useStore.ts  # 防沉迷时钟 + 时长 + 关卡进度
 │   ├── game/studyBuddy.ts # study-buddy 融合层（环境变量开关控制）
 │   └── pages/         # 路由页
@@ -56,7 +57,7 @@ play-buddy/
 ## Conventions
 
 - **不改 `src/components/ui/`** —— shadcn 生成，需要时用 `npx shadcn add <组件>` 重新生成
-- **新游戏做成自包含模块**（像 `marble/` 和 `mathisland/` 那样自带存档和音效），不侵入 `useStore`。主 store 只管全局防沉迷时钟和时长。
+- **新游戏做成自包含模块**（像 `marble/`、`mathisland/`、`muldrill/` 那样自带存档和音效），不侵入 `useStore`。主 store 只管全局防沉迷时钟和时长。
 - **游戏内计时与防沉迷计时是两回事** —— 防沉迷是**限制总屏幕时间**，游戏内倒计时是**催促本轮**。两者同屏出现会互相打架（一个说"还剩 18 分钟能玩"，一个说"这轮还剩 4 分钟"，孩子大概率两个一起无视）。设计时先想清楚这条。
 - **数字口径**：游戏内显示的速度星/分数是给孩子正反馈；家长看板的用时/正确率是给家长的。两者不要混用同一个组件。
 - **改动不直接推 `main`** —— 开 `feat/xxx` 分支，验证后合。`main` 是孩子正在用的环境。
@@ -75,13 +76,21 @@ npm run verify:marble
 
 **TDD：先写 verify 脚本并确认它失败，再实现。**
 
-新增纯逻辑模块（题目生成、计分、关卡）优先放进独立文件以便无头验证 —— 参考 `src/mathisland/generate.ts` 的做法：纯函数、不碰 DOM，可以跑几万轮。
+新增纯逻辑模块（题目生成、计分、关卡）优先放进独立文件以便无头验证 —— 参考 `src/mathisland/generate.ts` 和 `src/muldrill/pick-gen.ts` 的做法：纯函数、不碰 DOM，可以跑几万轮。
+   rng 必须由调用方注入，不许在纯函数里用 `Math.random` —— 否则无法确定性复现。
 
 ## Gotchas
 
 - **`src/game/studyBuddy.ts` 不能用 `import.meta`** —— `verify:studybuddy` 用 CommonJS 编译（`tsconfig.verify.json`），那个模式下 `import.meta` 是 TS1343 语法错误。环境变量经 `vite.config.ts` 的 `define` 注入为 `globalThis` 常量。改这个文件必须跑 `npm run verify:studybuddy`。
 - **lint 基线有 18 个错误** —— `npm run lint` 在 main 上就有 18 个 `react-hooks/set-state-in-effect`（`Home.tsx`、`ControlBar.tsx` 等既有代码）。判断标准是**有没有新增**，不是有没有错。检查自己的文件：`npx eslint src/<新目录>/`。
 - **随机生成题库要防两类撞车** —— 有限题库 vs 随机池的交集（会导致题库项被挤掉、数量不足）、记录 id 撞车（`find(x => x.id === id)` 只命中第一条）。用数组下标而非 id 定位。测试轮数要 ≥1000，50 轮抓不到低频 bug。
+- **纯函数层测不到 React 闭包** —— `setState` 是异步批处理的，"同一事件里 setX 再读 X"会拿到旧值。
+  数字键盘的自动提交必须把值**显式传参**给判定函数，不能让判定函数去读 state
+  （见 `MulDrill.tsx` 的 `submit(raw?)`）。这类问题无头 verify 抓不到，改完要在真机上手动过一遍。
+- **迁移不等于逐字复制** —— 从 study-buddy 往这搬游戏时，显示层的问题要顺手修，但要在
+  commit message 和代码注释里写清改了什么、为什么。`muldrill` 就改了一处：原乘法表
+  单元格宽度不等（`1×1=1` 5 字符 / `9×9=81` 6 字符），等宽字体下**列是歪的**，
+  而"扫一列找答案"正是那个提示的全部意义。改成定宽右对齐的口诀表版式。
 - **`package-lock.json` 不入库** —— 依赖版本已在 `package.json` 钉死，故意不提交。
 - **`.env` 不入库** —— 只提交 `.env.example`。
 
