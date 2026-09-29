@@ -4,10 +4,8 @@
 学习找 study-buddy，玩耍找 play-buddy。构建产物为纯静态，任意静态托管可用；
 在家与 study-buddy 联动（学习换时长、错题同步），在外纯玩。
 
-> 📦 **部署**（生产 `main` / 测试 `staging` 双通道）见 **[docs/deploy.md](docs/deploy.md)**；
+> 📦 **部署**（生产 `main` / 测试 `staging`）见 **[docs/deploy.md](docs/deploy.md)**；
 > 踩过的坑与排查记录见 **[docs/deploy-notes.md](docs/deploy-notes.md)**。
-> 免登录快速预览（3 小时有效）见 deploy.md 第六节。
-> ⚠️ EdgeOne 免费二级域名有访问限制，长期外网访问需绑定已备案的自定义域名。
 >
 > 🤖 **AI 协作者请先读 [AGENTS.md](AGENTS.md)** —— 项目结构、部署约定、测试命令、已知陷阱都在里面。
 
