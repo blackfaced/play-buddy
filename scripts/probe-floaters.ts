@@ -111,8 +111,18 @@ function unsupportedNow(engine: GameEngine): FloatRec[] {
 
 /** unsupported AND unmoved across a 6 s re-scan → genuine floater.
  *  (the wedge-buster ladder needs ~2 s to escalate to a full wake and up to
- *  ~10 s to settle — a 2 s window would flag blocks mid-rescue) */
+ *  ~10 s to settle — a 2 s window would flag blocks mid-rescue).
+ *  Floaters inside the hero's descent shaft (below hero, |dx|≤4 cells) are
+ *  BY DESIGN left alone — they read as normal footing blocks and knocking
+ *  them out early breaks level fairness (L50 careful-bot wipeout). */
+function inDescentShaft(engine: GameEngine, f: FloatRec): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const hero = (engine as any).hero as Matter.Body;
+  return f.y > hero.position.y - 2 * CELL && Math.abs(f.x - hero.position.x) <= 4 * CELL;
+}
+
 function confirmFloaters(h: Harness, first: FloatRec[]): FloatRec[] {
+  first = first.filter((f) => !inDescentShaft(h.engine, f));
   if (first.length === 0) return [];
   for (let i = 0; i < 360; i++) h.engine.advance(TICK); // 6 s
   // the audit (and its wedge-buster) only run while the round is undecided —
