@@ -5,7 +5,13 @@
 // 同一个构建产物跑两种环境：
 //   在家 — 由 study-buddy 的 Express 托管在 /games/balance-blocks/，
 //          /api/* 同源可达 → 开启"学习换时长"奖励 + 游玩会话上报
-//   在外 — 静态部署（无 API），所有调用静默失败 → 纯玩模式
+//   在外 — 静态部署（EdgeOne 等，无 API），所有调用静默失败 → 纯玩模式
+//
+// 开关（构建期环境变量，Vite 只暴露 VITE_ 前缀）：
+//   VITE_STUDY_BUDDY_ENABLED=false → 彻底关闭融合层：不探测、不请求，
+//     也不会在每次加载时白等 2.5s 超时。用于纯静态部署。
+//   不设 / true（默认）→ 运行时探测，维持在家的现有行为。
+//   npm run build:static 即以 false 构建。
 //
 // 奖励规则（家长拍板 2026-08-27，定位：学习辅助手段而非主渠道）：
 //   - 每完成 1 局学习游戏 +5 分钟游戏时长
@@ -16,6 +22,36 @@
 // =====================================================================
 
 const MIN = 60_000;
+
+/**
+ * 融合层开关。抽出成纯函数以便单测（env 由调用方传入，浏览器侧传
+ * import.meta.env）。未设置时视为启用，保持既有行为不变。
+ */
+export function isFusionEnabled(env: Record<string, unknown> = {}): boolean {
+  const v = env.VITE_STUDY_BUDDY_ENABLED;
+  if (v === undefined || v === null || v === '') return true;
+  return !['false', '0', 'off', 'no'].includes(String(v).trim().toLowerCase());
+}
+
+/**
+ * 浏览器侧实际生效的开关。
+ *
+ * 不直接读 import.meta —— verify 脚本以 CommonJS 编译运行，那里 import.meta
+ * 非法（TS1343）。改为从 globalThis 上的注入点取值，vite.config.ts 用
+ * `define` 把构建期 env 写进去。Node 单测下该点不存在 → 默认开启。
+ */
+declare const __STUDY_BUDDY_ENABLED__: string | undefined;
+
+export const FUSION_ENABLED = ((): boolean => {
+  try {
+    if (typeof __STUDY_BUDDY_ENABLED__ !== 'undefined') {
+      return isFusionEnabled({ VITE_STUDY_BUDDY_ENABLED: __STUDY_BUDDY_ENABLED__ });
+    }
+  } catch {
+    /* 未注入（Node 单测）→ 按默认开启 */
+  }
+  return true;
+})();
 
 /** 本游戏在 study-buddy 侧的 appId（会话上报与奖励排除都用它） */
 export const SB_APP_ID = 'balance-blocks';
@@ -45,8 +81,13 @@ export function isHomeMode(): boolean {
   return reachable;
 }
 
-/** 探测 study-buddy API 是否同源可达（2.5s 超时，失败即纯玩模式） */
+/** 探测 study-buddy API 是否同源可达（2.5s 超时，失败即纯玩模式）。
+ *  融合层被环境变量关闭时直接返回 false，一个请求都不发。 */
 export async function probeStudyBuddy(f: SBFetch = defaultFetch): Promise<boolean> {
+  if (!FUSION_ENABLED) {
+    reachable = false;
+    return false;
+  }
   const j = await getJson('/api/apps', f);
   reachable = j !== null;
   return reachable;
@@ -100,6 +141,7 @@ export async function fetchStudyReward(
   todayKey: string,
   f: SBFetch = defaultFetch,
 ): Promise<StudyReward | null> {
+  if (!FUSION_ENABLED) return null;
   const appsJson = (await getJson('/api/apps', f)) as AppsJson | null;
   if (!appsJson || !Array.isArray(appsJson.apps)) return null;
   const studyApps = appsJson.apps

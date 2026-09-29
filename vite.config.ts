@@ -1,18 +1,29 @@
 import path from "path"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, loadEnv } from "vite"
 import { inspectAttr } from 'plugin-inspect-react-code'
 
 // https://vite.dev/config/
-export default defineConfig({
-  base: './',
-  plugins: [inspectAttr(), react()],
-  server: {
-    port: 3000,
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(({ mode }) => {
+  // 注入构建期环境变量到 globalThis，供不依赖 import.meta 的模块读取
+  // （src/game/studyBuddy.ts 在 CommonJS 的 verify 脚本里不能用 import.meta）
+  const env = loadEnv(mode, process.cwd(), "VITE_")
+  const studyBuddyFlag =
+    process.env.VITE_STUDY_BUDDY_ENABLED ?? env.VITE_STUDY_BUDDY_ENABLED ?? ""
+
+  return {
+    base: './',
+    plugins: [inspectAttr(), react()],
+    server: {
+      port: 3000,
     },
-  },
-});
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+    define: {
+      __STUDY_BUDDY_ENABLED__: JSON.stringify(studyBuddyFlag),
+    },
+  }
+})
