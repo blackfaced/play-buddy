@@ -412,23 +412,38 @@ export default function MulDrill() {
         <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-4 py-6">
           <div className="flex items-center justify-between rounded-3xl bg-white/85 px-5 py-3 font-bold shadow-sm backdrop-blur">
             <span className="text-sm">
-              第 <b className="text-lg">{asked + 1}</b> 题
+              第{}
+              <b className="text-lg" data-testid="mul-asked">
+                {asked + 1}
+              </b>{}
+              题
             </span>
             <span
+              data-testid="mul-left"
               className={`text-3xl tabular-nums ${left <= 10 ? 'animate-pulse text-[#FF4757]' : 'text-[#7C5CD3]'}`}
             >
               {left}
             </span>
             <span className="text-sm">
-              对 <b className="text-lg">{hits}</b>
+              对{}
+              <b className="text-lg" data-testid="mul-hits">
+                {hits}
+              </b>
             </span>
           </div>
 
           <div className="rounded-3xl bg-white/85 p-6 text-center shadow-sm backdrop-blur">
-            <div className="text-5xl font-black tracking-wide tabular-nums">{q.problem}</div>
+            <div className="text-5xl font-black tracking-wide tabular-nums" data-testid="mul-problem">
+              {q.problem}
+            </div>
 
             {wrong === null ? (
-              <div className="mt-5 h-16 text-5xl font-black tabular-nums text-[#7C5CD3]">{buf || '?'}</div>
+              <div
+                className="mt-5 h-16 text-5xl font-black tabular-nums text-[#7C5CD3]"
+                data-testid="mul-buf"
+              >
+                {buf || '?'}
+              </div>
             ) : (
               <div className="mt-4">
                 <p className="text-lg font-bold text-[#BE5A47]">
@@ -437,6 +452,7 @@ export default function MulDrill() {
                 <pre
                   className="mx-auto mt-3 w-fit whitespace-pre text-left font-mono text-[11px] leading-relaxed text-ink/70"
                   aria-label="1-9 乘法表"
+                  data-testid="mul-table"
                 >
                   {makeMultiplicationTable()}
                 </pre>
@@ -505,7 +521,9 @@ export default function MulDrill() {
         <div className="text-center">
           <div className="text-6xl">{v.emoji}</div>
           <div className="mt-2 text-3xl font-black">{v.title}</div>
-          <div className="mt-3 text-6xl font-black tabular-nums text-[#7C5CD3]">{result?.rate ?? 0}%</div>
+          <div className="mt-3 text-6xl font-black tabular-nums text-[#7C5CD3]" data-testid="mul-result-rate">
+            {result?.rate ?? 0}%
+          </div>
           <div className="text-sm text-ink/50">正确率</div>
         </div>
 

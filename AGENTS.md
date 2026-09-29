@@ -23,6 +23,7 @@ play-buddy/
 │   ├── game/studyBuddy.ts # study-buddy 融合层（环境变量开关控制）
 │   └── pages/         # 路由页
 ├── scripts/verify-*.ts      # 无头回归脚本（node --test 风格）
+├── e2e/                     # Playwright 端到端（跑 dist/，非 dev server）
 ├── e2e/                     # Playwright 端到端
 └── docs/deploy.md           # 部署指南
 ```
@@ -71,7 +72,15 @@ npm run verify:win          # 积木闯关胜负路径
 npm run verify:endless      # 无尽模式门禁
 npm run verify:studybuddy   # 融合层 + 环境变量开关
 npm run verify:math-island  # 口算岛题目生成（3000 轮 × 3 关 ≈ 194 万项断言）
+npm run verify:mul-drill    # 乘法大冒险题目/键盘/结算（5000 轮 ≈ 2 万项断言）
 npm run verify:marble
+```
+
+端到端（无头 Chromium，跑真实构建产物 `dist/`）：
+
+```bash
+npm run test:e2e        # 全部 e2e
+npm run test:e2e:mul    # 只跑乘法大冒险（先 build:static）
 ```
 
 **TDD：先写 verify 脚本并确认它失败，再实现。**
@@ -91,6 +100,17 @@ npm run verify:marble
   commit message 和代码注释里写清改了什么、为什么。`muldrill` 就改了一处：原乘法表
   单元格宽度不等（`1×1=1` 5 字符 / `9×9=81` 6 字符），等宽字体下**列是歪的**，
   而"扫一列找答案"正是那个提示的全部意义。改成定宽右对齐的口诀表版式。
+- **e2e 跑构建产物，不跑 dev server** —— `npm run test:e2e:mul` 会先 `build:static`。
+  原因：`build:static` 把融合层关掉，正好顺带断言"静态部署不发任何 `/api/` 请求"。
+  测试用 `node --test`（对齐 study-buddy 的 e2e 写法），不引 @playwright/test。
+- **`page.clock.install()` 必须在 `goto` 之前** —— 装晚了接管不到页面已创建的
+  `setTimeout`；装完之后 `waitUntil:'networkidle'` 和 `waitForTimeout` 会挂死
+  （它们按真实时间等，而真实时间已被冻结），要改用 `waitUntil:'load'` + `clock.runFor()`。
+- **Playwright 浏览器下载要走国内镜像** —— 官方 CDN 的文件端点在部分网络下拉不动
+  （根路径能返 200，文件是 0 字节，表现为 install 一直转、缓存目录只有几 KB）：
+  `PLAYWRIGHT_DOWNLOAD_HOST=https://cdn.npmmirror.com/binaries/playwright npx playwright install chromium`
+- **随机出题做 e2e 断言要防"输到一半就对了"** —— 答对与否只能靠"构造一个恒不等于
+  答案的输入"（用 `answer + 1`），不能硬编码某个数字：3×3=9 时输 `9` 就直接对了。
 - **`package-lock.json` 不入库** —— 依赖版本已在 `package.json` 钉死，故意不提交。
 - **`.env` 不入库** —— 只提交 `.env.example`。
 
