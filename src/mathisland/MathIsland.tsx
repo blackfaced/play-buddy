@@ -10,6 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
+import { useStore } from '@/store/useStore';
 import {
   generateLevel,
   generateOptions,
@@ -127,6 +128,7 @@ export default function MathIsland() {
   const [buffer, setBuffer] = useState('');
   const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [wrongList, setWrongList] = useState<Mistake[]>([]);
+  const [creditedMs, setCreditedMs] = useState(0);
   const [muted, setMuted] = useState(false);
   const { play, enabledRef } = useSound();
 
@@ -274,6 +276,8 @@ export default function MathIsland() {
     play('clear');
     const used = ROUND_SECONDS - timeLeft;
     const st = totalStars;
+    // 通关奖励真正入账到防沉迷时长（本机入账，受每日上限约束）
+    setCreditedMs(useStore.getState().addStudyBonus(starsToBonusMs(st)));
     setPhase('result');
     setSave((s) => {
       const key = String(level);
@@ -411,6 +415,16 @@ export default function MathIsland() {
             <Row label="答对" value={`${right} / ${qs.length}`} />
             <Row label="用时" value={fmt(used)} />
             <Row label="换到游戏时长" value={`+${Math.floor(bonusMs / 60000)} 分 ${Math.floor((bonusMs % 60000) / 1000)} 秒`} />
+            <Row
+              label="实际入账"
+              value={
+                creditedMs >= bonusMs
+                  ? `+${Math.floor(creditedMs / 60000)} 分 ${Math.floor((creditedMs % 60000) / 1000)} 秒`
+                  : creditedMs > 0
+                    ? `+${Math.floor(creditedMs / 60000)} 分 ${Math.floor((creditedMs % 60000) / 1000)} 秒（今日奖励快满了）`
+                    : '今日奖励已达上限'
+              }
+            />
             <Row label="本关最好" value={`${save.bestStars[String(level)] ?? 0} 星`} />
           </div>
           <div className="flex gap-3">
