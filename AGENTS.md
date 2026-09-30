@@ -36,6 +36,8 @@ play-buddy/
 | `/blocks` | 平衡积木 |
 | `/marble` | 弹珠轨道 |
 | `/math` | 糖果口算岛 |
+| `/write` | 字的构造台 |
+| `/mul` | 乘法大冒险（hidden，大厅不展示） |
 
 ## 部署
 

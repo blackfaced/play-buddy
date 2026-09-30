@@ -29,7 +29,7 @@ export const STRUCT_HINT: Record<Struct, string> = {
   lr: '左边一块、右边一块',
 };
 
-/** 字的三种结构选项，用于出题（"独体字"是干扰项：合��字不能选它） */
+/** 字的三种结构选项，用于出题（"独体字"是干扰项：合体字不能选它） */
 export const STRUCT_OPTIONS: ReadonlyArray<{ value: Struct | 'sg'; label: string; hint: string }> = [
   { value: 'up', label: STRUCT_LABEL.up, hint: STRUCT_HINT.up },
   { value: 'lr', label: STRUCT_LABEL.lr, hint: STRUCT_HINT.lr },
