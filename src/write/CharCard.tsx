@@ -146,18 +146,30 @@ export default function CharCard({ char, structure = null, size = 260 }: Props) 
       writerRef.current = w;
       setReady(true);
 
-      // 二次校正：等 SVG 渲染完再量一次包围盒
+      // 二次校正：等 SVG 渲染完再量一次包围盒。
+      // 注意：HanziWriter 把坐标系翻转塞在最外层 <g> 的 transform 里
+      // （"translate(x, y) scale(s, -s)"，字形数据是 y 轴朝上的），
+      // 直接覆盖 transform 会把翻转弄丢、字整个倒过来。所以这里
+      // 在外面包一层新 <g> 做居中缩放，原有 transform 一点不动。
       requestAnimationFrame(() => {
-        const g = box.querySelector('g');
-        if (!g) return;
+        const svg = box.querySelector('svg');
+        const g = svg?.querySelector('g');
+        if (!svg || !g) return;
         try {
-          const bb = g.getBBox();
           const stage = box.getBoundingClientRect();
-          if (bb.width <= 0 || stage.width <= 0) return;
-          const scale = Math.min(1, stage.width / (bb.width * 1.06), stage.height / (bb.height * 1.06));
-          g.setAttribute(
+          // getBoundingClientRect 量的是"应用全部 transform 之后"的屏幕包围盒，
+          // 不受翻转影响；再换算回相对卡片左上角的 px（svg 无 viewBox，1 单位=1px）
+          const r = g.getBoundingClientRect();
+          if (r.width <= 0 || stage.width <= 0) return;
+          const scale = Math.min(1, stage.width / (r.width * 1.06), stage.height / (r.height * 1.06));
+          const cx = r.left - stage.left + r.width / 2;
+          const cy = r.top - stage.top + r.height / 2;
+          const wrap = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          svg.insertBefore(wrap, g);
+          wrap.appendChild(g);
+          wrap.setAttribute(
             'transform',
-            `translate(${stage.width / 2 - (bb.x + bb.width / 2) * scale} ${stage.height / 2 - (bb.y + bb.height / 2) * scale}) scale(${scale})`,
+            `translate(${stage.width / 2 - cx * scale} ${stage.height / 2 - cy * scale}) scale(${scale})`,
           );
         } catch {
           /* 量不到就保持默认，不要因此白屏 */
