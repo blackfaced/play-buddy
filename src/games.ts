@@ -17,6 +17,14 @@ export interface GameEntry {
   /** 卡片强调色（边框/标题），取 tailwind 调色板里的色值 */
   accent: string;
   accentSoft: string;
+  /**
+   * 暂时不让孩子看到（代码在、路由可直达，但大厅不展示）。
+   *
+   * 用来装"已经写好但还没到学习进度"的游戏 —— 比如乘法大冒险：
+   * 二年级还没学乘法表，先把代码落地，等到了那一课再去掉这个标记。
+   * 路由仍然注册，方便自己进去验。
+   */
+  hidden?: boolean;
 }
 
 export const GAMES: GameEntry[] = [
@@ -41,6 +49,28 @@ export const GAMES: GameEntry[] = [
     accentSoft: '#F3E0D3',
   },
   {
+    id: 'write',
+    path: '/write',
+    title: '字的构造台',
+    emoji: '🖌',
+    tagline: '先看清字长什么样，再在纸上写',
+    category: 'study',
+    accent: '#5A7A4A',
+    accentSoft: '#E9F0E2',
+  },
+  {
+    id: 'mul',
+    path: '/mul',
+    title: '乘法大冒险',
+    emoji: '✖️',
+    tagline: '1-9 乘法表 · 60 秒挑战',
+    category: 'study',
+    accent: '#5B3FBF',
+    accentSoft: '#F2EDFC',
+    // 二年级还没学乘法表，先落地不展示
+    hidden: true,
+  },
+  {
     id: 'marble',
     path: '/marble',
     title: '弹珠轨道',
@@ -52,4 +82,7 @@ export const GAMES: GameEntry[] = [
   },
 ];
 
-export const gamesByCategory = (cat: GameCategory) => GAMES.filter((g) => g.category === cat);
+export const gamesByCategory = (cat: GameCategory) =>
+  GAMES.filter((g) => g.category === cat && !g.hidden);
+
+export const visibleGames = () => GAMES.filter((g) => !g.hidden);

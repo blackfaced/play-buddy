@@ -42,6 +42,7 @@ npm run verify:win         # 闯关胜负路径
 npm run verify:endless     # 无尽模式（坠落兜底/检查点/谨慎下潜聚合门禁）
 npm run verify:reward      # 学习奖励入账 + 环境变量解析
 npm run verify:math-island # 糖果口算岛题目生成（3000 轮 × 3 关 ≈ 194 万项断言）
+npm run verify:write       # 字的构造台题库/造题/字形库（2000 轮 = 1 万项断言）
 
 # 构建
 npm run build                                              # 平台版（base='./'，纯静态零请求）
