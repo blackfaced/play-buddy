@@ -244,4 +244,13 @@ test('一轮打完出结算屏（看得到成绩，不是静默重开）', async
   const body = await page.locator('body').innerText();
   assert.ok(/眼睛真尖|看得挺准|再来一遍|慢慢看/.test(body), '结算页没有评语');
   assert.match(body, /再来一轮/, '结算页缺"再来一轮"');
+
+  // 学习类游戏必须展示奖励入账（AGENTS.md 约定：展示实际入账，不是名义奖励）
+  const bonus = page.getByTestId('write-bonus');
+  await bonus.waitFor({ state: 'visible', timeout: 3000 });
+  assert.match(
+    await bonus.innerText(),
+    /游戏时长|奖励已达上限/,
+    '结算页没有展示学习奖励入账情况',
+  );
 });
