@@ -8,9 +8,7 @@
  *   1. 拆出纯逻辑层到 pick-gen.ts（原先内联在 DOM 脚本里，无头测不了）
  *   2. 补上 play-buddy 的自包含约定：localStorage 存档 + WebAudio 音效
  *
- * 学习类游戏的会话与错题会回传 study-buddy（"在家"模式），因为
- * study-buddy 的 apps registry 仍登记着 multiplication-drill，
- * 而 play-buddy 的 fetchStudyReward 会去查它的日统计——不回传就断链。
+ * 本模块自包含：成绩与错题只存本机 localStorage，不回传任何服务。
  *
  * 主应用只需 <Route path="/mul" element={<MulDrill />} /> 即可接线。
  */

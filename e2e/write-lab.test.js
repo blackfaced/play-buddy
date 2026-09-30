@@ -212,6 +212,11 @@ test('找偏旁：答完给提示，选项恰好一个正确', async (t) => {
   await page.getByTestId('part-verdict').waitFor({ timeout: 4000 });
   const v = await page.getByTestId('part-verdict').innerText();
   assert.ok(v.includes(radical) || v.length > 4, '判定区没有内容');
+
+  // 判定图标必须是真 SVG，不能把 "<svg ..." 源码当文本渲出来
+  const bodyText = await page.locator('body').innerText();
+  assert.ok(!bodyText.includes('<svg'), '判定图标被当成纯文本渲染了（OK_SVG/NO_SVG 必须是 JSX 元素）');
+  assert.ok((await page.locator('svg').count()) > 0, '判定后页面上应存在真 SVG 图标');
 });
 
 test('一轮打完出结算屏（看得到成绩，不是静默重开）', async (t) => {
