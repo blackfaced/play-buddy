@@ -29,7 +29,7 @@ export const STRUCT_HINT: Record<Struct, string> = {
   lr: '左边一块、右边一块',
 };
 
-/** 字的三种结构选项，用于出题（"独体字"是干扰项：合��字不能选它） */
+/** 字的三种结构选项，用于出题（"独体字"是干扰项：合体字不能选它） */
 export const STRUCT_OPTIONS: ReadonlyArray<{ value: Struct | 'sg'; label: string; hint: string }> = [
   { value: 'up', label: STRUCT_LABEL.up, hint: STRUCT_HINT.up },
   { value: 'lr', label: STRUCT_LABEL.lr, hint: STRUCT_HINT.lr },
@@ -155,7 +155,7 @@ export interface ConfusableItem {
 export const CONFUSABLES: readonly ConfusableItem[] = [
   { word: '春天', answer: '春', options: ['香', '春', '秦'], tip: '春下面是「日」。香下面是「禾」，禾那两笔要甩出去。' },
   { word: '身体', answer: '身', options: ['身', '射', '伸'], tip: '身，最后一笔斜撇要冲出横折钩外头。' },
-  { word: '花朵', answer: '朵', options: ['朵', '杂', '朶'], tip: '朵下面是「木」，最后一笔是捺，直甩右下，不带钩。' },
+  { word: '花朵', answer: '朵', options: ['朵', '杂', '朵'], tip: '朵下面是「木」，最后一笔是捺，直甩右下，不带钩。' },
   { word: '杨树', answer: '杨', options: ['场', '杨', '汤'], tip: '杨是木字旁，末笔捺要变点。汤是三点水，场是提土旁。' },
   { word: '打扫', answer: '扫', options: ['扫', '抄', '秒'], tip: '扫是提手旁，末笔是提。' },
   { word: '他们', answer: '他', options: ['池', '地', '他'], tip: '他、池、地右边都是「也」，左边的偏旁决定意思：亻、氵、提土。' },

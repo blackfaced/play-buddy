@@ -1,7 +1,7 @@
 /**
  * Headless verification for 字的构造台 (src/write/structure.ts)。
  *
- * 这个模块的全部价值在"出题对不对"，而��错题比写错题更伤 —— 孩子
+ * 这个模块的全部价值在"出题对不对"，而出错题比写错题更伤 —— 孩子
  * 会开始不信题。所以这里重点断言**题库自身的一致性**：
  *   - 搭积木：每个字的答案部件在干扰项里、干扰项不重、不等于答案
  *   - 结构题：干扰项"独体字"必须存在（合成字不能选它）
@@ -142,11 +142,11 @@ for (let i = 0; i < ROUNDS; i++) {
     const c = BUILD_CHARS.find((x) => x.char === ch)!;
     check(c.top === '木' || c.bottom === '木', `charsUsing('木') 返回了不含木的字：${ch}`);
   }
-  // ���表里的偏旁一定能查到至少一个字（RADICALS 是照着 BUILD_CHARS 挑的）
+  // 字表里的偏旁一定能查到至少一个字（RADICALS 是照着 BUILD_CHARS 挑的）
   for (const r of RADICALS) {
     check(charsUsing(r.radical).length > 0, `偏旁「${r.radical}」在搭积木题库里查不到任何字`, r);
   }
-  check(charsUsing('龘').length === 0, '不存在的偏旁应返回空数组');
+  check(charsUsing('骉').length === 0, '不存在的偏旁应返回空数组');
 }
 
 /* ---------- 评分 ---------- */
@@ -176,8 +176,8 @@ for (let i = 0; i < ROUNDS; i++) {
     check(getHanziData(c.answer) !== null, `形近题答案「${c.answer}」缺笔顺数据`);
   }
 
-  check(getHanziData('龘') === null, '不存在的字应返回 null（不是抛异常）');
-  check(strokeCount('龘') === 0, '不存在的字笔画数应为 0');
+  check(getHanziData('骉') === null, '不存在的字应返回 null（不是抛异常）');
+  check(strokeCount('骉') === 0, '不存在的字笔画数应为 0');
 
   // 数据完整性：strokes 与 medians 必须等长，否则 HanziWriter 会画错
   for (const c of STROKE_CHARS) {
