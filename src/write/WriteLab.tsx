@@ -7,11 +7,13 @@
  *   - 找偏旁：认了一个部件，认不出一串字（部件记忆）
  *   - 形近对比：两个字摆一起看不出差在哪（对比能力）
  *
- * 全部自包含：自带 localStorage 存档 + WebAudio 音效，不侵入 useStore。
+ * 存档与音效自包含；唯一接入全局的地方是通关奖励 —— 按 AGENTS.md 约定
+ * 经 useStore.addStudyBonus 入账（受每日封顶约束），结算页展示实际入账。
  * 不做屏幕书写、不做自动评分 —— 写字在纸上，这里只管"看清"。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
+import { useStore } from '@/store/useStore';
 import CharCard from './CharCard';
 import {
   BUILD_CHARS,
@@ -24,6 +26,7 @@ import {
   buildConfusableChoice,
   scoreRate,
   verdictFor,
+  bonusMsForRate,
 } from './structure';
 
 /* ==================== 存档 ==================== */
@@ -164,7 +167,16 @@ export default function WriteLab() {
   const { play, onRef } = useSound();
   // 一轮打完的成绩 → 结算屏。孩子必须看见"我这轮看得准不准"，
   // 静默重开等于没有反馈闭环。
-  const [result, setResult] = useState<{ rate: number; name: string } | null>(null);
+  const [result, setResult] = useState<{
+    rate: number;
+    name: string;
+    /** 这一轮是否参与奖励（笔顺字卡是翻看复习，不参与） */
+    earns: boolean;
+    /** 名义奖励（按正确率换算），不参与时为 0 */
+    bonusMs: number;
+    /** 实际入账（受每日封顶截断） */
+    creditedMs: number;
+  } | null>(null);
 
   useEffect(() => {
     onRef.current = !muted;
@@ -172,7 +184,18 @@ export default function WriteLab() {
 
   const record = useCallback(
     (id: GameId, rate: number) => {
-      setResult({ rate, name: GAMES.find((g) => g.id === id)?.name ?? '' });
+      // 通关奖励入账：笔顺字卡是翻看复习、没有答题，不换时长；
+      // 三个答题游戏按正确率换算。addStudyBonus 返回实际入账（受日封顶截断）。
+      const earns = id !== 'card';
+      const bonusMs = earns ? bonusMsForRate(rate) : 0;
+      const creditedMs = bonusMs > 0 ? useStore.getState().addStudyBonus(bonusMs) : 0;
+      setResult({
+        rate,
+        name: GAMES.find((g) => g.id === id)?.name ?? '',
+        earns,
+        bonusMs,
+        creditedMs,
+      });
       setSave((s) => {
         const next: Save = {
           best: { ...s.best, [id]: Math.max(s.best[id] ?? 0, rate) },
@@ -281,6 +304,20 @@ export default function WriteLab() {
               {result.rate}%
             </div>
             <div className="text-sm font-bold text-ink/50">看得准不准</div>
+            {result.earns ? (
+              <div
+                className="w-full rounded-2xl bg-white/80 px-5 py-3 text-center text-sm font-bold text-ink/70 shadow-sm"
+                data-testid="write-bonus"
+              >
+                {result.creditedMs > 0 && result.creditedMs >= result.bonusMs
+                  ? `换到游戏时长 +${Math.floor(result.creditedMs / 60000)} 分 ${Math.floor((result.creditedMs % 60000) / 1000)} 秒`
+                  : result.creditedMs > 0
+                    ? `换到游戏时长 +${Math.floor(result.creditedMs / 60000)} 分 ${Math.floor((result.creditedMs % 60000) / 1000)} 秒（今日奖励快满了）`
+                    : result.bonusMs > 0
+                      ? '今日学习奖励已达上限，明天再换'
+                      : '这轮没换到游戏时长，看得再准一点就有'}
+              </div>
+            ) : null}
             <div className="flex w-full flex-col gap-2.5">
               <button
                 onClick={() => setResult(null)}
