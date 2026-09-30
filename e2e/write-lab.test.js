@@ -195,6 +195,13 @@ test('断网也能用：字卡照常出笔顺（字形已内嵌）', async (t) =
   assert.deepEqual(externals, [], `断网场景不该有外部请求，实际：${externals.join(', ')}`);
   const bodyText = await page.locator('body').innerText();
   assert.match(bodyText, /朵 · 6 画/, `字卡没显示笔画数：${bodyText.slice(0, 160)}`);
+
+  // 字不能倒过来：HanziWriter 把坐标系翻转放在最外层 <g> 的 transform 里
+  // （scale(s, -s)），居中校正若覆盖它，字就整个上下颠倒。断言翻转还在。
+  const flipped = await page
+    .locator('svg g')
+    .evaluateAll((gs) => gs.some((g) => /scale\([^)]*-/.test(g.getAttribute('transform') || '')));
+  assert.ok(flipped, '坐标系翻转 transform 丢了（居中校正不许覆盖原有 transform），字会倒过来');
 });
 
 test('找偏旁：答完给提示，选项恰好一个正确', async (t) => {
