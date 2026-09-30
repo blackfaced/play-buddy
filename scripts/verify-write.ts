@@ -146,7 +146,7 @@ for (let i = 0; i < ROUNDS; i++) {
   for (const r of RADICALS) {
     check(charsUsing(r.radical).length > 0, `偏旁「${r.radical}」在搭积木题库里查不到任何字`, r);
   }
-  check(charsUsing('骉').length === 0, '不存在的偏旁应返回空数组');
+  check(charsUsing('龘').length === 0, '不存在的偏旁应返回空数组');
 }
 
 /* ---------- 评分 ---------- */
@@ -176,8 +176,8 @@ for (let i = 0; i < ROUNDS; i++) {
     check(getHanziData(c.answer) !== null, `形近题答案「${c.answer}」缺笔顺数据`);
   }
 
-  check(getHanziData('骉') === null, '不存在的字应返回 null（不是抛异常）');
-  check(strokeCount('骉') === 0, '不存在的字笔画数应为 0');
+  check(getHanziData('龘') === null, '不存在的字应返回 null（不是抛异常）');
+  check(strokeCount('龘') === 0, '不存在的字笔画数应为 0');
 
   // 数据完整性：strokes 与 medians 必须等长，否则 HanziWriter 会画错
   for (const c of STROKE_CHARS) {
