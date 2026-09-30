@@ -205,6 +205,22 @@ export function buildConfusableChoice(item: ConfusableItem, rng: () => number): 
   return { answer: item.answer, options };
 }
 
+/** 单轮时长奖励上限：3 分钟。一轮题量比口算岛单关小，上限也低一档。 */
+export const ROUND_BONUS_CAP_MS = 3 * 60_000;
+
+/**
+ * 一轮正确率 → 游戏时长奖励毫秒。
+ *
+ * 与正确率成正比：全对拿满 3 分钟，对一半拿一半 —— 孩子能直观理解
+ * "看得越准，换得越多"。NaN / 超界一律夹住，不进结算页才有机会出事。
+ * 注意：笔顺字卡是翻看复习、没有答题，不调这个函数（由 UI 层把守）。
+ */
+export function bonusMsForRate(rate: number): number {
+  if (!Number.isFinite(rate)) return 0;
+  const r = Math.min(100, Math.max(0, rate));
+  return Math.round((r / 100) * ROUND_BONUS_CAP_MS);
+}
+
 /** 三个游戏统一的进度评分：0-100，0 题不得 NaN */
 export function scoreRate(right: number, total: number): number {
   if (!Number.isFinite(total) || total <= 0) return 0;

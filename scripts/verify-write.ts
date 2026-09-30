@@ -27,6 +27,8 @@ import {
   buildConfusableChoice,
   scoreRate,
   verdictFor,
+  bonusMsForRate,
+  ROUND_BONUS_CAP_MS,
 } from '../src/write/structure';
 import { STROKE_CHARS, getHanziData, strokeCount } from '../src/write/strokes';
 
@@ -203,6 +205,19 @@ for (let i = 0; i < ROUNDS; i++) {
   for (const [c, n] of expect) {
     check(strokeCount(c) === n, `${c} 应 ${n} 画，实际 ${strokeCount(c)}`, c);
   }
+}
+
+/* ---------- 学习奖励换算（正确率 → 时长） ---------- */
+{
+  check(bonusMsForRate(0) === 0, '0% 应得 0 奖励');
+  check(bonusMsForRate(50) === 90_000, '50% 应得 90 秒');
+  check(bonusMsForRate(100) === ROUND_BONUS_CAP_MS, '100% 应拿满单轮上限');
+  check(bonusMsForRate(150) === ROUND_BONUS_CAP_MS, '150% 应夹到上限');
+  check(bonusMsForRate(-1) === 0, '负正确率应夹到 0');
+  check(bonusMsForRate(NaN) === 0, 'NaN 应得 0（不得入账 NaN）');
+  check(bonusMsForRate(Infinity) === 0, 'Infinity 应得 0');
+  check(ROUND_BONUS_CAP_MS <= 5 * 60_000, '单轮上限不应高于口算岛的 5 分钟');
+  check(Number.isInteger(bonusMsForRate(33)), '33% 应取整');
 }
 
 /* ---------- report ---------- */
