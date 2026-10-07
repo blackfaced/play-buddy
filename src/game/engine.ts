@@ -1651,8 +1651,6 @@ export class GameEngine {
     const cap = this.reducedMotion ? 40 : 80;
     const count = this.reducedMotion ? 20 : 40;
     for (let i = 0; i < count && this.particles.length < cap; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const sp = 1 + Math.random() * 2;
       this.particles.push({
         x: this.hero.position.x + (Math.random() - 0.5) * 120,
         y: this.hero.position.y - 40 - Math.random() * 60,
@@ -2363,7 +2361,7 @@ export class GameEngine {
       const mx = x + 18 * Math.sin(x * 0.05);
       const my = 910 + 4 * Math.sin(x * 0.021);
       ctx.beginPath();
-      ctx.ellipse(mx, my, 52, 15, 0, Math.PI * 2);
+      ctx.ellipse(mx, my, 52, 15, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     // twinkling sparkles anchored along the descent (world space)
@@ -2371,6 +2369,7 @@ export class GameEngine {
     for (const sp of SCENERY.sparkles) {
       const y = camTop - 40 + sp.fy * (GROUND_Y - 140 - camTop);
       if (y < this.camY - 20 || y > this.camY + this.viewH + 20) continue;
+      const tw = this.reducedMotion ? 1 : 0.5 + 0.5 * Math.sin(this.simT / 700 + sp.ph);
       ctx.globalAlpha = 0.12 + 0.3 * tw;
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath();
