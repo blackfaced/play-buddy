@@ -960,6 +960,51 @@
 
 .chapter-device { position: relative; width: 100%; max-width: 800px; margin: 14px auto 22px; }
 .chapter-device > svg { display: block; width: 100%; height: auto; }
-.chapter-bag-dock { position: sticky; bottom: -1px; margin-top: 18px; padding: 12px; background: #183a3d; border-top: 1px solid #9c885a; z-index: 4; }
+.chapter-bag-dock { position: relative; margin-top: 18px; padding: 12px; background: #183a3d; border-top: 1px solid #9c885a; z-index: 4; }
 .chapter-bag-dock > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .chapter-bag-dock .chapter-inventory { margin-top: 12px; max-height: 220px; overflow-y: auto; }
+
+/* The paper is the play surface, not a container for a global answer card. */
+.chapter-optical-bench { width: 100%; }
+.chapter-optical-bench .chapter-lens-paper { padding: 0; border: 0; background: transparent; }
+.chapter-lens-map { display: block; width: 100%; max-height: 58dvh; touch-action: none; user-select: none; cursor: grab; border-radius: 12px; }
+.chapter-lens-map:active { cursor: grabbing; }
+.chapter-lens-map:focus-visible { outline: 3px solid #f3ce7c; outline-offset: 3px; }
+.chapter-lens-cradle { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .65rem; padding: .7rem 0; }
+.chapter-lens-cradle .chapter-lenses { margin: 0; gap: .4rem; }
+.chapter-lens-cradle p { width: 100%; text-align: center; font-size: .8rem; margin: 0; color: #cdbf96; }
+.chapter-portable-lens { pointer-events: none; }
+@media (max-width: 600px) { .chapter-lens-map { min-height: 240px; max-height: none; } }
+.chapter-installation { margin: .8rem 0; border-top: 1px solid #796b48; padding-top: .7rem; }
+.chapter-installation > summary { cursor: pointer; color: #cdbf96; padding: .5rem; }
+
+/* Matching maker's frames are raw physical evidence, with no inferred axes or cross-highlights. */
+.chapter-maker-frame{position:relative;max-width:420px;margin:18px auto;padding:22px 16px 27px;background:#b59762;border:3px solid #745b39;clip-path:polygon(23px 0,100% 0,100% 100%,0 100%,0 23px);box-shadow:inset 0 0 0 6px #d8bc83}
+.chapter-maker-frame:after{content:"";position:absolute;right:15px;bottom:9px;width:6px;height:6px;border-radius:50%;background:#705331;box-shadow:-13px 0 #705331}
+.chapter-pattern-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;background:#806644;border:2px solid #806644}
+.chapter-pattern-fixed,.chapter-pattern-cell{background:#e8d4a8;min-width:0;position:relative;aspect-ratio:1}
+.chapter-pattern-fixed{background:#d0ba90}
+.chapter-stamp-art{width:100%;height:100%;max-height:105px;display:block}
+.chapter-pattern-cell .chapter-slot{width:100%;height:100%;min-height:0;padding:0;border-radius:0;border:0;background:#f5e6c3;display:block}
+.chapter-pattern-cell .chapter-remove{position:absolute;right:0;bottom:0;font-size:10px;padding:1px 3px;line-height:1.2;background:#fff5dc}
+.chapter-piece-tray .chapter-stamp-art{height:86px;width:86px}
+.chapter-frame-seal{display:block;width:140px;margin:12px auto}
+.chapter-tide-frame .chapter-sudoku{width:100%;margin:0;border-color:#806644}
+@media(max-width:480px){.chapter-maker-frame{padding:16px 10px 24px}.chapter-piece-tray .chapter-stamp-art{height:65px;width:65px}}
+
+/* The chute and receiving frame share an SVG coordinate grid, never CSS row sizing. */
+.chapter-shape-chutes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(8px, 2vw, 24px); width: min(100%, 740px); margin: 12px auto 24px; }
+.chapter-shape-chute { min-width: 0; text-align: center; }
+.chapter-shape-chute h3 { margin: 0; font-size: 1rem; letter-spacing: .15em; }
+.chapter-drop-chute { display: block; width: 100%; height: clamp(280px, 42vw, 394px); }
+.chapter-shape-chute > label { display: block; margin: 8px 0; font-size: .8rem; }
+.chapter-digit-dial { display: flex; justify-content: center; align-items: center; gap: 4px; }
+.chapter-digit-dial button { width: 44px; min-height: 44px; padding: 0; }
+.chapter-digit-dial input { width: 48px; min-width: 0; height: 50px; padding: 0; text-align: center; font-size: 1.6rem; font-weight: 700; }
+@media (max-width: 460px) {
+  .chapter-shape-chutes { gap: 5px; }
+  .chapter-digit-dial { flex-wrap: wrap; gap: 2px; }
+  .chapter-digit-dial input { order: -1; flex-basis: 100%; max-width: 72px; margin: 0 12px 3px; }
+}
+
+.chapter-save-warning{margin:14px 0;padding:14px 18px;border:1px solid #b07842;border-radius:12px;background:#fff0d4;color:#704720}.chapter-save-warning p{margin:0 0 9px}

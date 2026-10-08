@@ -199,7 +199,7 @@ function PictureRings({ rings }: { rings: number[] }) {
     </div>
   );
 }
-export default function EscapeRoom({ renderCompletion, mode: controlledMode, onModeChange }: { renderCompletion?: ReactNode; mode?: GuidanceMode; onModeChange?: (mode: GuidanceMode) => void } = {}) {
+export default function EscapeRoom({ renderCompletion, mode: controlledMode, onModeChange, onSceneSelect, onComplete }: { onSceneSelect?: () => void; onComplete?: () => void; renderCompletion?: ReactNode; mode?: GuidanceMode; onModeChange?: (mode: GuidanceMode) => void } = {}) {
   const lock = useStore((state) => state.lock);
   const [s, dispatch] = useReducer(reduceEscape, undefined, () => {
     try {
@@ -208,6 +208,8 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
       return initialState();
     }
   });
+  useEffect(() => { if (s.escaped) onComplete?.(); }, [s.escaped, onComplete]);
+  const [revisiting, setRevisiting] = useState(false);
   const [view, setView] = useState<View>(0);
   const [guidance, setGuidance] = useState<{ mode: GuidanceMode; detail: Detail; hintLevel: number }>(() => {
     try {
@@ -344,9 +346,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
     <GuidanceProvider mode={mode}>
     <main className="escape-app" inert={lock !== null}>
       <header className="escape-topbar">
-        <Link to="/" className="escape-back">
-          <ArrowLeft size={17} /> 游戏大厅
-        </Link>
+        {onSceneSelect ? <button className="escape-back" onClick={onSceneSelect}><ArrowLeft size={17} /> 场景选择</button> : <Link to="/" className="escape-back"><ArrowLeft size={17} /> 游戏大厅</Link>}
         <span>THE STARLIGHT</span>
         <button
           onClick={() => setSound(!sound)}
@@ -368,7 +368,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
         </button>}
       </section>
       <ModeControls mode={mode} onChange={changeMode} />
-      {s.escaped ? (
+      {s.escaped && !revisiting ? (
         <section className="escape-finale">
           <div className="escape-stars">✧ · ✦ · ✧</div>
           <Compass size={66} />
@@ -389,9 +389,10 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
           >
             翻看航海手记
           </button>
-          {!renderCompletion && <button className="escape-quiet" onClick={() => open("reset")}>
+          {(!renderCompletion || onSceneSelect) && <button className="escape-quiet" onClick={() => open("reset")}>
             再航行一次
           </button>}
+          {onSceneSelect && <button className="escape-quiet" onClick={() => setRevisiting(true)}>回船舱看看</button>}
           {renderCompletion}
         </section>
       ) : (
@@ -504,7 +505,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
       )}
       <footer className="escape-footer">
         <span>{saveStatus} · 随时离开，下次继续</span>
-        {!renderCompletion && <button onClick={() => open("reset")}>
+        {(!renderCompletion || onSceneSelect) && <button onClick={() => open("reset")}>
           <RotateCcw size={13} /> 重新开始
         </button>}
       </footer>
@@ -923,6 +924,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                   className="escape-primary"
                   onClick={() => {
                     dispatch({ type: "reset" });
+                    setRevisiting(false);
                     setSelected(null);
                     setScratch({});
                     setSelectedSlat(null);

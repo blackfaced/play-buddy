@@ -54,10 +54,16 @@ export interface PuzzleBase {
   rewards: string[];
   success: string;
 }
+export interface PatternStamp {
+  direction: "N" | "E" | "S" | "W";
+  dots: number;
+  emblem?: "shell" | "star" | "fish" | "wave" | "anchor" | "sail";
+}
 export interface ArrangementPuzzle extends PuzzleBase {
   kind: "arrangement";
   slots: string[];
-  pieces: { id: string; label: string; symbol: string }[];
+  pieces: { id: string; label: string; symbol: string; stamp?: PatternStamp }[];
+  grid?: ({ stamp: PatternStamp } | { slot: number })[];
   solution: string[];
   rows?: { label: string; sequence: (string | null)[] }[];
 }
@@ -65,6 +71,7 @@ export interface CodePuzzle extends PuzzleBase {
   kind: "code";
   length: number;
   solution: string;
+  frameSeal?: boolean;
   animals?: { id: string; name: string; legs: number; count: number }[];
 }
 export interface FilterPuzzle extends PuzzleBase {
@@ -93,7 +100,7 @@ export interface DropPuzzle extends PuzzleBase {
     id: string;
     label: string;
     model: DropModel;
-    placement: DropPlacement;
+    placements: DropPlacement[];
   }[];
 }
 export interface SudokuPuzzle extends PuzzleBase {
@@ -131,7 +138,7 @@ export interface DropPlacement {
 export type PuzzleInput =
   | { kind: "arrangement"; slots: (string | null)[] }
   | { kind: "code"; value: string }
-  | { kind: "filter"; lens: string | null; value: string }
+  | { kind: "filter"; lens: string | null; value: string; position?: { x: number; y: number } }
   | { kind: "drop"; predictions: number[] }
   | { kind: "sudoku"; cells: number[] }
   | { kind: "search" };
@@ -142,6 +149,7 @@ export interface PuzzleProgress {
   solved: boolean;
   hints: number;
   seenLenses: string[];
+  seenClues: string[];
   /** Whole-board attempts only; never per-piece correctness. */
   attempts: number;
 }

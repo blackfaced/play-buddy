@@ -131,10 +131,32 @@ function Compass({x,y}:{x:number;y:number}) {return <g transform={`translate(${x
 function Rope({x,y}:{x:number;y:number}) {return <g transform={`translate(${x} ${y})`} fill="none">{[0,1,2,3,4].map(i=><ellipse key={i} cx={i*2} cy={i*3} rx={108-i*15} ry={79-i*11} stroke="#705137" strokeWidth="15"/>)}{[0,1,2,3,4].map(i=><ellipse key={i} cx={i*2} cy={i*3-2} rx={108-i*15} ry={79-i*11} stroke="#d1b07c" strokeWidth="9" strokeDasharray="6 3"/>)}<path d="M87 42q61 58 104 26" stroke="#c8a574" strokeWidth="11"/></g>;}
 function Oil({x,y}:{x:number;y:number}) {return <g transform={`translate(${x} ${y})`} stroke={ink} strokeWidth="3"><path d="M-30-30q-39 6-25 41l28 4" fill="none" stroke="#c0a46b" strokeWidth="11"/><path d="M-34-18Q-30-40 14-27L32 32Q-8 53-42 31Z" fill="#b4a264"/><path d="M13-23L72-48 77-41 26 3" fill="#c0ae78"/><path d="M-23-27V-42H6V-30" fill={gold}/><path d="M-25 0L-30 24" stroke="#e7d397" strokeWidth="5"/></g>;}
 function SearchScenery({id,scene}:{id:string;scene:string}) {
- return <g><rect width="1000" height="620" fill={scene==='optics'?'#253e53':scene==='gallery'?'#3c6254':'#4b5c58'}/><Wood id={id} x={24} y={93} w={952} h={91}/><path d="M35 184H965" stroke={ink} strokeWidth="13"/><Wood id={id} x={0} y={279} w={1000} h={341}/><path d="M0 288H1000" stroke="#dcc092" strokeWidth="6"/><path d="M0 482H1000M0 584H1000" stroke="#6c4f38" strokeWidth="3"/>
- {/* A deliberately irregular shelf of keepsakes, never a row of answer icons. */}
- <Books x={51} y={162} s={.65}/><Bottle x={193} y={140} s={.58} color={scene==='optics'?'#7697aa':'#82a69a'}/><Shell x={293} y={144} s={.7}/><Cup x={407} y={145}/><g transform="translate(539 137) rotate(-8)"><rect x="-45" y="-15" width="92" height="32" rx="5" fill="#a6674c" stroke={ink} strokeWidth="3"/><path d="M-36-6H37M-36 4H37" stroke="#d8c390" strokeWidth="4"/></g><Bottle x={673} y={138} s={.62}/><Books x={784} y={168} s={.68}/><Shell x={922} y={150} s={.65}/>
- <path d="M4 595q125-33 240-10" fill="none" stroke="#604a36" strokeWidth="6"/><path d="M324 572q35-8 65 0m-37 7h21M831 557q49-11 98 0" fill="none" stroke="#d8b381" strokeWidth="2" opacity=".5"/></g>;
+ const surface = <g><Wood id={id} x={0} y={279} w={1000} h={341}/><path d="M0 288H1000" stroke="#dcc092" strokeWidth="6"/><path d="M0 482H1000M0 584H1000" stroke="#6c4f38" strokeWidth="3"/></g>;
+ if (scene === 'gallery') return <g aria-label="标本收藏架">
+  <rect width="1000" height="620" fill="#3c6254"/>{surface}
+  <Wood id={id} x={24} y={55} w={952} h={132}/><path d="M35 184H965M340 63V181M646 63V181" stroke={ink} strokeWidth="11"/>
+  <Books x={56} y={171} s={.8}/><Shell x={241} y={137} s={1.15}/><Bottle x={404} y={140} s={.72}/>
+  <g transform="translate(548 129)"><ellipse rx="57" ry="39" fill="#2c493f" stroke={gold} strokeWidth="3"/><path d="M-39 0Q-15-26 12-7L36-22V22L12 7Q-15 26-39 0Z" fill="#b7c7a0"/><circle cx="-23" cy="-3" r="3" fill={ink}/></g>
+  <Shell x={733} y={140} s={.9}/><Books x={846} y={172} s={.7}/>
+ </g>;
+ if (scene === 'optics') return <g aria-label="星空观测窗">
+  <rect width="1000" height="620" fill="#233b52"/>
+  <path d="M38 276V70Q285-34 532 70V276" fill="#172e45" stroke="#bba170" strokeWidth="12"/>
+  <path d="M285 15V271M48 149H522" stroke="#839b91" strokeWidth="7"/>
+  {[[83,97],[171,61],[220,185],[364,92],[435,211],[473,66]].map(([x,y])=><path key={x} d={`M${x-4} ${y}h8m-4-4v8`} stroke="#eadbb0" strokeWidth="2"/>)}
+  <path d="M404 47a26 26 0 1 0 29 37 29 29 0 0 1-29-37" fill="#e3d8af"/>
+  <g transform="translate(701 128) rotate(6)"><rect x="-110" y="-96" width="220" height="177" fill="#d9c494" stroke="#8b7854" strokeWidth="5"/><circle cy="-9" r="56" fill="none" stroke="#69877e" strokeWidth="3"/><path d="M-80-9H80M0-73V55M-38-53L42 32M-41 31L39-48" stroke="#9a9065" strokeWidth="2"/><path d="M-114-99H114" stroke={ink} strokeWidth="8"/></g>
+  <path d="M896 50V232" stroke={gold} strokeWidth="7"/><circle cx="896" cy="109" r="45" fill="none" stroke={gold} strokeWidth="5"/><ellipse cx="896" cy="109" rx="20" ry="45" fill="none" stroke="#88a8a0" strokeWidth="4"/>
+  {surface}
+ </g>;
+ return <g aria-label="铜管工具架">
+  <rect width="1000" height="620" fill="#4b5c58"/>
+  <path d="M0 47H306Q331 47 331 77V198H464" fill="none" stroke={ink} strokeWidth="27"/><path d="M0 44H306Q329 44 329 75V195H464" fill="none" stroke={`url(#${id}-copper)`} strokeWidth="17"/>
+  <Wood id={id} x={488} y={37} w={471} h={134}/><path d="M506 143H940" stroke={gold} strokeWidth="8"/>
+  {[541,626,711,796,881].map((x,i)=><g key={x}><circle cx={x} cy="60" r="5" fill={ink}/><path d={`M${x} 64v28`} stroke={gold} strokeWidth="5"/>{i%2===0?<path d={`M${x-12} 79v40l12 11 12-11V79M${x} 99v43`} fill="none" stroke="#a9b7a8" strokeWidth="8"/>:<path d={`M${x} 84v58m-18-53h36`} stroke="#b9a277" strokeWidth="12"/>}</g>)}
+  <Gear x={187} y={177} r={44}/><Gear x={411} y={113} r={30}/><path d="M14 246H641" stroke="#253b37" strokeWidth="5"/>
+  {surface}
+ </g>;
 }
 export function SearchBackdrop({scene,state}:{scene:string;state:ChapterState}) {
  const id=useId().replace(/:/g,'');

@@ -1,3 +1,4 @@
+import { lensClues } from "../src/escape/chapter/lens";
 import assert from "node:assert/strict";
 import {
   initialChapter,
@@ -152,6 +153,7 @@ assert(state.puzzles["search-kit"].solved);
 applyTool("mount-arrow", "arrow-tiles");
 applyTool("mount-sail", "sail-tiles");
 applyTool("mount-vane", "vane-tiles");
+const beforePatternSave = serializeChapter(CHAPTER, state);
 const arrangement = puzzle("pattern-tray");
 assert(arrangement.kind === "arrangement");
 let slots: Extract<PuzzleInput, { kind: "arrangement" }> = {
@@ -186,6 +188,18 @@ travel("optics");
 applyTool("mount-filter", "filter-disc");
 for (const lens of ["sun", "moon", "leaf"])
   input("lens-chart", { kind: "filter", lens, value: "" });
+assert.deepEqual(state.puzzles["lens-chart"].seenLenses, [], "Switching colors never inspects the whole paper");
+const optical = CHAPTER.puzzles.find(p => p.kind === "filter")!;
+assert(optical.kind === "filter");
+for (const clue of lensClues(optical)) {
+  input(optical.id, { kind: "filter", lens: clue.lens, position: {x: clue.x,y:clue.y}, value: "" });
+}
+assert.equal(state.puzzles[optical.id].seenClues.length, 6);
+reload();
+assert.equal(state.puzzles[optical.id].seenClues.length, 6, "Local notes survive reload");
+const legacy = JSON.parse(serializeChapter(CHAPTER,state));
+delete legacy.state.puzzles[optical.id].seenClues;
+assert.equal(parseChapter(CHAPTER,JSON.stringify(legacy)).puzzles[optical.id].seenClues.length,6,"Legacy earned observations migrate");
 assert.deepEqual(state.puzzles["lens-chart"].seenLenses, [
   "sun",
   "moon",
@@ -224,22 +238,36 @@ travel("workshop");
 applyTool("mount-route", "route-plate");
 const drop = puzzle("gravity-lock");
 assert(drop.kind === "drop");
+const digitGlyphs = {
+  0: ["111", "101", "101", "101", "111"],
+  6: ["111", "100", "111", "101", "111"],
+  9: ["111", "101", "111", "001", "111"],
+};
 const answers = drop.boards.map((board) => {
-  const result = simulateDrops(board.model, [board.placement]);
+  const result = simulateDrops(board.model, board.placements);
   assert(result.valid);
-  return Math.max(...result.landed[0].cells.map(([, y]) => y)) + 1;
+  assert.equal(result.landed.length, board.model.pieces.length);
+  const occupied = new Set(result.cells.map(([x, y]) => `${x},${y}`));
+  const rows = Array.from({ length: board.model.height }, (_, y) => Array.from(
+    { length: board.model.width }, (_, x) => occupied.has(`${x},${y}`) ? "1" : "0",
+  ).join(""));
+  const matches = Object.entries(digitGlyphs).filter(([, glyph]) => glyph.join("/") === rows.join("/"));
+  assert.equal(matches.length, 1, "Whole sequential landing forms one visible numeral");
+  return Number(matches[0][0]);
 });
-assert.deepEqual(answers, [6, 5, 8], "Independent geometry cross-check");
-for (let a = 1; a <= 8; a++)
-  for (let b = 1; b <= 8; b++)
-    for (let c = 1; c <= 8; c++) {
+assert.deepEqual(answers, [0, 6, 9], "Digits are read from final tetromino silhouettes");
+assert.deepEqual(state.puzzles[drop.id].input, { kind: "drop", predictions: [-1, -1, -1] });
+assert(validInput(drop, { kind: "drop", predictions: [0, -1, 9] }), "Zero is a real prediction and differs from unset");
+for (let a = 0; a <= 9; a++)
+  for (let b = 0; b <= 9; b++)
+    for (let c = 0; c <= 9; c++) {
       assert.equal(
         validatePuzzle(drop, { kind: "drop", predictions: [a, b, c] }),
-        a === 6 && b === 5 && c === 8,
-        "Every wrong whole-board prediction rejected",
+        a === answers[0] && b === answers[1] && c === answers[2],
+        "Every wrong three-digit silhouette prediction rejected",
       );
     }
-input(drop.id, { kind: "drop", predictions: [6, 5, 7] });
+input(drop.id, { kind: "drop", predictions: [0, 6, 8] });
 confirm(drop.id);
 assert(!state.puzzles[drop.id].solved);
 input(drop.id, { kind: "drop", predictions: answers });
@@ -267,11 +295,12 @@ confirm(sudoku.id);
 travel("workshop");
 applyTool("mount-prism", "beacon-prism");
 const final = puzzle("foglight-console");
-assert(final.kind === "arrangement");
-input(final.id, { kind: "arrangement", slots: [...final.solution].reverse() });
+assert(final.kind === "code");
+assert.equal(final.length, 6);
+input(final.id, { kind: "code", value: "313422" });
 confirm(final.id);
 assert(!state.complete);
-input(final.id, { kind: "arrangement", slots: [...final.solution] });
+input(final.id, { kind: "code", value: "224313" });
 confirm(final.id);
 assert(state.complete);
 reload();
@@ -294,18 +323,139 @@ assert.equal(
 for (const raw of [null, "{", "{}", "[]", "null", "x".repeat(240001)])
   assert.deepEqual(parseChapter(CHAPTER, raw), initialChapter(CHAPTER));
 const envelope = JSON.parse(completed);
-for (const version of [0, 2, -1, "1"])
+for (const version of [0, 3, -1, "1"])
   assert.deepEqual(
     parseChapter(CHAPTER, JSON.stringify({ ...envelope, version })),
     initialChapter(CHAPTER),
   );
 assert(
-  isFutureChapterSave(CHAPTER, JSON.stringify({ ...envelope, version: 2 })),
+  isFutureChapterSave(CHAPTER, JSON.stringify({ ...envelope, version: 3 })),
 );
 assert(
-  isFutureChapterSave(CHAPTER, JSON.stringify({ ...envelope, revision: 2 })),
+  isFutureChapterSave(CHAPTER, JSON.stringify({ ...envelope, revision: 3 })),
 );
 assert(!isFutureChapterSave(CHAPTER, completed));
+// Revision 1 contained two different mechanisms. Upgrade only independently
+// verified old completions, preserving all unaffected progress and gate provenance.
+assert.equal(CHAPTER.revision, 2);
+const oldPatternSlots = ["arrow-S3", "arrow-W1", "sail-W1", "sail-N2", "vane-N2", "vane-E3"];
+const oldFinalSlots = ["shell", "star", "fish", "wave", "anchor", "sail"];
+const oldCompleted = structuredClone(envelope);
+oldCompleted.revision = 1;
+oldCompleted.state.puzzles["pattern-tray"].input = { kind: "arrangement", slots: oldPatternSlots };
+oldCompleted.state.puzzles["foglight-console"].input = { kind: "arrangement", slots: oldFinalSlots };
+oldCompleted.state.puzzles["gravity-lock"].input = { kind: "drop", predictions: [6, 5, 8] };
+for (const id of ["pattern-tray", "foglight-console"]) {
+  oldCompleted.state.puzzles[id].undo = [{ kind: "arrangement", slots: [null, null, null, null, null, null] }];
+  oldCompleted.state.puzzles[id].redo = [structuredClone(oldCompleted.state.puzzles[id].input)];
+}
+for (const id of ["pattern-tray", "gravity-lock", "foglight-console"])
+  oldCompleted.state.puzzles[id].hints = 3;
+oldCompleted.state.puzzles["gravity-lock"].undo = [{ kind: "drop", predictions: [6, 0, 0] }];
+oldCompleted.state.puzzles["gravity-lock"].redo = [{ kind: "drop", predictions: [6, 5, 8] }];
+const upgraded = parseChapter(CHAPTER, JSON.stringify(oldCompleted));
+assert.deepEqual(upgraded, state, "An honestly completed old chapter retains every earned unlock, clue and completion");
+assert.equal(JSON.parse(serializeChapter(CHAPTER, upgraded)).revision, 2);
+assert.deepEqual(parseChapter(CHAPTER, serializeChapter(CHAPTER, upgraded)), upgraded, "The migrated save roundtrips in revision 2");
+assert(!isFutureChapterSave(CHAPTER, JSON.stringify(oldCompleted)));
+
+for (const slots of [oldPatternSlots, ["arrow-S3", null, null, null, null, null]]) {
+  const pending = JSON.parse(beforePatternSave);
+  pending.revision = 1;
+  Object.assign(pending.state.puzzles["pattern-tray"], {
+    input: { kind: "arrangement", slots }, solved: false, hints: 3,
+    undo: [{ kind: "arrangement", slots: oldPatternSlots }],
+    redo: [{ kind: "arrangement", slots: oldPatternSlots }],
+  });
+  const migrated = parseChapter(CHAPTER, JSON.stringify(pending));
+  assert.deepEqual(migrated, parseChapter(CHAPTER, beforePatternSave), "An incomplete old layout resets only that board, even when its unconfirmed answer was correct");
+}
+for (const slots of [oldFinalSlots, ["shell", null, null, null, null, null]]) {
+  const pending = structuredClone(oldCompleted);
+  pending.state.puzzles["foglight-console"].input = { kind: "arrangement", slots };
+  pending.state.puzzles["foglight-console"].solved = false;
+  const migrated = parseChapter(CHAPTER, JSON.stringify(pending));
+  assert.equal(migrated.complete, false);
+  assert.deepEqual(migrated.puzzles["foglight-console"].input, { kind: "code", value: "" });
+  assert.deepEqual(migrated.puzzles["foglight-console"].undo, []);
+  assert.deepEqual(migrated.puzzles["foglight-console"].redo, []);
+  for (const p of CHAPTER.puzzles.filter(p => p.id !== "foglight-console"))
+    assert.deepEqual(migrated.puzzles[p.id], state.puzzles[p.id], `Pending old final preserves ${p.id}`);
+  assert.deepEqual(migrated.found, state.found);
+  assert.deepEqual(migrated.revealed, state.revealed);
+  assert.deepEqual(migrated.usedTools, state.usedTools);
+}
+for (const malformed of [
+  null,
+  { kind: "arrangement", slots: oldPatternSlots.slice(0, 5) },
+  { kind: "arrangement", slots: [...oldPatternSlots].reverse() },
+  { kind: "arrangement", slots: Array(6).fill(oldPatternSlots[0]) },
+  { kind: "arrangement", slots: arrangement.solution },
+  { kind: "code", value: "224313" },
+]) {
+  const broken = structuredClone(oldCompleted);
+  broken.state.puzzles["pattern-tray"].input = malformed;
+  const migrated = parseChapter(CHAPTER, JSON.stringify(broken));
+  assert.equal(migrated.puzzles["pattern-tray"].solved, false, "Malformed old solved bits never earn new pattern progress");
+  assert.deepEqual(migrated.puzzles["pattern-tray"].input, { kind: "arrangement", slots: Array(6).fill(null) });
+  assert.equal(migrated.puzzles["animal-cabinet"].solved, true, "Independent, valid earlier progress survives");
+  assert.equal(migrated.complete, false);
+  assert.ok(!migrated.found.includes("filter-disc"));
+  assert.ok(!migrated.usedTools.includes("mount-filter"));
+  assert.equal(migrated.puzzles["lens-chart"].solved, false, "Dependent solved flags require earned provenance");
+}
+for (const malformed of [
+  null,
+  { kind: "arrangement", slots: oldFinalSlots.slice(0, 5) },
+  { kind: "arrangement", slots: [...oldFinalSlots].reverse() },
+  { kind: "arrangement", slots: Array(6).fill("shell") },
+  { kind: "code", value: "224313" },
+]) {
+  const broken = structuredClone(oldCompleted);
+  broken.state.puzzles["foglight-console"].input = malformed;
+  const migrated = parseChapter(CHAPTER, JSON.stringify(broken));
+  assert.equal(migrated.complete, false, "Malformed old final must not convert to a completed new keypad");
+  assert.deepEqual(migrated.puzzles["foglight-console"].input, { kind: "code", value: "" });
+  for (const p of CHAPTER.puzzles.filter(p => p.id !== "foglight-console"))
+    assert.deepEqual(migrated.puzzles[p.id], state.puzzles[p.id]);
+}
+for (const oldInput of [
+  { kind: "drop", predictions: [6, 5, 8] },
+  { kind: "drop", predictions: [6, 0, 0] },
+]) {
+  const pending = structuredClone(oldCompleted);
+  pending.state.puzzles["gravity-lock"].input = oldInput;
+  pending.state.puzzles["gravity-lock"].solved = false;
+  const migrated = parseChapter(CHAPTER, JSON.stringify(pending));
+  assert.deepEqual(migrated.puzzles["gravity-lock"].input, { kind: "drop", predictions: [-1, -1, -1] });
+  assert.equal(migrated.puzzles["gravity-lock"].hints, 0, "Old hint requests never reveal the new numeral reasoning");
+  assert.deepEqual(migrated.puzzles["gravity-lock"].undo, []);
+  assert.deepEqual(migrated.puzzles["gravity-lock"].redo, []);
+  assert.equal(migrated.puzzles["lens-chart"].solved, true);
+  assert.equal(migrated.puzzles["tide-sudoku"].solved, false);
+  assert(!migrated.found.includes("winding-crank"));
+  assert.equal(migrated.complete, false);
+}
+for (const malformed of [
+  null,
+  { kind: "drop", predictions: [6, 5] },
+  { kind: "drop", predictions: [6, 5, 7] },
+  { kind: "drop", predictions: [0, 6, 9] },
+  { kind: "drop", predictions: ["6", "5", "8"] },
+  { kind: "code", value: "658" },
+]) {
+  const broken = structuredClone(oldCompleted);
+  broken.state.puzzles["gravity-lock"].input = malformed;
+  const migrated = parseChapter(CHAPTER, JSON.stringify(broken));
+  assert.equal(migrated.puzzles["gravity-lock"].solved, false);
+  assert.deepEqual(migrated.puzzles["gravity-lock"].input, { kind: "drop", predictions: [-1, -1, -1] });
+  assert.equal(migrated.puzzles["lens-chart"].solved, true);
+  assert.equal(migrated.complete, false, "Invalid old height answers cannot award the new numeral puzzle");
+}
+const forgedOldGates = structuredClone(oldCompleted);
+forgedOldGates.state.usedTools = [];
+assert.equal(parseChapter(CHAPTER, JSON.stringify(forgedOldGates)).complete, false, "Valid old answer strings still need genuine gate provenance");
+
 const tampered = structuredClone(envelope);
 tampered.state.revealed = [];
 tampered.state.usedTools = [];
@@ -414,7 +564,7 @@ assert.deepEqual(
   initialChapter(CHAPTER),
 );
 console.log(
-  "Chapter: complete solve path; 512 drop boards; unique sudoku; gates, undo/redo/reset/reload, hints, save provenance and lint passed",
+  "Chapter: complete solve path; 1000 multi-drop digit predictions; unique sudoku; gates, undo/redo/reset/reload, hints, save provenance and lint passed",
 );
 
 // Physical tool targets must bind to the same scene's closeup and finite geometry.

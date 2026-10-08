@@ -20,8 +20,8 @@
     "test:e2e": "node --test e2e/*.test.js",
     "test:e2e:mul": "npm run build && node --test e2e/mul-drill.test.js",
     "verify:write": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-write.js",
-    "verify:escape": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-escape.js && node node_modules/.tmp-verify/scripts/verify-escape-math.js && node node_modules/.tmp-verify/scripts/verify-escape-art.js && node node_modules/.tmp-verify/scripts/verify-escape-guidance.js && node scripts/verify-escape-ui.mjs && node node_modules/.tmp-verify/scripts/verify-escape-adventure.js && node scripts/verify-escape-adventure-ui.mjs && npm run verify:escape:chapter",
-    "verify:escape:chapter": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-escape-chapter.js && node scripts/verify-escape-chapter-independent.mjs && node scripts/verify-escape-chapter-ui.mjs"
+    "verify:escape": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-escape.js && node node_modules/.tmp-verify/scripts/verify-escape-math.js && node node_modules/.tmp-verify/scripts/verify-escape-art.js && node node_modules/.tmp-verify/scripts/verify-escape-guidance.js && node scripts/verify-escape-ui.mjs && node node_modules/.tmp-verify/scripts/verify-escape-adventure.js && node scripts/verify-escape-adventure-ui.mjs && node scripts/verify-escape-scenes.mjs && node scripts/verify-escape-scenes-ui.mjs && npm run verify:escape:chapter",
+    "verify:escape:chapter": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-escape-chapter.js && node node_modules/.tmp-verify/scripts/verify-escape-lens.js && node scripts/verify-escape-chapter-independent.mjs && node scripts/verify-escape-chapter-ui.mjs && node scripts/verify-escape-exploration-ui.mjs && node scripts/verify-escape-drop.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

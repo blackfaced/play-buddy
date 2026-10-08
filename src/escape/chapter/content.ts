@@ -1,4 +1,5 @@
-import type { Cell, ChapterDefinition, DropPuzzle, Requirement } from "./types";
+import { dropBoards } from "./dropGeometry";
+import type { ChapterDefinition, Requirement } from "./types";
 export const CHAPTER_KEY = "play-buddy:escape:foglight:v1";
 const tool = (id: string): Requirement => ({ kind: "tool", id });
 const reveal = (id: string): Requirement => ({ kind: "reveal", id });
@@ -8,82 +9,9 @@ const base = {
   requires: [] as Requirement[],
   rewards: [] as string[],
 };
-function fixedColumns(heights: number[]): Cell[] {
-  return heights.flatMap((height, x) =>
-    Array.from({ length: height }, (_, offset): Cell => [x, 7 - offset]),
-  );
-}
-const dropBoards: DropPuzzle["boards"] = [
-  {
-    id: "drop-a",
-    label: "甲 · T 形",
-    model: {
-      width: 6,
-      height: 8,
-      fixed: fixedColumns([1, 3, 0, 2, 4, 1]),
-      pieces: [
-        {
-          id: "t",
-          label: "T 形",
-          cells: [
-            [0, 0],
-            [1, 0],
-            [2, 0],
-            [1, 1],
-          ],
-        },
-      ],
-    },
-    placement: { pieceId: "t", rotation: 0, column: 1 },
-  },
-  {
-    id: "drop-b",
-    label: "乙 · 方形",
-    model: {
-      width: 6,
-      height: 8,
-      fixed: fixedColumns([2, 0, 4, 1, 3, 2]),
-      pieces: [
-        {
-          id: "o",
-          label: "方形",
-          cells: [
-            [0, 0],
-            [1, 0],
-            [0, 1],
-            [1, 1],
-          ],
-        },
-      ],
-    },
-    placement: { pieceId: "o", rotation: 0, column: 3 },
-  },
-  {
-    id: "drop-c",
-    label: "丙 · 长条",
-    model: {
-      width: 6,
-      height: 8,
-      fixed: fixedColumns([3, 0, 2, 1, 4, 2]),
-      pieces: [
-        {
-          id: "i",
-          label: "长条",
-          cells: [
-            [0, 0],
-            [0, 1],
-            [0, 2],
-            [0, 3],
-          ],
-        },
-      ],
-    },
-    placement: { pieceId: "i", rotation: 0, column: 1 },
-  },
-];
 export const CHAPTER: ChapterDefinition = {
   id: "foglight",
-  revision: 1,
+  revision: 2,
   title: "归航之光",
   finish: "foglight-console",
   scenes: [
@@ -128,21 +56,21 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "arrow-tiles",
-      name: "箭纹片",
+      name: "星帆纹片",
       symbol: "↑",
-      description: "两枚带朝向与刻点的箭纹片。",
+      description: "两枚带箭纹与刻点的小木片，角落分别有星和帆的徽记。",
     },
     {
       id: "sail-tiles",
-      name: "帆纹片",
+      name: "浪贝纹片",
       symbol: "◩",
-      description: "两枚带朝向与刻点的帆纹片。",
+      description: "两枚带箭纹与刻点的小木片，角落分别有浪和贝壳的徽记。",
     },
     {
       id: "vane-tiles",
-      name: "风标纹片",
+      name: "锚鱼纹片",
       symbol: "⚑",
-      description: "两枚长短臂不同、带刻点的风标纹片。",
+      description: "两枚带箭纹与刻点的小木片，角落分别有锚和鱼的徽记。",
     },
     {
       id: "oil-can",
@@ -166,7 +94,7 @@ export const CHAPTER: ChapterDefinition = {
       id: "route-plate",
       name: "航路铭牌",
       symbol: "▤",
-      description: "长方形铜铭牌，背面有两枚凸出的卡榫。",
+      description: "长方形铜铭牌，刻着三枚向下落的方块；背面有两枚凸出的卡榫。",
     },
     {
       id: "winding-crank",
@@ -186,7 +114,7 @@ export const CHAPTER: ChapterDefinition = {
       id: "pattern-engraving",
       scene: "gallery",
       label: "检查保养铭刻",
-      clue: "铭刻：↑ → ↓ ← ↑；• → •• → ••• → •。",
+      clue: "铭刻：左上角一道斜切口，右下角两颗并排铜铆钉。",
       requires: [],
     },
     {
@@ -316,7 +244,7 @@ export const CHAPTER: ChapterDefinition = {
     {
       id: "mount-route",
       installsItem: true,
-      target: { closeup: "gravity-lock", label: "铭牌嵌槽", description: "实验台下方有一块长方形空槽。", x: 20, y: 64, width: 60, height: 24 },
+      target: { closeup: "gravity-lock", label: "铭牌嵌槽", description: "实验台下方有一块长方形空槽，槽边刻着向下落的方块。", x: 20, y: 64, width: 60, height: 24 },
       scene: "workshop",
       item: "route-plate",
       label: "将航路铭牌装上实验台",
@@ -405,47 +333,31 @@ export const CHAPTER: ChapterDefinition = {
       scene: "gallery",
       kind: "arrangement",
       title: "海风纹片台",
-      inscription: "三条纹带各缺两枚，台边刻着两串符号。",
-      easyHelp: "朝向每次顺时针转四分之一圈，刻点按一点、两点、三点循环。分别继续两种规律。",
+      inscription: "方盘上留着一些固定纹片，铜框左上角有一道斜切口。",
+      easyHelp: "观察固定纹片中反复出现的相同之处，再试着放入活动纹片。",
       requires: [tool("mount-arrow"), tool("mount-sail"), tool("mount-vane")],
       rewards: ["filter-disc"],
-      slots: [
-        "箭纹第3格",
-        "箭纹第4格",
-        "帆纹第3格",
-        "帆纹第4格",
-        "风标第3格",
-        "风标第4格",
-      ],
+      slots: ["第一排第二格", "第一排第三格", "第二排第一格", "第二排第四格", "第三排第二格", "第四排第一格"],
       pieces: [
-        { id: "arrow-S3", label: "箭纹 · 南 · 三点", symbol: "↓ •••" },
-        { id: "arrow-W1", label: "箭纹 · 西 · 一点", symbol: "← •" },
-        { id: "sail-W1", label: "帆纹 · 西 · 一点", symbol: "◩ ← •" },
-        { id: "sail-N2", label: "帆纹 · 北 · 两点", symbol: "◩ ↑ ••" },
-        { id: "vane-N2", label: "风标 · 北 · 两点", symbol: "⚑ ↑ ••" },
-        { id: "vane-E3", label: "风标 · 东 · 三点", symbol: "⚑ → •••" },
+        { id: "star-stamp", label: "星徽纹片", symbol: "↑ •• ★", stamp: { direction: "N", dots: 2, emblem: "star" } },
+        { id: "sail-stamp", label: "帆徽纹片", symbol: "← •• ◭", stamp: { direction: "W", dots: 2, emblem: "sail" } },
+        { id: "wave-stamp", label: "浪徽纹片", symbol: "↓ •••• ≈", stamp: { direction: "S", dots: 4, emblem: "wave" } },
+        { id: "shell-stamp", label: "贝壳徽纹片", symbol: "→ •••• ◔", stamp: { direction: "E", dots: 4, emblem: "shell" } },
+        { id: "anchor-stamp", label: "锚徽纹片", symbol: "↑ • ⚓", stamp: { direction: "N", dots: 1, emblem: "anchor" } },
+        { id: "fish-stamp", label: "鱼徽纹片", symbol: "↓ ••• ⋊", stamp: { direction: "S", dots: 3, emblem: "fish" } },
       ],
-      solution: [
-        "arrow-S3",
-        "arrow-W1",
-        "sail-W1",
-        "sail-N2",
-        "vane-N2",
-        "vane-E3",
+      solution: ["star-stamp", "sail-stamp", "wave-stamp", "shell-stamp", "anchor-stamp", "fish-stamp"],
+      grid: [
+        {stamp:{direction:"S",dots:2}}, {slot:0}, {slot:1}, {stamp:{direction:"E",dots:2}},
+        {slot:2}, {stamp:{direction:"N",dots:4}}, {stamp:{direction:"W",dots:4}}, {slot:3},
+        {stamp:{direction:"S",dots:1}}, {slot:4}, {stamp:{direction:"W",dots:1}}, {stamp:{direction:"E",dots:1}},
+        {slot:5}, {stamp:{direction:"N",dots:3}}, {stamp:{direction:"W",dots:3}}, {stamp:{direction:"E",dots:3}},
       ],
-      rows: [
-        { label: "箭纹", sequence: ["↑ •", "→ ••", null, null, "↑ ••"] },
-        {
-          label: "帆纹",
-          sequence: ["◩ → ••", "◩ ↓ •••", null, null, "◩ → •••"],
-        },
-        { label: "风标", sequence: ["⚑ ↓ •••", "⚑ ← •", null, null, "⚑ ↓ •"] },
-      ],
-      success: "纹带完整地扣合，台侧升起一枚三色镜盘。",
+      success: "纹片沉入铜框，台侧升起一枚三色镜盘。",
       hints: [
-        "相邻纹片不只是形状不同。",
-        "分别留意朝向和刻点。",
-        "朝向每次顺时针转四分之一圈，刻点按一点、两点、三点循环。分别继续两种规律。",
+        "先比较同一排和同一列的固定纹片。",
+        "方向和刻点可以分开观察。",
+        "同排点数相同，同列方向相同；角落的小徽章并不决定它的位置。",
       ],
     },
     {
@@ -456,7 +368,7 @@ export const CHAPTER: ChapterDefinition = {
       title: "变色放大镜",
       inscription:
         "锁边刻着：日 ☀ → 月 ☾ → 叶 ♧。窗内有一张纸页，镜盘可以转动。",
-      easyHelp: "窗内的纸页藏着不同图层。依次转动日、月、叶镜片，观察各层。",
+      easyHelp: "拿起放大镜，在纸上的墨痕间移动。每种镜片各有两处刻记；看到完整刻记后会抄进手记。",
       requires: [tool("mount-filter")],
       rewards: ["route-plate"],
       length: 3,
@@ -490,7 +402,7 @@ export const CHAPTER: ChapterDefinition = {
       success: "观测窗的暗格打开，航路铭牌落在托盘中。",
       hints: [
         "同一张纸可能藏着不止一层。",
-        "转动镜片，比较三个标记。",
+        "墨痕散在港口各处。移动放大镜，再换镜片看看同一处。",
         "锁旁的日、月、叶给出了观察顺序。",
       ],
     },
@@ -501,15 +413,15 @@ export const CHAPTER: ChapterDefinition = {
       kind: "drop",
       title: "落块实验台",
       inscription:
-        "竖直落下，碰到方块停住；记录最低小格所在行。三幅图各做一次独立实验，积木不旋转、不横移，也不消行。",
+        "每槽的三块积木按 ①②③ 依次直落，不转向、不横移、不消行。全部落定后，会拼成哪个数字？",
       requires: [tool("mount-route")],
       rewards: ["winding-crank"],
       boards: dropBoards,
-      success: "三次落块实验吻合，抽屉弹开，露出潮汐曲柄。",
+      success: "三个数字吻合，积木落定，抽屉弹开，露出潮汐曲柄。",
       hints: [
-        "每幅图都是单独的一次下落。",
-        "不能横移或转动；先找到哪一格最早碰到障碍。",
-        "停住以后，读整个积木最低格的行号。",
+        "每槽单独看：最下面的 ① 先落，② 和 ③ 接着落。",
+        "先在心里把 ① 放到底，再让 ② 碰到它时停下。",
+        "最后放下 ③，把所有积木看成一个整体，认出数字轮廓。",
       ],
     },
     {
@@ -534,27 +446,19 @@ export const CHAPTER: ChapterDefinition = {
       ...base,
       id: "foglight-console",
       scene: "workshop",
-      kind: "arrangement",
+      kind: "code",
       title: "归航雾灯",
-      inscription:
-        "六枚航路徽章，从左向右连成归港之路。",
-      easyHelp: "镜片中见过的航路短图仍可回到观测窗查看。用重合的图案把短段连起来。",
+      inscription: "灯座上有一排密码轮，旁边压着一枚缺角的方框印记。",
+      easyHelp: "有些旧刻记在别的器物上也出现过。可以回去看看。",
       requires: [tool("mount-route"), tool("mount-prism")],
-      slots: ["航路1", "航路2", "航路3", "航路4", "航路5", "航路6"],
-      pieces: [
-        { id: "shell", label: "贝壳", symbol: "◔" },
-        { id: "star", label: "星", symbol: "★" },
-        { id: "fish", label: "鱼", symbol: "⋊" },
-        { id: "wave", label: "浪", symbol: "≈" },
-        { id: "anchor", label: "锚", symbol: "⚓" },
-        { id: "sail", label: "帆", symbol: "◭" },
-      ],
-      solution: ["shell", "star", "fish", "wave", "anchor", "sail"],
+      length: 6,
+      solution: "224313",
+      frameSeal: true,
       success: "归航之光已点亮！温暖的光束穿过薄雾，把小船引回港湾。",
       hints: [
-        "三张短图示描述的是同一段航程。",
-        "找在两张图里重复出现的图案。",
-        "用重合图案把短段接成长段，再摆六枚徽章。",
+        "航路短图上的徽章，还在什么地方见过？",
+        "有两块方盘的铜框，连缺角与铆钉的位置都一样。",
+        "接好航路短图；依次找到徽章在纹片盘上的位置，再读潮汐板同一位置的数字。",
       ],
     },
   ],

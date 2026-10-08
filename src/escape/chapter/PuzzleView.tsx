@@ -1,47 +1,21 @@
-import { useId, useState } from "react";
+import DropPuzzleView from "./DropPuzzleView";
+import { StampArt, FrameSeal } from "./PatternArt";
+import LensMap from "./LensMap";
+import { useState } from "react";
 import type { GuidanceMode } from "../guidancePolicy";
 import type {
   ChapterAction,
   PuzzleDefinition,
   PuzzleInput,
   PuzzleProgress,
-  Cell,
 } from "./types";
-import { simulateDrops, rotateCells, placePiece } from "./validators";
+import { placePiece } from "./validators";
 
 interface Props {
   puzzle: PuzzleDefinition;
   progress: PuzzleProgress;
   mode: GuidanceMode;
   onAction: (action: ChapterAction) => void;
-}
-
-function PieceDrawing({
-  cells,
-  label,
-}: {
-  cells: readonly Cell[];
-  label: string;
-}) {
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      role="img"
-      aria-label={label}
-      className="chapter-piece-art"
-    >
-      {cells.map(([x, y], index) => (
-        <rect
-          key={index}
-          x={10 + x * 20}
-          y={10 + y * 20}
-          width="18"
-          height="18"
-          rx="3"
-        />
-      ))}
-    </svg>
-  );
 }
 
 export default function PuzzleView({
@@ -52,7 +26,6 @@ export default function PuzzleView({
 }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [cell, setCell] = useState<number | null>(null);
-  const lensClip = useId().replace(/:/g, "");
   const input = progress.input;
   const change = (next: PuzzleInput) =>
     onAction({ type: "input", id: puzzle.id, input: next });
@@ -105,7 +78,7 @@ export default function PuzzleView({
                     onClick={() => setSelected(piece.id)}
                     className="chapter-shape"
                   >
-                    <span aria-hidden="true">{piece.symbol}</span>
+                    {piece.stamp ? <StampArt stamp={piece.stamp} /> : <span aria-hidden="true">{piece.symbol}</span>}
                     <small>{piece.label}</small>
                   </button>
                 ))}
@@ -113,7 +86,20 @@ export default function PuzzleView({
             <p className="chapter-controls-note">
               先选图形，再点位置。已放下的图形可以换位置；选中格子里的图形后，可移回托盘。
             </p>
-            <div className="chapter-arrangement">
+            {puzzle.grid ? <div className="chapter-maker-frame" aria-label="左上斜切角、右下双铆钉的纹片铜框"><div className="chapter-pattern-grid">
+              {puzzle.grid.map((entry,index) => {
+                if ('stamp' in entry) return <div className="chapter-pattern-fixed" key={index} aria-label={`第${Math.floor(index/4)+1}行第${index%4+1}列，固定纹片`}><StampArt stamp={entry.stamp} /></div>;
+                const slot=entry.slot;
+                const piece=puzzle.pieces.find(p=>p.id===input.slots[slot]);
+                return <div className="chapter-pattern-cell" key={index}>
+                  <button className="chapter-slot" aria-label={`${puzzle.slots[slot]}：${piece?.label ?? '空'}`} onClick={()=>{
+                    if(!selected){setSelected(piece?.id ?? null);return;}
+                    change(placePiece(input,selected,slot));
+                  }}>{piece?.stamp ? <StampArt stamp={piece.stamp}/> : <span aria-hidden="true">·</span>}</button>
+                  {piece && <button className="chapter-remove" aria-label={`取回${puzzle.slots[slot]}的${piece.label}`} onClick={()=>change({kind:'arrangement',slots:input.slots.map((v,i)=>i===slot?null:v)})}>取回</button>}
+                </div>;
+              })}
+            </div></div> : (            <div className="chapter-arrangement">
               {puzzle.slots.map((slot, index) => {
                 const piece = puzzle.pieces.find(
                   (p) => p.id === input.slots[index],
@@ -153,11 +139,13 @@ export default function PuzzleView({
                   </div>
                 );
               })}
-            </div>
+            </div>)}
+
           </>
         )}
         {puzzle.kind === "code" && input.kind === "code" && (
           <>
+            {puzzle.frameSeal && <FrameSeal />}
             {puzzle.animals && (
               <div className="chapter-animal-scene" aria-label="动物观察图">
                 {puzzle.animals.flatMap((animal) =>
@@ -278,126 +266,7 @@ export default function PuzzleView({
         )}
         {puzzle.kind === "filter" && input.kind === "filter" && (
           <>
-            <div className="chapter-lenses" aria-label="放大镜滤片">
-              <button
-                aria-pressed={input.lens === null}
-                onClick={() => change({ ...input, lens: null })}
-              >
-                裸眼观察
-              </button>
-              {puzzle.lenses.map((lens) => (
-                <button
-                  key={lens.id}
-                  aria-pressed={input.lens === lens.id}
-                  onClick={() => change({ ...input, lens: lens.id })}
-                >
-                  <span style={{ color: lens.color }}>{lens.symbol}</span>{" "}
-                  {lens.name}
-                </button>
-              ))}
-            </div>
-            <div
-              className="chapter-lens-paper"
-              data-lens={input.lens ?? "none"}
-            >
-              <span className="chapter-paper-label">雾灯检修纸 · 交叠墨迹</span>
-              <svg
-                className="chapter-lens-window"
-                viewBox="0 0 600 300"
-                role="img"
-                aria-label={
-                  input.lens
-                    ? `${puzzle.lenses.find((lens) => lens.id === input.lens)?.name}下的检修纸`
-                    : "裸眼看到交叠墨迹"
-                }
-              >
-                <defs>
-                  <clipPath id={lensClip}>
-                    <circle cx="285" cy="135" r="116" />
-                  </clipPath>
-                </defs>
-                <rect
-                  x="6"
-                  y="6"
-                  width="588"
-                  height="276"
-                  rx="12"
-                  fill="#ead9ad"
-                />
-                <g opacity=".4" aria-hidden="true">
-                  {puzzle.lenses.map((lens, index) => (
-                    <text
-                      key={lens.id}
-                      x="60"
-                      y={90 + index * 50}
-                      fill={lens.color}
-                      fontSize="32"
-                      transform={`rotate(${index * 5 - 5} 300 150)`}
-                    >
-                      {lens.symbol} ╱╲ ╳ ╱╲ ╳ ╱╲ {lens.symbol}
-                    </text>
-                  ))}
-                </g>
-                {input.lens && (
-                  <g clipPath={`url(#${lensClip})`}>
-                    <rect
-                      x="150"
-                      y="0"
-                      width="280"
-                      height="280"
-                      fill="#fff4d7"
-                    />
-                    {puzzle.lenses.map((lens) => (
-                      <g
-                        key={lens.id}
-                        data-layer={lens.id}
-                        visibility={
-                          input.lens === lens.id ? "visible" : "hidden"
-                        }
-                        aria-hidden={input.lens !== lens.id}
-                        fill={lens.color}
-                      >
-                        <text x="285" y="95" textAnchor="middle" fontSize="34">
-                          {lens.symbol}
-                        </text>
-                        <text x="285" y="152" textAnchor="middle" fontSize="48">
-                          {lens.clue}
-                        </text>
-                        <text x="285" y="199" textAnchor="middle" fontSize="24">
-                          {lens.marks.join(" → ")}
-                        </text>
-                      </g>
-                    ))}
-                  </g>
-                )}
-                <path
-                  d="M370 219L421 278"
-                  stroke="#75502e"
-                  strokeWidth="24"
-                  strokeLinecap="round"
-                />
-                <circle
-                  cx="285"
-                  cy="135"
-                  r="118"
-                  fill="none"
-                  stroke={
-                    puzzle.lenses.find((lens) => lens.id === input.lens)
-                      ?.color ?? "#a38049"
-                  }
-                  strokeWidth="12"
-                />
-              </svg>
-              {input.lens &&
-                puzzle.lenses
-                  .filter((lens) => lens.id === input.lens)
-                  .map((lens) => (
-                    <p className="chapter-source-strip" key={lens.id}>
-                      {lens.symbol} {lens.name} · {lens.clue} ·{" "}
-                      {lens.marks.join(" → ")}
-                    </p>
-                  ))}
-            </div>
+            <LensMap puzzle={puzzle} input={input} onChange={change} />
             <label className="chapter-code-label">
               检修盘
               <input
@@ -419,117 +288,11 @@ export default function PuzzleView({
           </>
         )}
         {puzzle.kind === "drop" && input.kind === "drop" && (
-          <div className="chapter-prediction-boards">
-            {puzzle.boards.map((board, boardIndex) => {
-              const { model, placement } = board;
-              const piece = model.pieces.find(
-                (p) => p.id === placement.pieceId,
-              )!;
-              const shape = rotateCells(piece.cells, placement.rotation);
-              const initial = shape.map(
-                ([x, y]) => [x + placement.column, y] as Cell,
-              );
-              const landed = progress.solved
-                ? (simulateDrops(model, [placement]).landed[0]?.cells ?? [])
-                : [];
-              return (
-                <section className="chapter-prediction" key={board.id}>
-                  <h3>{board.label}</h3>
-                  <div className="chapter-drop-piece-label">
-                    <PieceDrawing
-                      cells={shape}
-                      label={`${piece.id}：${piece.label}`}
-                    />
-                    <span>
-                      {piece.id} · {piece.label}
-                      <br />↓ 直落
-                    </span>
-                  </div>
-                  <div className="chapter-numbered-board">
-                    <div className="chapter-row-numbers" aria-hidden="true">
-                      {Array.from({ length: model.height }, (_, y) => (
-                        <span key={y}>{y + 1}</span>
-                      ))}
-                    </div>
-                    <div
-                      className="chapter-drop-board"
-                      style={{
-                        gridTemplateColumns: `repeat(${model.width}, 1fr)`,
-                      }}
-                      aria-label={`${board.label}落块图`}
-                    >
-                      {Array.from(
-                        { length: model.width * model.height },
-                        (_, index) => {
-                          const x = index % model.width,
-                            y = Math.floor(index / model.width);
-                          const fixed = model.fixed.some(
-                            (c) => c[0] === x && c[1] === y,
-                          );
-                          const falling =
-                            !progress.solved &&
-                            initial.some((c) => c[0] === x && c[1] === y);
-                          const occupied = landed.some(
-                            (c) => c[0] === x && c[1] === y,
-                          );
-                          return (
-                            <span
-                              key={index}
-                              className={
-                                fixed
-                                  ? "fixed"
-                                  : falling
-                                    ? "falling"
-                                    : occupied
-                                      ? "occupied"
-                                      : ""
-                              }
-                              aria-label={`第${y + 1}行第${x + 1}列，${fixed ? "固定块" : falling ? "起始积木" : occupied ? "落定积木" : "空格"}`}
-                            >
-                              {fixed
-                                ? "▧"
-                                : falling || occupied
-                                  ? piece.id
-                                  : ""}
-                            </span>
-                          );
-                        },
-                      )}
-                    </div>
-                  </div>
-                  <label>
-                    预测最下沿所在行
-                    <select
-                      aria-label={`${board.label}预测行`}
-                      value={input.predictions[boardIndex]}
-                      onChange={(event) =>
-                        change({
-                          kind: "drop",
-                          predictions: input.predictions.map((v, i) =>
-                            i === boardIndex ? Number(event.target.value) : v,
-                          ),
-                        })
-                      }
-                    >
-                      <option value={0}>尚未选择</option>
-                      {Array.from({ length: model.height }, (_, i) => (
-                        <option key={i} value={i + 1}>
-                          第 {i + 1} 行
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </section>
-              );
-            })}
-            <p className="chapter-controls-note">
-              三块积木分别直落，不旋转、不横移、不消行。选出各自最下沿最后所在的行，准备好后一起确认。
-            </p>
-          </div>
+          <DropPuzzleView puzzle={puzzle} input={input} solved={progress.solved} change={change}/>
         )}
         {puzzle.kind === "sudoku" && input.kind === "sudoku" && (
           <>
-            <div
+            <div className="chapter-maker-frame chapter-tide-frame" aria-label="左上斜切角、右下双铆钉的潮汐铜框"><div
               className="chapter-sudoku"
               role="group"
               aria-label="四乘四数独"
@@ -566,7 +329,7 @@ export default function PuzzleView({
                 </button>
               ))}
             </div>
-            <div className="chapter-number-pad" aria-label="填写或擦除">
+            </div><div className="chapter-number-pad" aria-label="填写或擦除">
               {[1, 2, 3, 4, 0].map((value) => (
                 <button
                   key={value}

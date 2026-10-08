@@ -1,3 +1,4 @@
+import { recognizeDropDigit } from "./dropGeometry";
 import type {
   Cell,
   DropModel,
@@ -75,7 +76,7 @@ export function initialInput(puzzle: PuzzleDefinition): PuzzleInput {
     case "filter":
       return { kind: puzzle.kind, lens: null, value: "" };
     case "drop":
-      return { kind: puzzle.kind, predictions: puzzle.boards.map(() => 0) };
+      return { kind: puzzle.kind, predictions: puzzle.boards.map(() => -1) };
     case "sudoku":
       return { kind: puzzle.kind, cells: [...puzzle.givens] };
     case "search":
@@ -113,6 +114,9 @@ export function validInput(
       );
     case "filter":
       return (
+        (value.position === undefined || (object(value.position) &&
+          typeof value.position.x === "number" && Number.isFinite(value.position.x) && value.position.x >= 80 && value.position.x <= 640 &&
+          typeof value.position.y === "number" && Number.isFinite(value.position.y) && value.position.y >= 80 && value.position.y <= 340)) &&
         (value.lens === null ||
           puzzle.lenses.some((lens) => lens.id === value.lens)) &&
         typeof value.value === "string" &&
@@ -124,10 +128,7 @@ export function validInput(
         Array.isArray(value.predictions) &&
         value.predictions.length === puzzle.boards.length &&
         value.predictions.every(
-          (row, i) =>
-            Number.isInteger(row) &&
-            row >= 0 &&
-            row <= puzzle.boards[i].model.height,
+          (digit) => Number.isInteger(digit) && digit >= -1 && digit <= 9,
         )
       );
     case "sudoku":
@@ -234,12 +235,13 @@ export function validatePuzzle(
     case "drop": {
       if (input.kind !== "drop") return false;
       return puzzle.boards.every((board, i) => {
-        const result = simulateDrops(board.model, [board.placement]);
+        const result = simulateDrops(board.model, board.placements);
         return (
           result.valid &&
-          result.landed.length === 1 &&
+          input.predictions[i] >= 0 &&
+          result.landed.length === board.model.pieces.length &&
           input.predictions[i] ===
-            Math.max(...result.landed[0].cells.map(([, y]) => y)) + 1
+            recognizeDropDigit(result.cells, board.model.width, board.model.height)
         );
       });
     }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { deriveLinkedAnswers, deriveDropAnswers } from "./verify-escape-chapter-reasoning.mjs";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import postcss from "postcss";
@@ -10,7 +11,7 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const { MemoryRouter } = require("react-router");
 await build({
   stdin: {
-    contents: `export {default as Chapter} from './src/escape/chapter/Chapter';export {default as PuzzleView} from './src/escape/chapter/PuzzleView';export * from './src/escape/chapter/content';export * from './src/escape/chapter/engine';export * from './src/escape/chapter/validators';export * from './src/escape/chapter/SceneArt';`,
+    contents: `export {default as Chapter} from './src/escape/chapter/Chapter';export {default as PuzzleView} from './src/escape/chapter/PuzzleView';export * from './src/escape/chapter/content';export * from './src/escape/chapter/engine';export * from './src/escape/chapter/validators';export * from './src/escape/chapter/SceneArt';export * from './src/escape/chapter/lens';export {MODE_KEY} from './src/escape/guidancePolicy';`,
     resolveDir: process.cwd(),
   },
   outfile: "node_modules/.tmp-chapter-ui.mjs",
@@ -37,11 +38,18 @@ await build({
   ],
 });
 const A = await import(process.cwd() + "/node_modules/.tmp-chapter-ui.mjs");
+const linked = deriveLinkedAnswers(A.CHAPTER);
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const storage = new Map();
+const storageWrites = [];
+let storageFailureKey = null;
 globalThis.localStorage = {
   getItem: (key) => storage.get(key) ?? null,
-  setItem: (key, value) => storage.set(key, value),
+  setItem: (key, value) => {
+    storageWrites.push(key);
+    if (key === storageFailureKey) throw new Error("Test storage quota failure");
+    storage.set(key, value);
+  },
 };
 let tree;
 let modalShows = 0;
@@ -247,7 +255,7 @@ async function mode(value) {
 }
 // No solution coaching in automatic copy or accessibility text. Physical data and
 // operational rules remain available in every mode, even with saved hint history.
-const coaching = ["只数足", "翅膀和触角不算", "观察足的数量", "每次顺时针", "（循环）", "藏着不同图层", "仍可回到观测窗查看"];
+const coaching = ["只数足", "翅膀和触角不算", "观察足的数量", "每次顺时针", "（循环）", "藏着不同图层", "仍可回到观测窗查看", "同排点数相同，同列方向相同", "接好航路短图", "潮汐板同一位置的数字"];
 for (const puzzle of A.CHAPTER.puzzles.filter(p => p.kind !== "search")) {
   for (const value of ["standard", "challenge", "easy"]) {
     for (const hintCount of [0, puzzle.hints.length]) {
@@ -266,14 +274,19 @@ for (const puzzle of A.CHAPTER.puzzles.filter(p => p.kind !== "search")) {
       if (value === "easy") assert.ok(markup.includes(puzzle.easyHelp));
       if (value === "standard" && hintCount > 0)
         for (const hint of puzzle.hints) assert.ok(markup.includes(hint));
-      if (puzzle.kind === "code") {
+      if (puzzle.kind === "code" && puzzle.animals) {
         for (const animal of puzzle.animals) {
           assert.ok(markup.includes(`${animal.name}标本`));
           assert.ok(markup.includes(`${animal.legs}条腿`), "Accessible physical description retains the visible limbs");
         }
         assert.ok(markup.includes("鸟 → 蜘蛛 → 龟 → 蚂蚁"));
       }
-      if (puzzle.kind === "drop") assert.ok(markup.includes("不旋转、不横移，也不消行"));
+      if (puzzle.kind === "drop") {
+        assert.ok(markup.includes("不转向、不横移、不消行"));
+        assert.ok(markup.includes("会拼成哪个数字"));
+        assert.ok(!markup.includes("预测行"));
+        assert.ok(!markup.includes("最低格"));
+      }
       if (puzzle.kind === "sudoku") assert.ok(markup.includes("每一行、每一列、每一个粗框小宫"));
     }
   }
@@ -444,12 +457,12 @@ await open("pattern-tray");
 assert.ok(!json().includes("每次顺时针"));
 await click(button("检查保养铭刻"));
 assert.ok(!json().includes("每次顺时针"));
-assert.ok(json().includes("↑ → ↓ ← ↑"));
+assert.ok(json().includes("左上角一道斜切口，右下角两颗并排铜铆钉"));
 assert.ok(saved().revealed.includes("pattern-engraving"));
 await close();
 await click(button("随身手记"));
 assert.ok(!json().includes("每次顺时针"));
-assert.ok(json().includes("↑ → ↓ ← ↑"));
+assert.ok(json().includes("左上角一道斜切口，右下角两颗并排铜铆钉"));
 assert.ok(!json().includes("原始抄录"));
 await close();
 for (const value of ["easy", "challenge", "standard"]) {
@@ -457,7 +470,7 @@ for (const value of ["easy", "challenge", "standard"]) {
   await mode(value);
   await click(button("随身手记"));
   assert.deepEqual(saved(), before, "Mode changes preserve revealed clues and progress");
-  assert.ok(json().includes("↑ → ↓ ← ↑"));
+  assert.ok(json().includes("左上角一道斜切口，右下角两颗并排铜铆钉"));
   for (const phrase of coaching) assert.ok(!json().includes(phrase), `Journal remains raw physical evidence in ${value}`);
   await close();
 }
@@ -567,7 +580,7 @@ const trayIds = scope()
   .map((n) => text(n));
 assert.notDeepEqual(
   trayIds,
-  pattern.pieces.map((p) => p.symbol + p.label),
+  pattern.pieces.map((p) => p.label),
 );
 async function place(puzzle, pieceId, index) {
   const piece = puzzle.pieces.find((p) => p.id === pieceId);
@@ -583,7 +596,7 @@ async function place(puzzle, pieceId, index) {
       ),
   );
 }
-await place(pattern, pattern.solution[0], 0);
+await place(pattern, linked.pattern[0], 0);
 const inputBeforeClose = saved().puzzles[pattern.id].input;
 await close();
 await open("pattern-tray");
@@ -596,14 +609,14 @@ assert.deepEqual(saved().puzzles[pattern.id].input, inputBeforeClose);
 await click(button("撤销"));
 assert.equal(saved().puzzles[pattern.id].input.slots[0], null);
 await click(button("重做"));
-assert.equal(saved().puzzles[pattern.id].input.slots[0], pattern.solution[0]);
-await place(pattern, pattern.solution[1], 1);
-await place(pattern, pattern.solution[0], 1);
+assert.equal(saved().puzzles[pattern.id].input.slots[0], linked.pattern[0]);
+await place(pattern, linked.pattern[1], 1);
+await place(pattern, linked.pattern[0], 1);
 assert.deepEqual(saved().puzzles[pattern.id].input.slots.slice(0, 2), [
-  pattern.solution[1],
-  pattern.solution[0],
+  linked.pattern[1],
+  linked.pattern[0],
 ]);
-const movedPiece = pattern.pieces.find((p) => p.id === pattern.solution[0]);
+const movedPiece = pattern.pieces.find((p) => p.id === linked.pattern[0]);
 await click(label(`取回${pattern.slots[1]}的${movedPiece.label}`));
 assert.equal(saved().puzzles[pattern.id].input.slots[1], null);
 await confirm();
@@ -617,7 +630,7 @@ assert.equal(scope().findAllByProps({ "aria-label": "可选提示" }).length, 0)
 assert.deepEqual(saved().puzzles[pattern.id].input, kept);
 await mode("standard");
 await open("pattern-tray");
-for (let i = 0; i < 6; i++) await place(pattern, pattern.solution[i], i);
+for (let i = 0; i < 6; i++) await place(pattern, linked.pattern[i], i);
 assert.equal(saved().puzzles[pattern.id].solved, false);
 await confirm();
 await room("optics");
@@ -631,6 +644,7 @@ await use("clean-window", "cloth");
 await use("mount-frame", "lens-frame");
 await use("mount-filter", "filter-disc");
 const lensPuzzle = A.CHAPTER.puzzles.find((p) => p.id === "lens-chart");
+await click(button("拿起放大镜"));
 for (const lens of lensPuzzle.lenses) {
   await click(button(`${lens.symbol} ${lens.name}`));
   const layers = scope().findAll(
@@ -644,8 +658,40 @@ for (const lens of lensPuzzle.lenses) {
     layers.find((n) => n.props.visibility === "visible").props["data-layer"],
     lens.id,
   );
+  assert.ok(!saved().puzzles[lensPuzzle.id].seenLenses.includes(lens.id), "Color alone reveals nothing");
+  for (const clue of A.lensClues(lensPuzzle).filter(c=>c.lens===lens.id)) {
+    const canvas = label("雾港检修图：可移动放大镜");
+    const event = {clientX:clue.x,clientY:clue.y,pointerId:1,button:0,preventDefault(){},currentTarget:{getBoundingClientRect:()=>({left:0,top:0,width:720,height:420}),setPointerCapture(){},focus(){},hasPointerCapture:()=>false}};
+    await act(async()=>canvas.props.onPointerDown(event));
+    await act(async()=>label("雾港检修图：可移动放大镜").props.onPointerUp(event));
+  }
   assert.ok(saved().puzzles[lensPuzzle.id].seenLenses.includes(lens.id));
 }
+// Dragging the physical rim preserves grab offset; cancellation ends movement.
+const mapLabel = "雾港检修图：可移动放大镜";
+const pointerTarget = {getBoundingClientRect:()=>({left:10,top:20,width:360,height:210}),setPointerCapture(){},focus(){},hasPointerCapture:()=>false};
+const pointEvent = (x,y) => ({clientX:10+x/2,clientY:20+y/2,pointerId:8,button:0,preventDefault(){},currentTarget:pointerTarget});
+const beforeDrag = saved().puzzles[lensPuzzle.id].input.position;
+await act(async()=>label(mapLabel).props.onPointerDown(pointEvent(beforeDrag.x+10,beforeDrag.y)));
+await act(async()=>label(mapLabel).props.onPointerMove(pointEvent(beforeDrag.x+30,beforeDrag.y+20)));
+assert.deepEqual(saved().puzzles[lensPuzzle.id].input.position,{x:beforeDrag.x+20,y:beforeDrag.y+20});
+await act(async()=>label(mapLabel).props.onPointerCancel());
+const canceledPosition = saved().puzzles[lensPuzzle.id].input.position;
+await act(async()=>label(mapLabel).props.onPointerMove(pointEvent(100,100)));
+assert.deepEqual(saved().puzzles[lensPuzzle.id].input.position,canceledPosition);
+await act(async()=>label(mapLabel).props.onKeyDown({key:"ArrowRight",preventDefault(){}}));
+assert.equal(saved().puzzles[lensPuzzle.id].input.position.x,canceledPosition.x+12);
+const reopenedPosition = saved().puzzles[lensPuzzle.id].input.position;
+await close(); await open(lensPuzzle.id);
+assert.deepEqual(saved().puzzles[lensPuzzle.id].input.position,reopenedPosition,"Reopen retains lens position");
+const beforeLock = saved();
+globalThis.__chapterLock = "rest";
+await act(async()=>tree.update(wrap()));
+assert.equal(tree.root.findAllByProps({"aria-label":mapLabel}).length,0,"Health lock unmounts captured lens");
+globalThis.__chapterLock = null;
+await act(async()=>tree.update(wrap()));
+assert.deepEqual(saved(),beforeLock,"Health interruption never changes clues or answers");
+if (!tree.root.findAllByProps({"aria-label":mapLabel}).length) await open(lensPuzzle.id);
 await code("lens-chart", "375");
 await confirm();
 await click(button("☀ 日"));
@@ -657,41 +703,60 @@ assert.equal(
   scope()
     .findAllByType("h3")
     .filter((n) => text(n).includes("原始抄录")).length,
-  3,
+  6,
 );
 await room("workshop");
 await open("gravity-lock");
 await use("mount-route", "route-plate");
 const drop = A.CHAPTER.puzzles.find((p) => p.id === "gravity-lock");
+const dropAnswers = deriveDropAnswers(drop);
 assert.equal(
   scope()
-    .findAllByType("span")
-    .filter((n) => n.props.className === "occupied").length,
+    .findAllByType("rect")
+    .filter((n) => n.props["data-settled-cell"]).length,
   0,
 );
+assert.equal(scope().findAllByType("g").filter(node => node.props["data-hanging-piece"]).length,
+  drop.boards.reduce((total, board) => total + board.placements.length, 0),
+  "All queued tetrominoes are visible before mental simulation");
+assert.deepEqual(saved().puzzles[drop.id].input.predictions, [-1, -1, -1]);
+await click(label(`${drop.boards[0].label}数字减一`));
+assert.equal(label(`${drop.boards[0].label}最终数字`).props.value, "9");
+await click(label(`${drop.boards[0].label}数字加一`));
+assert.equal(label(`${drop.boards[0].label}最终数字`).props.value, "0", "Dial wraps to an intentional zero");
+await act(async () => label(`${drop.boards[0].label}最终数字`).props.onChange({ target: { value: "" } }));
+assert.equal(saved().puzzles[drop.id].input.predictions[0], -1, "Erasing zero restores unset rather than another guess");
 for (let i = 0; i < drop.boards.length; i++) {
   const board = drop.boards[i];
-  const result = A.simulateDrops(board.model, [board.placement]);
-  const row = Math.max(...result.landed[0].cells.map((c) => c[1])) + 1;
+  const digit = dropAnswers.predictions[i];
   await act(async () =>
-    label(`${board.label}预测行`).props.onChange({
-      target: { value: String(row) },
+    label(`${board.label}最终数字`).props.onChange({
+      target: { value: String(digit) },
     }),
   );
 }
 assert.equal(saved().puzzles[drop.id].solved, false);
+assert.equal(scope().findAllByType("rect").filter(node => node.props["data-settled-cell"]).length, 0,
+  "Even a complete correct draft cannot reveal the fallen outlines before confirmation");
+const lastDrop = drop.boards.at(-1);
+await act(async () => label(`${lastDrop.label}最终数字`).props.onChange({ target: { value: String((dropAnswers.predictions.at(-1) + 1) % 10) } }));
+await confirm();
+assert.equal(saved().puzzles[drop.id].solved, false);
+assert.equal(scope().findAllByType("rect").filter(node => node.props["data-settled-cell"]).length, 0,
+  "A wrong whole prediction never reveals which numeral was wrong");
+await act(async () => label(`${lastDrop.label}最终数字`).props.onChange({ target: { value: String(dropAnswers.predictions.at(-1)) } }));
 await confirm();
 assert.equal(
   scope()
-    .findAllByType("span")
-    .filter((n) => n.props.className === "occupied").length,
-  12,
+    .findAllByType("rect")
+    .filter((n) => n.props["data-settled-cell"]).length,
+  dropAnswers.boards.flatMap(board => board.landed.flatMap(piece => piece.cells)).length,
 );
 await room("optics");
 await open("tide-sudoku");
 await use("wind-tide", "winding-crank");
 const sudoku = A.CHAPTER.puzzles.find((p) => p.id === "tide-sudoku");
-const solution = [1, 2, 3, 4, 3, 4, 1, 2, 2, 1, 4, 3, 4, 3, 2, 1];
+const solution = linked.sudoku;
 await click(label("第1行第2列，空"));
 await click(button("1", scope().findByProps({ "aria-label": "填写或擦除" })));
 await confirm();
@@ -729,8 +794,39 @@ await assertSelected("beacon-prism");
 await use("oil-track", "oil-can");
 await use("mount-prism", "beacon-prism");
 const final = A.CHAPTER.puzzles.find((p) => p.id === "foglight-console");
-for (let i = 0; i < final.solution.length; i++)
-  await place(final, final.solution[i], i);
+assert.equal(final.kind, "code");
+assert.equal(scope().findAllByProps({ "aria-label": "可用图形" }).length, 0, "The last lock no longer offers an emblem ordering tray");
+assert.ok(!json().includes(linked.code), "The unfilled lock never exposes its joined answer");
+const beforeRevisit = saved();
+await room("gallery");
+await open(pattern.id);
+assert.equal(scope().findByType("fieldset").props.disabled, true, "Solved classification remains visible and immutable");
+const renderedGrid = scope().findByProps({ className: "chapter-pattern-grid" });
+assert.equal(renderedGrid.children.length, 16, "All sixteen classification positions remain visible on revisit");
+const emblemNames = Object.fromEntries(pattern.pieces.map(piece => [piece.stamp.emblem, piece.label.replace("徽纹片", "")]));
+const positionsFromRevisitedGrid = linked.route.map(emblem => {
+  const matches = renderedGrid.children.map((cell, index) => ({ cell, index })).filter(({ cell }) =>
+    cell.findAllByType("svg").some(svg => svg.props["aria-label"]?.includes(`角落有${emblemNames[emblem]}徽记`)));
+  assert.equal(matches.length, 1, `Solved board visibly locates the ${emblem} route emblem once`);
+  return matches[0].index;
+});
+assert.deepEqual(positionsFromRevisitedGrid, linked.lookups.map(lookup => lookup.index));
+await room("optics");
+await open(sudoku.id);
+assert.equal(scope().findByType("fieldset").props.disabled, true, "Solved Sudoku remains available to read");
+const numberCells = scope().findByProps({ "aria-label": "四乘四数独" }).findAllByType("button");
+assert.equal(numberCells.length, 16);
+assert.deepEqual(numberCells.map(cell => Number(text(cell))), linked.sudoku, "Every solved numeric cell is preserved and visible");
+const revisitedCode = positionsFromRevisitedGrid.map(index => text(numberCells[index])).join("");
+assert.equal(revisitedCode, linked.code, "The entered final answer is read from both reopened boards in the independently stitched route order");
+assert.deepEqual(saved().puzzles, beforeRevisit.puzzles, "Revisiting sources changes no solved answers or progress");
+await room("workshop");
+await open(final.id);
+assert.equal(label(`${final.title}密码`).props.maxLength, 6);
+await code(final.id, linked.code.split("").reverse().join(""));
+await confirm();
+assert.equal(saved().complete, false, "A wrong joined code cannot finish the chapter");
+await code(final.id, revisitedCode);
 await confirm();
 assert.equal(saved().complete, true);
 assert.equal(tree.root.findAllByType("dialog").length, 0);
@@ -754,6 +850,48 @@ assert.equal(saved().complete, false);
 assert.equal(saved().found.length, 0);
 assert.equal(storage.get(oldKey), "untouched");
 await act(async () => tree.unmount());
+// Chapter storage failure must be visible on the active surface and must never
+// discard the current session while allowing unrelated preferences to persist.
+storage.delete(A.CHAPTER_KEY);
+storageFailureKey = A.CHAPTER_KEY;
+await mount();
+assert.ok(json().includes("本次更改暂未保存"));
+await click(button("推开工作舱的门 →"));
+assert.equal(storage.has(A.CHAPTER_KEY), false);
+await open("search");
+await collect("gallery-curtain");
+await collect("brush");
+assert.ok(text(scope()).includes("本次更改暂未保存"), "The modal itself announces failed saves");
+assert.ok(!json().includes("进度已保存在本机"), "No success claim can coexist with a failed chapter write");
+await click(button("重试保存"));
+assert.ok(text(scope()).includes("本次更改暂未保存"), "An unsuccessful retry must not clear the warning");
+assert.equal(storage.has(A.CHAPTER_KEY), false);
+await collect("shell-fan");
+await collect("arrow-tiles");
+const inMemoryBag = await inventory();
+assert.ok(text(inMemoryBag).includes(A.CHAPTER.items.find(item => item.id === "brush").name));
+assert.ok(text(inMemoryBag).includes(A.CHAPTER.items.find(item => item.id === "arrow-tiles").name), "Further discoveries remain editable in memory during failure");
+await click(bagToggle());
+storageFailureKey = null;
+await click(button("重试保存"));
+assert.ok(!json().includes("本次更改暂未保存"));
+assert.equal(saved().started, true);
+assert.deepEqual(saved().found, ["brush", "arrow-tiles"], "Retry saves the newest in-memory discoveries rather than a stale failed snapshot");
+assert.deepEqual(saved().revealed, ["gallery-curtain", "shell-fan"]);
+const recoveredSave = saved();
+await close();
+await act(async () => tree.unmount());
+await mount();
+assert.deepEqual(saved(), recoveredSave, "A successful retry survives a real component remount");
+await act(async () => tree.unmount());
+storageFailureKey = A.MODE_KEY;
+await mount();
+await mode("easy");
+assert.ok(!json().includes("本次更改暂未保存"), "A guidance-only failure cannot be reported as lost chapter progress");
+assert.deepEqual(saved(), recoveredSave);
+storageFailureKey = null;
+await act(async () => tree.unmount());
+
 // Preserve future save until explicit, scoped reset consent.
 const future = JSON.stringify({
   version: 999,
@@ -762,7 +900,10 @@ const future = JSON.stringify({
   state: {},
 });
 storage.set(A.CHAPTER_KEY, future);
+const writesBeforeFuture = storageWrites.filter(key => key === A.CHAPTER_KEY).length;
 await mount();
+assert.equal(storageWrites.filter(key => key === A.CHAPTER_KEY).length, writesBeforeFuture, "Future-version protection blocks even automatic save attempts");
+assert.equal(tree.root.findAllByType("button").filter(node => text(node) === "重试保存").length, 0, "No retry control can overwrite a protected future save");
 assert.equal(storage.get(A.CHAPTER_KEY), future);
 assert.ok(json().includes("这份进度来自更新的版本"));
 assert.equal(button("推开工作舱的门 →").props.disabled, true);
@@ -819,5 +960,5 @@ for (const puzzle of A.CHAPTER.puzzles) {
   assert.ok(!/class="[^\"]*(?:correct|incorrect)/.test(markup));
 }
 console.log(
-  "Chapter UI actions passed: all closeups and contextual targets in three modes, one compact bag with retained focus/selection, explicit no-loss tool use and prerequisite feedback, persistent used devices, hidden finds, source journal, seven mechanisms, real SVG lens layers, exact gravity, reversible arrangement/Sudoku, completion, health lock, replay, future-save protection and SSR/CSS contracts.",
+  "Chapter UI actions passed: all closeups and contextual targets in three modes, one compact bag with retained focus/selection, explicit no-loss tool use and prerequisite feedback, persistent used devices, hidden finds, source journal, seven mechanisms, real SVG lens layers, exact gravity, reversible classification/Sudoku, visible solved-board revisits and independently joined numeric completion, health lock, replay, failed-save recovery with current-state retry, future-save protection and SSR/CSS contracts.",
 );

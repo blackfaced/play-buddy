@@ -1,3 +1,5 @@
+import { recognizeDropDigit } from "./dropGeometry";
+import { lensClues, observedClues } from "./lens";
 import type {
   ChapterAction,
   ChapterDefinition,
@@ -26,7 +28,7 @@ function copy(value: PuzzleInput): PuzzleInput {
     case "code":
       return { kind: value.kind, value: value.value };
     case "filter":
-      return { kind: value.kind, value: value.value, lens: value.lens };
+      return { kind: value.kind, value: value.value, lens: value.lens, ...(value.position ? { position: { ...value.position } } : {}) };
     case "drop":
       return { kind: value.kind, predictions: [...value.predictions] };
     case "sudoku":
@@ -43,6 +45,7 @@ function progress(puzzle: PuzzleDefinition): PuzzleProgress {
     solved: false,
     hints: 0,
     seenLenses: [],
+    seenClues: [],
     attempts: 0,
   };
 }
@@ -207,9 +210,7 @@ export function reduceChapter(
       return updatePuzzle(state, puzzle.id, {
         ...current,
         input: copy(action.input),
-        seenLenses: action.input.lens
-          ? [...new Set([...current.seenLenses, action.input.lens])]
-          : current.seenLenses,
+        ...discover(puzzle, current, action.input),
       });
     }
     return state;
@@ -224,11 +225,9 @@ export function reduceChapter(
     return updatePuzzle(state, puzzle.id, {
       ...current,
       input: copy(input),
-      seenLenses:
-        input.kind === "filter" && input.lens
-          ? [...new Set([...current.seenLenses, input.lens])]
-          : current.seenLenses,
-      undo: [...current.undo, copy(current.input)].slice(-HISTORY_LIMIT),
+      ...discover(puzzle, current, input),
+      undo: input.kind === "filter" && current.input.kind === "filter" && input.value === current.input.value
+        ? current.undo : [...current.undo, copy(current.input)].slice(-HISTORY_LIMIT),
       redo: [],
     });
   }
@@ -332,14 +331,51 @@ export function parseChapter(
       !record(envelope) ||
       envelope.version !== CHAPTER_SAVE_VERSION ||
       envelope.chapter !== definition.id ||
-      envelope.revision !== definition.revision ||
+      (envelope.revision !== definition.revision &&
+        !(definition.id === "foglight" && definition.revision === 2 && envelope.revision === 1)) ||
       !record(envelope.state)
     )
       return initial;
     const saved = envelope.state;
     const state = { ...initial, started: saved.started === true };
     if (!state.started) return initial;
-    const savedPuzzles = record(saved.puzzles) ? saved.puzzles : {};
+    const savedPuzzles: Record<string, unknown> = record(saved.puzzles) ? { ...saved.puzzles } : {};
+    // Revision 1's solved boards earned real unlocks. Only exact valid old answers
+    // are upgraded; pending replacement boards reset, never granting progress.
+    if (definition.id === "foglight" && definition.revision === 2 && envelope.revision === 1) {
+      const replacements = [
+        { id: "pattern-tray", old: ["arrow-S3", "arrow-W1", "sail-W1", "sail-N2", "vane-N2", "vane-E3"] },
+        { id: "foglight-console", old: ["shell", "star", "fish", "wave", "anchor", "sail"] },
+      ];
+      for (const replacement of replacements) {
+        const prior = savedPuzzles[replacement.id];
+        const puzzle = definition.puzzles.find(p => p.id === replacement.id);
+        if (!puzzle || !record(prior)) continue;
+        const input = prior.input;
+        const earned = prior.solved === true && record(input) && input.kind === "arrangement" &&
+          Array.isArray(input.slots) && input.slots.length === replacement.old.length &&
+          input.slots.every((value, index) => value === replacement.old[index]);
+        const upgraded: PuzzleInput = earned && puzzle.kind === "arrangement"
+          ? { kind: "arrangement", slots: [...puzzle.solution] }
+          : earned && puzzle.kind === "code"
+            ? { kind: "code", value: puzzle.solution }
+            : initialInput(puzzle);
+        savedPuzzles[replacement.id] = { ...prior, input: upgraded, solved: earned, hints: 0, undo: [], redo: [] };
+      }
+    }
+    if (definition.id === "foglight" && envelope.revision === 1) {
+      const prior = savedPuzzles["gravity-lock"];
+      const puzzle = definition.puzzles.find(p => p.id === "gravity-lock");
+      if (puzzle?.kind === "drop" && record(prior)) {
+        const input = prior.input;
+        const earned = prior.solved === true && record(input) && input.kind === "drop" &&
+          Array.isArray(input.predictions) && input.predictions.length === 3 &&
+          input.predictions.every((value, index) => value === [6,5,8][index]);
+        savedPuzzles[puzzle.id] = { ...prior, hints: 0, solved: earned, undo: [], redo: [], input: earned
+          ? { kind: "drop", predictions: puzzle.boards.map(board => recognizeDropDigit(simulateDrops(board.model, board.placements).cells, board.model.width, board.model.height)) }
+          : initialInput(puzzle) };
+      }
+    }
     const wantItems = ids(
       saved.found,
       definition.items.map((item) => item.id),
@@ -370,11 +406,17 @@ export function parseChapter(
             .map(copy)
         : [];
       target.hints = bounded(stored.hints, puzzle.hints.length);
-      if (puzzle.kind === "filter")
+      if (puzzle.kind === "filter") {
         target.seenLenses = ids(
           stored.seenLenses,
           puzzle.lenses.map((lens) => lens.id),
         );
+        const clues = lensClues(puzzle);
+        // Legacy saves really displayed the whole selected layer. Keep those earned notes.
+        target.seenClues = Array.isArray(stored.seenClues)
+          ? ids(stored.seenClues, clues.map(clue => clue.id))
+          : clues.filter(clue => target.seenLenses.includes(clue.lens)).map(clue => clue.id);
+      }
       target.attempts = bounded(stored.attempts, 9999);
     }
     // Every productive pass adds at least one finite gate, item or solved puzzle.
@@ -555,6 +597,14 @@ export function lintChapter(definition: ChapterDefinition): string[] {
           !validInput(puzzle, { kind: puzzle.kind, slots: puzzle.solution })
         )
           errors.push(`Invalid arrangement: ${puzzle.id}`);
+        if (puzzle.grid) {
+          const slots = puzzle.grid.flatMap(cell => "slot" in cell ? [cell.slot] : []);
+          const stamps = [...puzzle.grid.flatMap(cell => "stamp" in cell ? [cell.stamp] : []), ...puzzle.pieces.map(piece => piece.stamp)];
+          if (puzzle.grid.length !== 16 || slots.length !== puzzle.slots.length ||
+            new Set(slots).size !== slots.length || slots.some(slot => !Number.isInteger(slot) || slot < 0 || slot >= puzzle.slots.length) ||
+            stamps.some(stamp => !stamp || !["N", "E", "S", "W"].includes(stamp.direction) || !Number.isInteger(stamp.dots) || stamp.dots < 1 || stamp.dots > 4))
+            errors.push(`Invalid classification grid: ${puzzle.id}`);
+        }
         break;
       case "code":
       case "filter":
@@ -593,7 +643,8 @@ export function lintChapter(definition: ChapterDefinition): string[] {
             !Number.isInteger(model.height) ||
             model.height < 1 ||
             model.height > 16 ||
-            model.pieces.length !== 1 ||
+            model.pieces.length !== 3 ||
+            board.placements.length !== model.pieces.length ||
             model.pieces.some((piece) => !validTetromino(piece.cells)) ||
             model.fixed.some(
               ([x, y]) =>
@@ -605,7 +656,8 @@ export function lintChapter(definition: ChapterDefinition): string[] {
                 y >= model.height,
             ) ||
             new Set(model.fixed.map(String)).size !== model.fixed.length ||
-            !simulateDrops(model, [board.placement]).valid
+            !simulateDrops(model, board.placements).valid ||
+            recognizeDropDigit(simulateDrops(model, board.placements).cells, model.width, model.height) < 0
           )
             errors.push(`Invalid drop board: ${board.id}`);
         }
@@ -677,4 +729,11 @@ export function lintChapter(definition: ChapterDefinition): string[] {
     if (!reachable.revealed.includes(reveal.id))
       errors.push(`Unreachable reveal: ${reveal.id}`);
   return errors;
+}
+
+function discover(puzzle: PuzzleDefinition, current: PuzzleProgress, input: PuzzleInput) {
+  if (puzzle.kind !== "filter" || input.kind !== "filter" || !input.position) return {};
+  const seenClues = [...new Set([...current.seenClues, ...observedClues(puzzle, input.lens, input.position).map(clue => clue.id)])];
+  const seenLenses = puzzle.lenses.filter(lens => lensClues(puzzle).filter(clue => clue.lens === lens.id).every(clue => seenClues.includes(clue.id))).map(lens => lens.id);
+  return { seenClues, seenLenses };
 }

@@ -401,11 +401,16 @@ function ProjectionClues() {
     </div>
   );
 }
-export default function Adventure() {
+export default function Adventure({ onSceneSelect, onNextScene, onComplete, standalone = false }: { onSceneSelect?: () => void; onNextScene?: () => void; onComplete?: () => void; standalone?: boolean } = {}) {
   const lock = useStore((s) => s.lock);
   const [state, dispatch] = useReducer(reduceAdventure, undefined, () =>
-    parseAdventure(readSaved(ADVENTURE_KEY)),
+    {
+      const saved = parseAdventure(readSaved(ADVENTURE_KEY));
+      return standalone && (!saved.started || saved.room === "cabin")
+        ? reduceAdventure(saved, { type: "begin" }) : saved;
+    },
   );
+  useEffect(() => { if (state.complete) onComplete?.(); }, [state.complete, onComplete]);
   const [mode, setMode] = useState<GuidanceMode>(() =>
     parseMode(readSaved(MODE_KEY)),
   );
@@ -531,13 +536,14 @@ export default function Adventure() {
         mode={mode}
         onModeChange={changeMode}
         renderCompletion={onward}
+        onSceneSelect={onSceneSelect}
       />
     );
   return (
     <main className="adventure-app" inert={lock !== null}>
       <header className="adventure-top">
         <div>
-          <Link to="/">← 回游戏大厅</Link>
+          {onSceneSelect ? <button onClick={onSceneSelect}>← 场景选择</button> : <Link to="/">← 回游戏大厅</Link>}
           <div className="adventure-eyebrow">STARLIGHT · 海风里的星光</div>
           <h1>{roomNames[state.room]}</h1>
         </div>
@@ -553,7 +559,7 @@ export default function Adventure() {
         <ModeControls mode={mode} onChange={changeMode} />
       </div>
       <nav className="adventure-tabs" aria-label="船上房间">
-        <button onClick={() => travel("cabin")}>← 船舱</button>
+        {!standalone && <button onClick={() => travel("cabin")}>← 船舱</button>}
         <button
           aria-current={state.room === "navigation" ? "location" : undefined}
           onClick={() => travel("navigation")}
@@ -579,10 +585,10 @@ export default function Adventure() {
           <button
             onClick={() => {
               setDetail(null);
-              setShowFoglight(true);
+              if (onNextScene) onNextScene(); else setShowFoglight(true);
             }}
           >
-            继续探索：雾灯工坊 →
+            {onNextScene ? "本场景已完成 · 选择下一场景 →" : "继续探索：雾灯工坊 →"}
           </button>
         )}
       </nav>
@@ -595,10 +601,10 @@ export default function Adventure() {
             className="adventure-primary"
             onClick={() => {
               setDetail(null);
-              setShowFoglight(true);
+              if (onNextScene) onNextScene(); else setShowFoglight(true);
             }}
           >
-            继续探索：雾灯工坊 →
+            {onNextScene ? "本场景已完成 · 选择下一场景 →" : "继续探索：雾灯工坊 →"}
           </button>
           <DeckScene />
           <div className="adventure-eyebrow">航海员的夜晚</div>

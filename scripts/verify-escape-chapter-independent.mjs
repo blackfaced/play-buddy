@@ -3,6 +3,7 @@
  * checks known-state roundtrips across seeded action orders, not arbitrary fuzz.
  */
 import { createRequire } from "node:module";
+import { deriveLinkedAnswers, deriveDropAnswers } from "./verify-escape-chapter-reasoning.mjs";
 const require = createRequire(import.meta.url);
 const assert = require("node:assert/strict");
 const {
@@ -15,74 +16,35 @@ const eq = (a, b) => {
   assert.deepEqual(a, b);
   checks++;
 };
-const permutations = (a) =>
-  a.length
-    ? a.flatMap((v, i) =>
-        permutations(a.filter((_, j) => j !== i)).map((p) => [v, ...p]),
-      )
-    : [[]];
-const rows = permutations([1, 2, 3, 4]);
-const sudokus = [];
-for (const a of rows)
-  for (const b of rows)
-    for (const c of rows)
-      for (const d of rows) {
-        const board = [...a, ...b, ...c, ...d];
-        if (
-          [0, 1, 2, 3].every(
-            (x) => new Set([a[x], b[x], c[x], d[x]]).size === 4,
-          ) &&
-          [0, 2].every((y) =>
-            [0, 2].every(
-              (x) =>
-                new Set([
-                  board[y * 4 + x],
-                  board[y * 4 + x + 1],
-                  board[(y + 1) * 4 + x],
-                  board[(y + 1) * 4 + x + 1],
-                ]).size === 4,
-            ),
-          )
-        )
-          sudokus.push(board);
-      }
-eq(sudokus.length, 288);
-function landing(board) {
-  const { model: m, placement: p } = board;
-  let shape = m.pieces[0].cells.map((c) => [...c]);
-  for (let k = 0; k < p.rotation; k++) shape = shape.map(([x, y]) => [-y, x]);
-  const left = Math.min(...shape.map((c) => c[0])),
-    top = Math.min(...shape.map((c) => c[1]));
-  shape = shape.map(([x, y]) => [x - left + p.column, y - top]);
-  const rocks = m.fixed.map((c) => c.join(","));
-  while (
-    shape.every(
-      ([x, y]) => y + 1 < m.height && !rocks.includes([x, y + 1].join(",")),
-    )
-  )
-    shape = shape.map(([x, y]) => [x, y + 1]);
-  const bottom = Math.max(...shape.map((c) => c[1])) + 1;
-  eq(V.simulateDrops(m, [p]).landed[0].cells, shape);
-  return bottom;
+const linked = deriveLinkedAnswers(D);
+const pattern = D.puzzles.find(p => p.id === "pattern-tray");
+const final = D.puzzles.find(p => p.id === "foglight-console");
+eq(linked.pattern, pattern.solution);
+eq(linked.code, final.solution);
+const withoutAnswerKeys = structuredClone(D);
+for (const puzzle of withoutAnswerKeys.puzzles) delete puzzle.solution;
+eq(deriveLinkedAnswers(withoutAnswerKeys), linked);
+console.log("Independent linked clues:", JSON.stringify({ axes: linked.axis, route: linked.route, lookups: linked.lookups, code: linked.code }));
+const dropPuzzle = D.puzzles.find(p => p.kind === "drop");
+const drops = deriveDropAnswers(dropPuzzle);
+for (let index = 0; index < dropPuzzle.boards.length; index++) {
+  const board = dropPuzzle.boards[index];
+  const actual = V.simulateDrops(board.model, board.placements);
+  eq(actual.valid, true);
+  eq(actual.landed, drops.boards[index].landed);
 }
 function solution(p) {
   switch (p.kind) {
     case "arrangement":
-      return { kind: p.kind, slots: p.solution };
+      return { kind: p.kind, slots: linked.pattern };
     case "code":
-      return { kind: p.kind, value: p.solution };
+      return { kind: p.kind, value: p.id === "foglight-console" ? linked.code : p.animals.map(animal => animal.legs * animal.count).join("") };
     case "filter":
-      return { kind: p.kind, lens: null, value: p.solution };
-    case "sudoku": {
-      const solutions = sudokus.filter((s) =>
-        p.givens.every((n, i) => !n || n === s[i]),
-      );
-      eq(solutions.length, 1);
-      console.log("Sudoku unique", solutions[0].join(""));
-      return { kind: p.kind, cells: solutions[0] };
-    }
+      return { kind: p.kind, lens: null, value: p.lenses.map(lens => lens.clue).join("") };
+    case "sudoku":
+      return { kind: p.kind, cells: linked.sudoku };
     case "drop":
-      return { kind: p.kind, predictions: p.boards.map(landing) };
+      return { kind: p.kind, predictions: drops.predictions };
     case "search":
       return { kind: p.kind };
   }
@@ -187,7 +149,7 @@ for (let run = 0; run < 64; run++) {
     eq(s.puzzles[filter.id].solved, true);
     eq(s.found, beforeLens.found);
     eq(s.puzzles[filter.id].attempts, beforeLens.puzzles[filter.id].attempts);
-    assert(s.puzzles[filter.id].seenLenses.includes(lens.id));
+    eq(s.puzzles[filter.id].seenLenses, beforeLens.puzzles[filter.id].seenLenses);
   }
   const observed = s;
   act({
@@ -227,43 +189,14 @@ for (const raw of [
   eq(E.parseChapter(D, raw), E.initialChapter(D));
 console.log(JSON.stringify({ checks, roundtrips: states, verdict: "PASS" }));
 
-const p = D.puzzles.find((p) => p.id === "pattern-tray");
-const dirs = ["N", "E", "S", "W"];
-const seeds = [
-  ["arrow", 0, 1],
-  ["sail", 1, 2],
-  ["vane", 2, 3],
-];
-const constraints = seeds.flatMap(([type, dotsDir, dots]) =>
-  [2, 3].map(
-    (step) =>
-      `${type}-${dirs[(dotsDir + step) % 4]}${((dots + step - 1) % 3) + 1}`,
-  ),
-);
-const matches = permutations(p.pieces.map((p) => p.id)).filter((order) =>
-  order.every((x, i) => x === constraints[i]),
-);
-assert.equal(matches.length, 1);
-assert.deepEqual(matches[0], p.solution);
-console.log(
-  "Pattern: unique among720 assignments under clockwise/+1 modulo3 physical rule.",
-);
-const f = D.puzzles.find((p) => p.id === "foglight-console"),
-  lens = D.puzzles.find((p) => p.kind === "filter");
-const names = Object.fromEntries(f.pieces.map((p) => [p.label, p.id]));
-const strips = lens.lenses.map((l) => l.marks.map((m) => names[m]));
-const final = permutations(f.pieces.map((p) => p.id)).filter((order) =>
-  strips.every((strip) =>
-    strip.every(
-      (x, i) => i === 0 || order.indexOf(x) === order.indexOf(strip[i - 1]) + 1,
-    ),
-  ),
-);
-assert.equal(final.length, 1);
-assert.deepEqual(final[0], f.solution);
-console.log(
-  "Final signal: unique among720 assignments from shared lens route strips.",
-);
+// The final keypad admits exactly the code independently obtained from the
+// stitched route, stamp locations and Sudoku, across all 4^6 possible digit strings.
+for (let value = 0; value < 4 ** 6; value++) {
+  const code = value.toString(4).padStart(6, "0").replace(/[0-3]/g, digit => String(Number(digit) + 1));
+  eq(V.validatePuzzle(final, { kind: "code", value: code }), code === linked.code);
+}
+console.log("Classification: one axis pair among 576, one stamp layout among 720; route: one among 720; final: one numeric code among 4096.");
+const lens = D.puzzles.find(p => p.kind === "filter");
 const animal = D.puzzles.find((p) => p.id === "animal-cabinet");
 assert.equal(
   animal.animals.map((a) => a.legs * a.count).join(""),

@@ -1,3 +1,4 @@
+import { lensClues } from "./lens";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useStore } from "../../store/useStore";
@@ -20,6 +21,7 @@ import {
 import type { ChapterAction, ChapterState, ToolDefinition } from "./types";
 import PuzzleView from "./PuzzleView";
 import DeviceArt from "./DeviceArt";
+import { SEARCH_INSPECTIONS, TOOL_OBSERVATIONS, REVEAL_OBSERVATIONS } from "./exploration";
 import "./chapter.css";
 
 function readSaved(key: string) {
@@ -113,10 +115,14 @@ function Point({
 
 export default function Chapter({
   onBack,
+  backLabel = "← 回到观星甲板",
+  onComplete,
   mode: controlledMode,
   onModeChange,
 }: {
   onBack?: () => void;
+  backLabel?: string;
+  onComplete?: () => void;
   mode?: GuidanceMode;
   onModeChange?: (mode: GuidanceMode) => void;
 }) {
@@ -137,14 +143,22 @@ export default function Chapter({
   const [selected, setSelected] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [revisiting, setRevisiting] = useState(false);
+  const [saveWarning, setSaveWarning] = useState(false);
+  const [saveRetry, setSaveRetry] = useState(0);
   useEffect(() => {
     if (futureSave) return;
+    let active = true;
+    let failed = false;
     try {
       localStorage.setItem(CHAPTER_KEY, serializeChapter(CHAPTER, state));
     } catch {
-      /* Play can continue without storage. */
+      failed = true;
     }
-  }, [state, futureSave]);
+    // Storage is an external system. Report its result after the write, and do
+    // not let an obsolete effect clear a newer failure or update an unmounted page.
+    queueMicrotask(() => { if (active) setSaveWarning(failed); });
+    return () => { active = false; };
+  }, [state, futureSave, saveRetry]);
   useEffect(() => {
     try {
       localStorage.setItem(MODE_KEY, mode);
@@ -152,6 +166,9 @@ export default function Chapter({
       /* Keep current-session assistance. */
     }
   }, [mode]);
+  useEffect(() => {
+    if (state.complete) onComplete?.();
+  }, [state.complete, onComplete]);
   const scene = CHAPTER.scenes.find((s) => s.id === state.scene)!;
   const puzzle = CHAPTER.puzzles.find((p) => p.id === detail);
   const installed = (item: string) => CHAPTER.tools.some(tool => tool.item === item && tool.installsItem && state.usedTools.includes(tool.id));
@@ -183,7 +200,7 @@ export default function Chapter({
       setMessage(
         next === state
           ? "这个位置暂时没有变化。道具还在你的工具袋里。"
-          : "机关轻轻动了一下。物件的去向也记进了手记。",
+          : TOOL_OBSERVATIONS[action.id]?.changed ?? "装置的接口已经接好。",
       );
     } else if (action.type === "collect") {
       setMessage(
@@ -195,7 +212,7 @@ export default function Chapter({
       setMessage(
         next === state
           ? "这里暂时没有变化。"
-          : "挪开后，原来遮住的位置露出来了。",
+          : REVEAL_OBSERVATIONS[action.id] ?? "遮挡物移到了一旁。",
       );
     } else if (action.type === "travel") {
       setDetail(null);
@@ -215,9 +232,9 @@ export default function Chapter({
   }
   function inspectTool(tool: ToolDefinition) {
     if (state.usedTools.includes(tool.id)) {
-      setMessage(`${tool.target.label}已经处理过，可以继续观察装置。`);
+      setMessage(TOOL_OBSERVATIONS[tool.id]?.settled ?? `${tool.target.label}已经接好。`);
     } else if (!selectedItem) {
-      setMessage(`${tool.target.description} 可以打开工具袋，选一件再试。`);
+      setMessage(tool.target.description + (mode === "easy" ? " 可以打开工具袋，选一件再试。" : ""));
     } else if (!requirementsMet(state, tool.requires)) {
       setMessage(`${tool.target.description} 接口暂时还不能活动。道具仍在工具袋里。`);
     } else act({ type: "use", id: tool.id, item: selectedItem });
@@ -226,10 +243,14 @@ export default function Chapter({
     return <Point key={tool.id} toolId={tool.id} point={{ id: tool.id, ...tool.target }} mode={mode} onClick={() => inspectTool(tool)} />;
   }
   function device() {
-    return puzzle && puzzle.kind !== "search" && <div className="chapter-device" data-device={puzzle.id}>
+    if (!puzzle || puzzle.kind === "search") return null;
+    const installation = <div className="chapter-device" data-device={puzzle.id}>
       <DeviceArt puzzle={puzzle} state={state} tools={tools} />
       {tools.map(toolPoint)}
     </div>;
+    return puzzleAvailable(CHAPTER, state, puzzle)
+      ? <details className="chapter-installation"><summary>查看已装配的装置</summary>{installation}</details>
+      : installation;
   }
   function compactBag() {
     return <footer className="chapter-bag-dock">
@@ -243,7 +264,7 @@ export default function Chapter({
     return (
       <section className="chapter-inventory" aria-label="工具袋">
         <h3>
-          随身工具袋 <small>{inventory.length} 件</small>
+          随身工具袋 {mode === "easy" && <small>{inventory.length} 件</small>}
         </h3>
         {inventory.length === 0 ? (
           <p>{mode === "easy" ? "摸摸旧船具，也许有东西藏在下面。" : "工具袋还是空的。"}</p>
@@ -298,6 +319,11 @@ export default function Chapter({
                   onClick={() => act({ type: "reveal", id: reveal.id })}
                 />
               ) : null;
+            if (pickup && state.found.includes(pickup.item)) {
+              const name = CHAPTER.items.find(item => item.id === pickup.item)?.name ?? point.label;
+              return <Point key={point.id} point={{ ...point, label: `${name}原来的位置` }} mode={mode}
+                onClick={() => setMessage(`${name}已经${installed(pickup.item) ? "装在装置上" : "收进工具袋"}，桌上只留下原来的空位。`)} />;
+            }
             if (pickup)
               return !state.found.includes(pickup.item) &&
                 requirementsMet(state, pickup.requires) ? (
@@ -310,6 +336,9 @@ export default function Chapter({
               ) : null;
             return null;
           })}
+          {(SEARCH_INSPECTIONS[state.scene] ?? []).map(point =>
+            <Point key={point.id} point={point} mode={mode} onClick={() => setMessage(point.description)} />
+          )}
           {tools.map(toolPoint)}
         </div>
         <button
@@ -323,7 +352,7 @@ export default function Chapter({
   }
   const back = onBack ? (
     <button className="chapter-back" onClick={onBack}>
-      ← 回到观星甲板
+      {backLabel}
     </button>
   ) : (
     <Link to="/escape">← 回到探险</Link>
@@ -370,6 +399,12 @@ export default function Chapter({
               : "自己发现规律；需要时可以主动查看提示。"}
         </p>
       </section>
+      {saveWarning && !futureSave && !detail && (
+        <section className="chapter-save-warning" role="alert">
+          <p>本次更改暂未保存。仍可继续探索；刷新或离开这一章可能丢失这些更改。</p>
+          <button className="chapter-secondary" onClick={() => setSaveRetry(value => value + 1)}>重试保存</button>
+        </section>
+      )}
       {futureSave && (
         <section className="chapter-finale" role="alert">
           <h2>这份进度来自更新的版本</h2>
@@ -391,7 +426,7 @@ export default function Chapter({
               星图的尽头，藏着一盏尚未点亮的雾灯。旧船长留下了三间工作舱。把散落的工具与线索连起来，让归航的小船看见灯光。
             </p>
             <p>
-              三个房间可以自由往返。每次挪动、填写和发现都会保存在这台设备上。
+              三个房间可以自由往返。游戏会尝试把挪动、填写和发现保存在这台设备上；无法保存时会显示提醒。
             </p>
             <button
               className="chapter-primary"
@@ -452,13 +487,13 @@ export default function Chapter({
                   </span>
                   <h2>{scene.title}</h2>
                 </div>
-                <span className="chapter-progress">
+                {mode === "easy" && <span className="chapter-progress">
                   {
                     CHAPTER.puzzles.filter((p) => state.puzzles[p.id].solved)
                       .length
                   }{" "}
                   / {CHAPTER.puzzles.length} 机关完成
-                </span>
+                </span>}
               </header>
               <div className="chapter-room-scene">
                 <SceneArt
@@ -480,7 +515,7 @@ export default function Chapter({
             {!detail && bag()}
           </div>
           <footer className="chapter-footer">
-            <span>进度自动保存在本机 · 可随时离开近景</span>
+            <span role="status">{saveWarning ? "本次更改暂未保存 · 可以重试保存" : futureSave ? "新版进度已保留" : "进度已保存在本机 · 可随时离开近景"}</span>
             <button onClick={() => open("reset")}>重玩这一章</button>
           </footer>
         </>
@@ -537,19 +572,12 @@ export default function Chapter({
                 ))}
               {CHAPTER.puzzles.flatMap((p) =>
                 p.kind === "filter"
-                  ? p.lenses
-                      .filter((lens) =>
-                        state.puzzles[p.id].seenLenses.includes(lens.id),
-                      )
-                      .map((lens) => (
-                        <article key={lens.id}>
-                          <h3>
-                            {lens.symbol} {lens.name} · 原始抄录
-                          </h3>
-                          <p>{lens.marks.join("　")}</p>
-                          <p>{lens.clue}</p>
-                        </article>
-                      ))
+                  ? lensClues(p).filter(clue => state.puzzles[p.id].seenClues.includes(clue.id)).map(clue => (
+                      <article key={clue.id}>
+                        <h3>{p.lenses.find(lens => lens.id === clue.lens)?.symbol} {clue.label} · 原始抄录</h3>
+                        <p>{clue.text}</p>
+                      </article>
+                    ))
                   : [],
               )}
             </div>
@@ -570,7 +598,7 @@ export default function Chapter({
             </>
           ) : puzzle ? (
             <>
-              {device()}
+              {!puzzleAvailable(CHAPTER, state, puzzle) && device()}
               {puzzle.id === "pattern-tray" &&
                 (() => {
                   const engraving = CHAPTER.reveals.find(
@@ -596,7 +624,7 @@ export default function Chapter({
                   );
                 })()}
               {puzzle.kind === "search" ? (
-                <p>{puzzle.inscription}</p>
+                <p>{mode === "easy" ? puzzle.inscription : "这里记着已经收好的旧物。"}</p>
               ) : puzzleAvailable(CHAPTER, state, puzzle) ? (
                 <PuzzleView
                   key={puzzle.id}
@@ -612,9 +640,10 @@ export default function Chapter({
                   </p>
                 </div>
               )}
+              {puzzleAvailable(CHAPTER, state, puzzle) && device()}
               {puzzle.kind === "search" && (
                 <div className="chapter-search-checklist">
-                  {puzzle.items.map((id) => (
+                  {puzzle.items.filter(id => mode === "easy" || state.found.includes(id)).map((id) => (
                     <span key={id}>
                       {state.found.includes(id) ? "✓" : "○"}{" "}
                       {CHAPTER.items.find((item) => item.id === id)?.name}
@@ -626,6 +655,10 @@ export default function Chapter({
             </>
           ) : null}
           {(detail === "search" || puzzle) && compactBag()}
+          {saveWarning && !futureSave && <div className="chapter-save-warning" role="alert">
+            <p>本次更改暂未保存。刷新或离开这一章可能丢失这些更改。</p>
+            <button className="chapter-secondary" onClick={() => setSaveRetry(value => value + 1)}>重试保存</button>
+          </div>}
           <p className="chapter-status" role="status" aria-live="polite">{message}</p>
         </Closeup>
       )}
