@@ -19,6 +19,7 @@ export interface RevealDefinition {
   id: string;
   scene: string;
   label: string;
+  /** Raw observed symbols/text only; explanations belong in puzzle assistance. */
   clue?: string;
   requires: Requirement[];
 }
@@ -45,7 +46,9 @@ export interface PuzzleBase {
   title: string;
   /** A physical inscription/rule, never an unsolicited answer recipe. */
   inscription: string;
+  /** Automatic coaching in easy mode only; never copied to the source journal. */
   easyHelp: string;
+  /** Player-requested coaching, hidden in challenge even when previously requested. */
   hints: string[];
   requires: Requirement[];
   rewards: string[];

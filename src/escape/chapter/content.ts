@@ -186,7 +186,7 @@ export const CHAPTER: ChapterDefinition = {
       id: "pattern-engraving",
       scene: "gallery",
       label: "检查保养铭刻",
-      clue: "朝向：↑ → ↓ ← ↑（每次顺时针转四分之一圈）；刻点：• → •• → ••• → •（循环）。",
+      clue: "铭刻：↑ → ↓ ← ↑；• → •• → ••• → •。",
       requires: [],
     },
     {
@@ -380,7 +380,8 @@ export const CHAPTER: ChapterDefinition = {
       kind: "code",
       title: "动物标本柜",
       inscription:
-        "只数足，翅膀和触角不算。铭牌的顺序：鸟 → 蜘蛛 → 龟 → 蚂蚁。",
+        "铭牌：鸟 → 蜘蛛 → 龟 → 蚂蚁。柜门上有四位密码盘。",
+      easyHelp: "只数足，翅膀和触角不算。按照铭牌顺序填写。",
       requires: [tool("brush-plaque")],
       rewards: ["lens-frame"],
       length: 4,
@@ -394,7 +395,7 @@ export const CHAPTER: ChapterDefinition = {
       success: "标本柜轻轻打开，一只光学镜架滑了出来。",
       hints: [
         "柜上的动物顺序很重要。",
-        "脚、翅膀、触角不是同一回事。",
+        "只数足，翅膀和触角不算。",
         "把第一只鸟的脚数写在第一格，再依次观察。",
       ],
     },
@@ -404,7 +405,8 @@ export const CHAPTER: ChapterDefinition = {
       scene: "gallery",
       kind: "arrangement",
       title: "海风纹片台",
-      inscription: "三条纹带各缺两枚。台边的保养铭刻记录着纹片的变化。",
+      inscription: "三条纹带各缺两枚，台边刻着两串符号。",
+      easyHelp: "朝向每次顺时针转四分之一圈，刻点按一点、两点、三点循环。分别继续两种规律。",
       requires: [tool("mount-arrow"), tool("mount-sail"), tool("mount-vane")],
       rewards: ["filter-disc"],
       slots: [
@@ -443,7 +445,7 @@ export const CHAPTER: ChapterDefinition = {
       hints: [
         "相邻纹片不只是形状不同。",
         "分别留意朝向和刻点。",
-        "把一个规律从第一格继续推到第二格，再向后试。",
+        "朝向每次顺时针转四分之一圈，刻点按一点、两点、三点循环。分别继续两种规律。",
       ],
     },
     {
@@ -453,7 +455,8 @@ export const CHAPTER: ChapterDefinition = {
       kind: "filter",
       title: "变色放大镜",
       inscription:
-        "锁边刻着：日 ☀ → 月 ☾ → 叶 ♧。镜盘可以转动，窗内的纸页藏着不同图层。",
+        "锁边刻着：日 ☀ → 月 ☾ → 叶 ♧。窗内有一张纸页，镜盘可以转动。",
+      easyHelp: "窗内的纸页藏着不同图层。依次转动日、月、叶镜片，观察各层。",
       requires: [tool("mount-filter")],
       rewards: ["route-plate"],
       length: 3,
@@ -534,7 +537,8 @@ export const CHAPTER: ChapterDefinition = {
       kind: "arrangement",
       title: "归航雾灯",
       inscription:
-        "六枚航路徽章，从左向右连成归港之路。镜片中见过的航路短图仍可回到观测窗查看。",
+        "六枚航路徽章，从左向右连成归港之路。",
+      easyHelp: "镜片中见过的航路短图仍可回到观测窗查看。用重合的图案把短段连起来。",
       requires: [tool("mount-route"), tool("mount-prism")],
       slots: ["航路1", "航路2", "航路3", "航路4", "航路5", "航路6"],
       pieces: [

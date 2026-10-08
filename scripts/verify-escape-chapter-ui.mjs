@@ -245,6 +245,39 @@ async function mode(value) {
     tree.root.findAllByType("select")[0].props.onChange({ target: { value } }),
   );
 }
+// No solution coaching in automatic copy or accessibility text. Physical data and
+// operational rules remain available in every mode, even with saved hint history.
+const coaching = ["只数足", "翅膀和触角不算", "观察足的数量", "每次顺时针", "（循环）", "藏着不同图层", "仍可回到观测窗查看"];
+for (const puzzle of A.CHAPTER.puzzles.filter(p => p.kind !== "search")) {
+  for (const value of ["standard", "challenge", "easy"]) {
+    for (const hintCount of [0, puzzle.hints.length]) {
+      const progress = { ...A.initialChapter(A.CHAPTER).puzzles[puzzle.id], hints: hintCount };
+      const markup = renderToStaticMarkup(React.createElement(A.PuzzleView, {
+        puzzle, progress, mode: value, onAction() {},
+      }));
+      if (value === "challenge" || (value === "standard" && hintCount === 0)) {
+        for (const phrase of coaching) assert.ok(!markup.includes(phrase), `${puzzle.id}/${value}: unsolicited coaching: ${phrase}`);
+        assert.ok(!markup.includes(puzzle.easyHelp));
+      }
+      if (value === "challenge") {
+        assert.ok(!markup.includes("可选提示"));
+        for (const hint of puzzle.hints) assert.ok(!markup.includes(hint));
+      }
+      if (value === "easy") assert.ok(markup.includes(puzzle.easyHelp));
+      if (value === "standard" && hintCount > 0)
+        for (const hint of puzzle.hints) assert.ok(markup.includes(hint));
+      if (puzzle.kind === "code") {
+        for (const animal of puzzle.animals) {
+          assert.ok(markup.includes(`${animal.name}标本`));
+          assert.ok(markup.includes(`${animal.legs}条腿`), "Accessible physical description retains the visible limbs");
+        }
+        assert.ok(markup.includes("鸟 → 蜘蛛 → 龟 → 蚂蚁"));
+      }
+      if (puzzle.kind === "drop") assert.ok(markup.includes("不旋转、不横移，也不消行"));
+      if (puzzle.kind === "sudoku") assert.ok(markup.includes("每一行、每一列、每一个粗框小宫"));
+    }
+  }
+}
 await mount();
 assert.ok(json().includes("推开工作舱的门"));
 await click(button("推开工作舱的门 →"));
@@ -336,7 +369,9 @@ for (const value of ["easy", "standard", "challenge"]) {
     value !== "challenge",
   );
   await open("search");
+  assert.equal(json().includes("翻开遮挡的旧物"), value === "easy", "Search coaching is easy-only");
   await close();
+  assert.equal(json().includes("摸摸旧船具"), value === "easy", "Empty inventory coaching is easy-only");
   // Every physical target is local to this exact closeup, in every guidance mode.
   // Inspecting unavailable equipment must still respond, without silently using anything.
   for (const scene of A.CHAPTER.scenes) {
@@ -408,13 +443,25 @@ await mode("standard");
 await open("pattern-tray");
 assert.ok(!json().includes("每次顺时针"));
 await click(button("检查保养铭刻"));
-assert.ok(json().includes("每次顺时针"));
+assert.ok(!json().includes("每次顺时针"));
+assert.ok(json().includes("↑ → ↓ ← ↑"));
 assert.ok(saved().revealed.includes("pattern-engraving"));
 await close();
 await click(button("随身手记"));
-assert.ok(json().includes("每次顺时针"));
+assert.ok(!json().includes("每次顺时针"));
+assert.ok(json().includes("↑ → ↓ ← ↑"));
 assert.ok(!json().includes("原始抄录"));
 await close();
+for (const value of ["easy", "challenge", "standard"]) {
+  const before = saved();
+  await mode(value);
+  await click(button("随身手记"));
+  assert.deepEqual(saved(), before, "Mode changes preserve revealed clues and progress");
+  assert.ok(json().includes("↑ → ↓ ← ↑"));
+  for (const phrase of coaching) assert.ok(!json().includes(phrase), `Journal remains raw physical evidence in ${value}`);
+  await close();
+}
+
 await open("search");
 assert.equal(scope().findAllByProps({ "aria-label": "检查软刷" }).length, 0);
 await collect("gallery-curtain");
@@ -449,6 +496,30 @@ const afterBrushing = saved();
 await click(target("brush-plaque"));
 assert.deepEqual(saved(), afterBrushing, "An already-used physical target remains safely inspectable");
 assert.equal(scope().findAllByType("figure").length, 4);
+assert.ok(!json().includes("只数足"));
+await click(button("给我一点方向"));
+assert.ok(!json().includes("只数足"));
+await click(button("再看一步提示"));
+assert.ok(json().includes("只数足"), "Standard only reveals the counting method after requested hints");
+const beforeGuidanceSwitch = saved();
+for (const value of ["easy", "challenge"]) {
+  await mode(value);
+  await open("animal-cabinet");
+  assert.deepEqual(saved(), beforeGuidanceSwitch, "Switching guidance preserves input, inventory, reveals and hint history");
+  assert.equal(json().includes("只数足"), value === "easy");
+  assert.ok(json().includes("鸟 → 蜘蛛 → 龟 → 蚂蚁"));
+  assert.equal(scope().findAllByType("figure").length, 4);
+}
+await close();
+await act(async () => tree.unmount());
+await mount();
+await open("animal-cabinet");
+assert.equal(tree.root.findAllByType("select")[0].props.value, "challenge");
+assert.ok(!json().includes("只数足"), "Reloading a challenge save cannot reveal prior standard hints");
+assert.deepEqual(saved(), beforeGuidanceSwitch);
+await mode("standard");
+await open("animal-cabinet");
+
 await code("animal-cabinet", "0000");
 await confirm();
 assert.equal(saved().puzzles["animal-cabinet"].solved, false);

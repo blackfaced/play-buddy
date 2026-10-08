@@ -169,7 +169,7 @@ export default function PuzzleView({
                       <svg
                         viewBox="0 0 180 160"
                         role="img"
-                        aria-label={`${animal.name}标本，观察足的数量`}
+                        aria-label={`${animal.name}标本，${animal.legs}条腿${animal.id === "bird" ? "，一侧可见翅膀与喙" : animal.id === "ant" ? "，头上有两根触角" : animal.id === "turtle" ? "，背上有龟甲" : "，圆形躯干"}`}
                       >
                         <ellipse
                           cx="90"

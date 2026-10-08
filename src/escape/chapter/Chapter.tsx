@@ -246,7 +246,7 @@ export default function Chapter({
           随身工具袋 <small>{inventory.length} 件</small>
         </h3>
         {inventory.length === 0 ? (
-          <p>摸摸旧船具，也许有东西藏在下面。</p>
+          <p>{mode === "easy" ? "摸摸旧船具，也许有东西藏在下面。" : "工具袋还是空的。"}</p>
         ) : (
           <div className="chapter-inventory-items">
             {inventory.map((item) => (
@@ -282,7 +282,7 @@ export default function Chapter({
     const searchPoints = SEARCH_HOTSPOTS[state.scene] ?? [];
     return (
       <>
-        <p>翻开遮挡的旧物，看看下面。拿走的东西会留下空位。</p>
+        {mode === "easy" && <p>翻开遮挡的旧物，看看下面。拿走的东西会留下空位。</p>}
         <div className="chapter-search-scene">
           <SearchBackdrop scene={state.scene} state={state} />
           {searchPoints.map((point) => {
@@ -364,7 +364,7 @@ export default function Chapter({
         </label>
         <p>
           {mode === "easy"
-            ? "物件标记与操作引导开启，提示仍由你决定何时查看。"
+            ? "物件标记与解题引导开启，也可主动查看更多提示。"
             : mode === "challenge"
               ? "不显示物件标记或提示。Tab 键仍能探索物件。"
               : "自己发现规律；需要时可以主动查看提示。"}
