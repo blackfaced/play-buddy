@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import EscapeRoom from "../EscapeRoom";
+import Chapter from "../chapter/Chapter";
 import { ModeControls } from "../Guidance";
 import {
   MODE_KEY,
@@ -409,6 +410,7 @@ export default function Adventure() {
     parseMode(readSaved(MODE_KEY)),
   );
   const [detail, setDetail] = useState<Detail>(null);
+  const [showFoglight, setShowFoglight] = useState(false);
   const [selected, setSelected] = useState<ExpeditionItem | null>(null);
   const [message, setMessage] = useState(
     "夜风轻轻吹过甲板。导航室与储物舱里，还藏着通往观星甲板的线索。",
@@ -512,6 +514,17 @@ export default function Adventure() {
       继续探索 · 导航室 →
     </button>
   );
+  if (showFoglight && state.complete)
+    return (
+      <Chapter
+        mode={mode}
+        onModeChange={changeMode}
+        onBack={() => {
+          setShowFoglight(false);
+          travel("deck");
+        }}
+      />
+    );
   if (state.room === "cabin")
     return (
       <EscapeRoom
@@ -562,9 +575,31 @@ export default function Adventure() {
             观星甲板
           </button>
         )}
+        {state.complete && state.room !== "deck" && (
+          <button
+            onClick={() => {
+              setDetail(null);
+              setShowFoglight(true);
+            }}
+          >
+            继续探索：雾灯工坊 →
+          </button>
+        )}
       </nav>
       {state.room === "deck" ? (
         <section className="adventure-complete">
+          <div className="adventure-eyebrow">海风里的星光 · 本章已完成</div>
+          <h2>你已抵达观星甲板！</h2>
+          <p>这段航海探险已经完成。船尾的三间舱室，还有一盏等待点亮的雾灯。</p>
+          <button
+            className="adventure-primary"
+            onClick={() => {
+              setDetail(null);
+              setShowFoglight(true);
+            }}
+          >
+            继续探索：雾灯工坊 →
+          </button>
           <DeckScene />
           <div className="adventure-eyebrow">航海员的夜晚</div>
           <h2>星光，就在前面。</h2>

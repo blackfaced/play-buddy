@@ -1,0 +1,959 @@
+.chapter-app {
+  --ink: #f5e8ca;
+  --muted: #c5b693;
+  --brass: #d4b16c;
+  --deep: #122f33;
+  min-height: 100vh;
+  padding: 22px clamp(14px, 3vw, 42px) 30px;
+  background:
+    radial-gradient(ellipse at 25% 5%, #38504a, transparent 65%), #142e32;
+  color: var(--ink);
+  font-family: Georgia, "Noto Serif SC", "Songti SC", serif;
+}
+.chapter-app *,
+.chapter-dialog * {
+  box-sizing: border-box;
+}
+.chapter-app button,
+.chapter-app select,
+.chapter-app input,
+.chapter-dialog button,
+.chapter-dialog select,
+.chapter-dialog input {
+  font: inherit;
+}
+.chapter-app button,
+.chapter-dialog button {
+  cursor: pointer;
+}
+.chapter-app button:disabled,
+.chapter-dialog button:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+.chapter-app button:focus-visible,
+.chapter-dialog button:focus-visible,
+.chapter-app select:focus-visible,
+.chapter-dialog select:focus-visible,
+.chapter-dialog input:focus-visible {
+  outline: 3px solid #fff2ae;
+  outline-offset: 4px;
+}
+.chapter-app a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.chapter-top,
+.chapter-mode,
+.chapter-rooms,
+.chapter-exploration,
+.chapter-footer,
+.chapter-opening,
+.chapter-finale,
+.chapter-app > .chapter-status {
+  max-width: 1220px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.chapter-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.chapter-top h1 {
+  font-size: clamp(25px, 3vw, 38px);
+  margin: 4px 0;
+  letter-spacing: 0.08em;
+}
+.chapter-eyebrow {
+  font:
+    10px/1.5 system-ui,
+    sans-serif;
+  color: #d4b16c;
+  letter-spacing: 0.2em;
+}
+.chapter-top > div {
+  flex: 1;
+}
+.chapter-back {
+  border: 0;
+  color: var(--ink);
+  background: none;
+  padding: 10px 0;
+}
+.chapter-mode {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 18px;
+  margin-bottom: 18px;
+  border-top: 1px solid #7b765c77;
+  padding-top: 13px;
+}
+.chapter-mode label {
+  white-space: nowrap;
+  font-size: 14px;
+}
+.chapter-mode p,
+.chapter-controls-note {
+  font:
+    12px/1.7 system-ui,
+    sans-serif;
+  color: #c5b693;
+}
+.chapter-mode p {
+  margin: 0;
+}
+.chapter-app select,
+.chapter-dialog select {
+  background: #17383b;
+  color: #f5e8ca;
+  border: 1px solid #9e906b;
+  border-radius: 6px;
+  padding: 9px;
+  min-height: 44px;
+}
+.chapter-rooms {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  margin-bottom: 16px;
+}
+.chapter-rooms button {
+  padding: 13px 22px;
+  min-height: 48px;
+  background: #1f3b3c;
+  color: #e3d5b5;
+  border: 1px solid #817655;
+  border-radius: 5px 5px 0 0;
+}
+.chapter-rooms button span {
+  font: 11px system-ui;
+  margin-right: 12px;
+  opacity: 0.65;
+}
+.chapter-rooms button[aria-current="location"] {
+  color: #21383a;
+  background: #dec18a;
+  border-color: #dec18a;
+  box-shadow: 0 4px 0 #987a41;
+}
+.chapter-exploration {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 215px;
+  gap: 22px;
+  align-items: start;
+}
+.chapter-room {
+  min-width: 0;
+}
+.chapter-room > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: end;
+  margin: 8px 0 16px;
+}
+.chapter-room h2 {
+  margin: 6px 0 0;
+  font-size: 23px;
+}
+.chapter-progress {
+  color: #bcb396;
+  font: 11px system-ui;
+  white-space: nowrap;
+}
+.chapter-room-scene,
+.chapter-search-scene {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #9a8255;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px #061c2255;
+  background: #203c3d;
+}
+.chapter-room-scene > svg,
+.chapter-search-scene > svg,
+.chapter-opening-art > svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.chapter-room-caption {
+  color: #d3c5a6;
+  line-height: 1.8;
+  font-size: 13px;
+  padding: 0 5px;
+}
+.chapter-point {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff0c9;
+}
+.chapter-point > span {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 200px;
+  padding: 6px 10px;
+  border: 1px solid #9d875b;
+  border-radius: 4px;
+  background: #163439;
+  color: #fff0c9;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+}
+.chapter-point > i {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #f4dc9daa;
+  border-radius: 50%;
+  font: normal 20px system-ui;
+  background: #102a30cc;
+  box-shadow: 0 0 0 5px #ebc98817;
+}
+.chapter-point:hover > span {
+  opacity: 1;
+}
+.chapter-point:focus-visible > span {
+  opacity: 1;
+}
+.chapter-point.easy > span {
+  opacity: 1;
+}
+.chapter-point.unmarked {
+  background: transparent;
+}
+.chapter-point.unmarked:hover > span {
+  opacity: 0;
+}
+.chapter-point.unmarked:focus-visible > span {
+  opacity: 1;
+}
+.chapter-inventory {
+  background: #132c2faa;
+  border: 1px solid #8b7b515c;
+  border-radius: 8px;
+  padding: 16px 13px;
+}
+.chapter-inventory h3 {
+  font-size: 15px;
+  margin: 0 0 13px;
+}
+.chapter-inventory h3 small {
+  color: #a89c7c;
+  font-size: 11px;
+  margin-left: 8px;
+}
+.chapter-inventory p {
+  font-size: 12px;
+  color: #c5b693;
+  line-height: 1.8;
+}
+.chapter-inventory-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.chapter-inventory-items button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 45px;
+  padding: 7px 10px;
+  border: 1px solid #726951;
+  border-radius: 6px;
+  background: #223d3d;
+  color: #ecddbd;
+  font-size: 12px;
+  text-align: left;
+}
+.chapter-inventory-items button span {
+  font-size: 23px;
+  color: #dab976;
+}
+.chapter-inventory-items button[aria-pressed="true"] {
+  border-color: #f1dca0;
+  background: #4b5544;
+  box-shadow: 0 0 0 2px #d7b57244;
+}
+.chapter-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.chapter-actions button,
+.chapter-secondary,
+.chapter-footer button,
+.chapter-tool-targets button,
+.chapter-hints button {
+  min-height: 44px;
+  border: 1px solid #9c8a61;
+  background: #284244;
+  color: #ecdfc1;
+  padding: 10px 15px;
+  border-radius: 6px;
+}
+.chapter-primary,
+.chapter-actions .chapter-primary {
+  min-height: 46px;
+  padding: 12px 22px;
+  background: #dabc7b;
+  color: #183536;
+  border: 1px solid #f0d89e;
+  border-radius: 6px;
+  font-weight: bold;
+  box-shadow: inset 0 -3px 0 #98794f55;
+}
+.chapter-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 15px;
+  color: #a99e81;
+  font: 11px system-ui;
+}
+.chapter-footer button {
+  font-size: 12px;
+}
+.chapter-status {
+  min-height: 24px;
+  color: #f1cf88;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.chapter-opening {
+  position: relative;
+  margin-top: 35px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 36px;
+  align-items: center;
+}
+.chapter-opening-art {
+  overflow: hidden;
+  border-radius: 50% 50% 8px 8px;
+  border: 1px solid #b2945f;
+}
+.chapter-opening h2 {
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: normal;
+}
+.chapter-opening p {
+  line-height: 1.95;
+  font-size: 15px;
+  color: #dfd1b2;
+}
+.chapter-finale {
+  margin-top: 22px;
+  margin-bottom: 22px;
+  padding: 24px 30px;
+  background:
+    radial-gradient(ellipse at right, #6a633455, transparent), #263e37;
+  border: 1px solid #d8b56b;
+  border-radius: 10px;
+  box-shadow: 0 0 40px #e5bc5833;
+}
+.chapter-finale h2 {
+  margin: 8px 0;
+  font-size: 36px;
+  color: #ffe0a0;
+}
+.chapter-finale p {
+  line-height: 1.8;
+  max-width: 760px;
+}
+.chapter-dialog {
+  --ink: #f5e8ca;
+  width: min(940px, calc(100vw - 28px));
+  max-height: 90dvh;
+  padding: 24px;
+  overflow: auto;
+  color: #f5e8ca;
+  background: #193639;
+  border: 1px solid #a68d5b;
+  border-radius: 12px;
+  box-shadow: 0 25px 90px #0009;
+  font-family: Georgia, "Noto Serif SC", serif;
+}
+.chapter-dialog::backdrop {
+  background: #061c22c9;
+  backdrop-filter: blur(3px);
+}
+.chapter-dialog > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+}
+.chapter-dialog > header button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #a68d5b;
+  background: #243c39;
+  color: #edd9ac;
+  border-radius: 50%;
+  font-size: 24px;
+}
+.chapter-dialog h2 {
+  font-size: 27px;
+  margin: 8px 0 20px;
+}
+.chapter-dialog p {
+  line-height: 1.85;
+}
+.chapter-dialog > .chapter-search-scene {
+  margin: 16px 0;
+}
+.chapter-dialog .chapter-inventory {
+  margin-top: 18px;
+  margin-bottom: 18px;
+}
+.chapter-tool-targets {
+  margin-top: 20px;
+  border-top: 1px solid #8e7f5855;
+  padding-top: 8px;
+}
+.chapter-tool-targets h3 {
+  font-size: 15px;
+  color: #cfb57c;
+}
+.chapter-tool-targets > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 13px;
+}
+.chapter-tool-targets button {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.chapter-inscription {
+  padding: 13px 17px;
+  background: #0e2a2f;
+  border-left: 3px solid #b99c60;
+  color: #daccad;
+  font-size: 14px;
+}
+.chapter-help {
+  padding: 12px;
+  border: 1px dashed #bca264;
+  color: #dfcc9a;
+  font-size: 13px;
+}
+.chapter-puzzle fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.chapter-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.chapter-piece-tray {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 20px 10px;
+  background: #102c3066;
+  border-radius: 8px;
+}
+.chapter-piece-tray button {
+  width: 102px;
+  min-height: 82px;
+  background: #dec798;
+  color: #30423a;
+  border: 2px solid #9f8558;
+  border-radius: 8px;
+  padding: 10px 6px;
+  box-shadow: 0 4px 0 #8a7046;
+}
+.chapter-piece-tray button[aria-pressed="true"] {
+  outline: 3px solid #fff4b1;
+  outline-offset: 3px;
+}
+.chapter-piece-tray .chapter-shape > span {
+  font-size: 24px;
+  display: block;
+  margin-bottom: 8px;
+}
+.chapter-piece-tray small {
+  display: block;
+  font-size: 11px;
+}
+.chapter-arrangement {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 9px;
+  margin: 20px 0;
+}
+.chapter-slot {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 98px;
+  color: #f2dcac;
+  background: #10282c;
+  border: 2px dashed #a28a5d;
+  border-radius: 6px;
+  padding: 8px 4px;
+}
+.chapter-slot > span {
+  font-size: 24px;
+  min-height: 36px;
+}
+.chapter-slot small {
+  font-size: 11px;
+  color: #b5a588;
+  margin-top: 8px;
+}
+.chapter-remove {
+  display: block;
+  min-height: 44px;
+  margin: 5px auto 0;
+  color: #e0cea6;
+  background: none;
+  border: 0;
+  font-size: 12px;
+  text-decoration: underline;
+}
+.chapter-pattern-sources {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  margin-bottom: 18px;
+  background: #cdbb8f;
+  color: #3f493b;
+  border: 5px solid #9d7c4e;
+  border-radius: 7px;
+}
+.chapter-pattern-sources > div {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.chapter-pattern-sources strong {
+  width: 40px;
+  font-size: 13px;
+}
+.chapter-pattern-sources > div > div {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.chapter-pattern-sources span {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  font-size: 20px;
+  border: 1px solid #7b714c;
+  border-radius: 4px;
+  background: #dfcea4;
+}
+.chapter-pattern-sources span.blank {
+  background: #a49370;
+  color: #e4d5ad;
+}
+.chapter-animal-scene {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  border: 8px solid #745637;
+  border-radius: 6px;
+  background: #a58d62;
+  padding: 12px;
+}
+.chapter-specimen {
+  margin: 0;
+  padding: 5px;
+  background: #e4d7b4;
+  box-shadow: inset 0 0 20px #7f673333;
+  color: #4a4938;
+  text-align: center;
+  border-radius: 3px;
+}
+.chapter-specimen svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.chapter-specimen figcaption {
+  padding: 5px;
+  font-size: 14px;
+  border-top: 1px solid #b3a078;
+}
+.chapter-code-label {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  margin: 22px 0;
+}
+.chapter-code-label input {
+  max-width: 180px;
+  width: 50%;
+  padding: 12px 15px;
+  background: #10272b;
+  color: #fff0cb;
+  border: 2px solid #a78b54;
+  border-radius: 6px;
+  font: 26px/1.4 monospace;
+  letter-spacing: 0.3em;
+}
+.chapter-lenses {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+}
+.chapter-lenses button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #aa9461;
+  border-radius: 20px;
+  color: #e4d6b6;
+  background: #213c3c;
+}
+.chapter-lenses button[aria-pressed="true"] {
+  background: #e7d3a5;
+  color: #273e3b;
+  outline: 2px solid #ac9964;
+  outline-offset: 2px;
+}
+.chapter-lens-paper {
+  padding: 16px;
+  background: #c2a877;
+  border: 5px solid #82633e;
+  border-radius: 7px;
+}
+.chapter-paper-label {
+  color: #4c5140;
+  font: 11px system-ui;
+  letter-spacing: 0.15em;
+}
+.chapter-lens-window {
+  width: 100%;
+  max-height: 350px;
+  display: block;
+  margin: 10px auto 0;
+}
+.chapter-source-strip {
+  background: #f3e4be;
+  color: #35463c;
+  text-align: center;
+  font-size: 16px;
+  padding: 10px;
+  margin-bottom: 0;
+  border-radius: 4px;
+}
+.chapter-prediction-boards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.chapter-prediction {
+  min-width: 0;
+}
+.chapter-prediction h3 {
+  font-size: 15px;
+}
+.chapter-drop-piece-label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 90px;
+  font-size: 12px;
+}
+.chapter-piece-art {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  fill: #d4b577;
+  stroke: #765c32;
+}
+.chapter-numbered-board {
+  display: flex;
+}
+.chapter-row-numbers {
+  display: grid;
+  grid-template-rows: repeat(8, 1fr);
+  width: 20px;
+  flex-shrink: 0;
+  font: 12px system-ui;
+  color: #baa67e;
+}
+.chapter-row-numbers span {
+  display: grid;
+  place-items: center;
+}
+.chapter-drop-board {
+  display: grid;
+  width: 100%;
+  background: #0d272b;
+  border: 2px solid #9b8256;
+  gap: 1px;
+}
+.chapter-drop-board > span {
+  aspect-ratio: 1;
+  border: 1px solid #6c776c55;
+  display: grid;
+  place-items: center;
+  color: #213c3a;
+  font: bold 12px system-ui;
+}
+.chapter-drop-board > span.fixed {
+  background: #77684f;
+  color: #b7a886;
+}
+.chapter-drop-board > span.falling {
+  background: #d5b675;
+  border: 2px solid #f8dfa0;
+}
+.chapter-drop-board > span.occupied {
+  background: #ccaa61;
+  border: 2px solid #edcc83;
+}
+.chapter-prediction > label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  margin-top: 16px;
+}
+.chapter-prediction-boards > .chapter-controls-note {
+  grid-column: 1 / -1;
+}
+.chapter-sudoku {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  max-width: 340px;
+  margin: 22px auto;
+  border: 4px solid #cdb37b;
+  background: #cdb37b;
+  gap: 1px;
+}
+.chapter-sudoku button {
+  aspect-ratio: 1;
+  min-height: 56px;
+  font: 28px Georgia;
+  color: #f7deb1;
+  background: #284448;
+  border: 0;
+}
+.chapter-sudoku button:nth-child(4n + 2) {
+  border-right: 4px solid #cdb37b;
+}
+.chapter-sudoku button:nth-child(n + 5):nth-child(-n + 8) {
+  border-bottom: 4px solid #cdb37b;
+}
+.chapter-sudoku button.given {
+  background: #cfbd91;
+  color: #253b34;
+  opacity: 1;
+  font-weight: bold;
+}
+.chapter-sudoku button.selected {
+  background: #536357;
+  box-shadow: inset 0 0 0 3px #f9d689;
+}
+.chapter-number-pad {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.chapter-number-pad button {
+  min-width: 48px;
+  min-height: 48px;
+  color: #f1ddb0;
+  background: #244146;
+  border: 1px solid #b39861;
+  border-radius: 5px;
+}
+.chapter-confirmation {
+  border-top: 1px solid #87765177;
+  margin-top: 22px;
+  padding-top: 20px;
+}
+.chapter-hints {
+  border-top: 1px solid #87765144;
+  margin-top: 22px;
+  padding-top: 15px;
+}
+.chapter-hints p {
+  font-size: 13px;
+  padding: 10px;
+  border-left: 2px solid #b39861;
+}
+.chapter-success {
+  padding: 15px;
+  background: #53664a44;
+  border: 1px solid #b7b177;
+  color: #f0ddb2;
+}
+.chapter-journal article {
+  border-bottom: 1px dashed #8e7b5355;
+  padding: 7px 0 12px;
+}
+.chapter-journal h3 {
+  color: #d4b879;
+  font-size: 16px;
+}
+.chapter-journal p {
+  font-size: 14px;
+}
+.chapter-search-checklist {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+  font-size: 13px;
+}
+@media (max-width: 800px) {
+  .chapter-exploration {
+    grid-template-columns: 1fr;
+  }
+  .chapter-exploration > .chapter-inventory {
+    padding: 14px;
+  }
+  .chapter-top {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .chapter-top > .chapter-back,
+  .chapter-top > a {
+    font-size: 12px;
+  }
+  .chapter-top .chapter-eyebrow {
+    letter-spacing: 0.1em;
+    font-size: 9px;
+  }
+  .chapter-mode {
+    align-items: start;
+  }
+  .chapter-opening {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .chapter-opening-art {
+    max-height: 360px;
+  }
+  .chapter-opening h2 {
+    margin: 14px 0;
+  }
+  .chapter-rooms button {
+    flex: 1;
+    padding: 12px 7px;
+    font-size: 13px;
+  }
+  .chapter-rooms button span {
+    display: block;
+    margin: 0 0 5px;
+  }
+  .chapter-dialog {
+    padding: 18px;
+  }
+  .chapter-arrangement {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .chapter-app {
+    padding: 15px 12px 25px;
+  }
+  .chapter-top h1 {
+    font-size: 24px;
+  }
+  .chapter-mode {
+    flex-direction: column;
+    gap: 5px;
+  }
+  .chapter-progress {
+    font-size: 10px;
+  }
+  .chapter-room h2 {
+    font-size: 20px;
+  }
+  .chapter-animal-scene {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .chapter-prediction-boards {
+    grid-template-columns: 1fr;
+  }
+  .chapter-prediction {
+    max-width: 275px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .chapter-pattern-sources {
+    padding: 9px;
+  }
+  .chapter-pattern-sources > div {
+    gap: 4px;
+  }
+  .chapter-pattern-sources > div > div {
+    gap: 3px;
+  }
+  .chapter-pattern-sources span {
+    font-size: 14px;
+  }
+  .chapter-piece-tray {
+    gap: 8px;
+    padding: 14px 6px;
+  }
+  .chapter-piece-tray button {
+    width: 88px;
+  }
+  .chapter-dialog .chapter-eyebrow {
+    max-width: 210px;
+  }
+  .chapter-footer {
+    align-items: start;
+  }
+  .chapter-finale {
+    padding: 18px;
+  }
+  .chapter-finale h2 {
+    font-size: 29px;
+  }
+  .chapter-point > span {
+    max-width: 135px;
+    white-space: normal;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chapter-app *,
+  .chapter-dialog * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

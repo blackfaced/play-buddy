@@ -41,6 +41,7 @@
     "scripts/verify-escape-art.tsx",
     "src/escape/logic.ts",
     "scripts/verify-escape-guidance.tsx",
-    "scripts/verify-escape-adventure.ts"
+    "scripts/verify-escape-adventure.ts",
+    "scripts/verify-escape-chapter.ts"
   ]
 }
