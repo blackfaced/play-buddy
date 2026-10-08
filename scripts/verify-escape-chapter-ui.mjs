@@ -106,6 +106,7 @@ async function room(id) {
 async function open(id) {
   const point = A.SCENE_HOTSPOTS[saved().scene].find((p) => p.id === id);
   await click(tree.root.findByProps({ "aria-label": `检查${point.label}` }));
+  assertTargets(id, tree.root.findAllByType("select")[0].props.value);
 }
 async function collect(id) {
   const point = A.SEARCH_HOTSPOTS[saved().scene].find((p) => p.id === id);
@@ -173,7 +174,6 @@ function target(id) {
 async function use(id, itemId) {
   await select(itemId);
   await click(target(id));
-  target(id);
   assertTargets(
     A.CHAPTER.tools.find((candidate) => candidate.id === id).target.closeup,
     tree.root.findAllByType("select")[0].props.value,
@@ -215,9 +215,18 @@ function assertDialogStructure() {
   assert.equal(hosts(tree.root, { "aria-label": "使用道具的位置" }).length, 0);
 }
 function assertTargets(closeup, guidance) {
-  const expected = A.CHAPTER.tools.filter(
+  const puzzle = A.CHAPTER.puzzles.find(candidate => candidate.id === closeup);
+  const ready = puzzle && puzzle.kind !== "search" && A.puzzleAvailable(A.CHAPTER, saved(), puzzle);
+  const tools = A.CHAPTER.tools.filter(
     (tool) => tool.scene === saved().scene && tool.target.closeup === closeup,
   );
+  if (ready) {
+    assert.ok(tools.every(tool => saved().usedTools.includes(tool.id)), "No unfinished setup target is hidden when the real puzzle opens");
+    assert.equal(hosts(scope(), { "data-device": puzzle.id }).length, 0, "Ready and solved puzzles never repeat a generic device diagram");
+    assert.equal(scope().findAllByType("details").length, 0, "No duplicate installation disclosure remains");
+    assert.equal(scope().findAllByType("fieldset").length, 1, "The actual puzzle remains visible on reopen");
+  }
+  const expected = ready ? [] : tools;
   const actual = scope().findAllByType("button").filter((node) => node.props["data-tool-target"]);
   assert.deepEqual(
     actual.map((node) => node.props["data-tool-target"]).sort(),
@@ -247,6 +256,10 @@ async function code(id, value) {
 }
 async function confirm() {
   await click(button("确认整个机关"));
+  if (tree.root.findAllByType("dialog").length) {
+    assert.equal(scope().findAllByProps({ className: "chapter-device" }).length, 0, "Confirmation never brings back a generic device diagram");
+    assert.equal(scope().findAllByType("details").length, 0, "Solved and wrong-answer boards remain the only device");
+  }
 }
 async function mode(value) {
   await act(async () =>
@@ -444,8 +457,8 @@ for (const value of ["easy", "standard", "challenge"]) {
   await use("brush-plaque", "brush");
   assert.ok(saved().usedTools.includes("brush-plaque"));
   const used = saved();
-  await click(target("brush-plaque"));
-  assert.deepEqual(saved(), used, `${value}: a used target remains safely inspectable`);
+  assertTargets("animal-cabinet", value);
+  assert.deepEqual(saved(), used, `${value}: showing the actual board preserves used tools`);
   await close();
   await click(button("重玩这一章"));
   await click(button("确认重玩这一章"));
@@ -506,8 +519,8 @@ await open("animal-cabinet");
 await assertSelected("arrow-tiles");
 await use("brush-plaque", "brush");
 const afterBrushing = saved();
-await click(target("brush-plaque"));
-assert.deepEqual(saved(), afterBrushing, "An already-used physical target remains safely inspectable");
+assertTargets("animal-cabinet", "standard");
+assert.deepEqual(saved(), afterBrushing, "Switching to the actual board preserves installation progress");
 assert.equal(scope().findAllByType("figure").length, 4);
 assert.ok(!json().includes("只数足"));
 await click(button("给我一点方向"));
@@ -834,6 +847,19 @@ assert.ok(tree.root.findByProps({ "aria-label": "章节完成" }));
 assert.ok(json().includes("向你们挥动一面小旗"));
 await click(button("再逛逛这艘船"));
 assert.equal(tree.root.findAllByProps({ "aria-label": "章节完成" }).length, 0);
+// All solved mechanisms remain the actual, immutable board on revisit in every mode.
+const completedPuzzles = saved().puzzles;
+for (const value of ["standard", "challenge", "easy"]) {
+  await mode(value);
+  for (const puzzle of A.CHAPTER.puzzles.filter(p => p.kind !== "search")) {
+    await room(puzzle.scene);
+    await open(puzzle.id);
+    assertTargets(puzzle.id, value);
+    assert.equal(scope().findByType("fieldset").props.disabled, puzzle.kind !== "filter", "Solved lens stays movable for reading; other solved boards are immutable");
+    assert.deepEqual(saved().puzzles, completedPuzzles, "Revisits preserve the actual solved answers");
+    await close();
+  }
+}
 await click(button("随身手记"));
 globalThis.__chapterLock = "rest";
 await act(async () => tree.update(wrap()));
@@ -960,5 +986,5 @@ for (const puzzle of A.CHAPTER.puzzles) {
   assert.ok(!/class="[^\"]*(?:correct|incorrect)/.test(markup));
 }
 console.log(
-  "Chapter UI actions passed: all closeups and contextual targets in three modes, one compact bag with retained focus/selection, explicit no-loss tool use and prerequisite feedback, persistent used devices, hidden finds, source journal, seven mechanisms, real SVG lens layers, exact gravity, reversible classification/Sudoku, visible solved-board revisits and independently joined numeric completion, health lock, replay, failed-save recovery with current-state retry, future-save protection and SSR/CSS contracts.",
+  "Chapter UI actions passed: all closeups and contextual targets in three modes, one compact bag with retained focus/selection, explicit no-loss tool use and prerequisite feedback, locked installation surfaces and single ready/solved boards, hidden finds, source journal, seven mechanisms, real SVG lens layers, exact gravity, reversible classification/Sudoku, visible solved-board revisits and independently joined numeric completion, health lock, replay, failed-save recovery with current-state retry, future-save protection and SSR/CSS contracts.",
 );

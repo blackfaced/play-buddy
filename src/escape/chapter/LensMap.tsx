@@ -1,3 +1,4 @@
+import { RouteArt } from './PatternArt';
 import { useId, useRef } from 'react';
 import type { FilterPuzzle, PuzzleInput } from './types';
 import { clampLens, lensClues, lensPointFromClient, LENS_RADIUS, LENS_START, observedClues } from './lens';
@@ -60,7 +61,7 @@ export default function LensMap({puzzle,input,onChange}:{puzzle:FilterPuzzle;inp
           <use href={`#${clip}-map`} opacity=".22"/>
           {puzzle.lenses.map(lens=><g key={lens.id} data-layer={lens.id} visibility={lens.id===active.id?'visible':'hidden'} fill={lens.color}>
             {lensClues(puzzle).filter(clue=>clue.lens===lens.id).map(clue=><g key={clue.id} data-inscription={clue.id}>
-              <text x={clue.x} y={clue.y} dominantBaseline="central" textAnchor="middle" fontSize={clue.id.endsWith('digit')?28:17} textLength={clue.width} lengthAdjust="spacingAndGlyphs" fontWeight="700">{clue.text}</text>
+              {clue.emblems ? <g transform={`translate(${clue.x-clue.width/2} ${clue.y-clue.height/2})`} color="#34392d"><RouteArt emblems={clue.emblems}/></g> : <text x={clue.x} y={clue.y} dominantBaseline="central" textAnchor="middle" fontSize={clue.id.endsWith('digit')?28:17} textLength={clue.width} lengthAdjust="spacingAndGlyphs" fontWeight="700">{clue.text}</text>}
             </g>)}
           </g>)}
           </g>

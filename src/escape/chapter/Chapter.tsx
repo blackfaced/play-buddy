@@ -1,3 +1,4 @@
+import { RouteArt } from './PatternArt';
 import { lensClues } from "./lens";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
@@ -243,14 +244,11 @@ export default function Chapter({
     return <Point key={tool.id} toolId={tool.id} point={{ id: tool.id, ...tool.target }} mode={mode} onClick={() => inspectTool(tool)} />;
   }
   function device() {
-    if (!puzzle || puzzle.kind === "search") return null;
-    const installation = <div className="chapter-device" data-device={puzzle.id}>
+    if (!puzzle || puzzle.kind === "search" || puzzleAvailable(CHAPTER, state, puzzle)) return null;
+    return <div className="chapter-device" data-device={puzzle.id}>
       <DeviceArt puzzle={puzzle} state={state} tools={tools} />
       {tools.map(toolPoint)}
     </div>;
-    return puzzleAvailable(CHAPTER, state, puzzle)
-      ? <details className="chapter-installation"><summary>查看已装配的装置</summary>{installation}</details>
-      : installation;
   }
   function compactBag() {
     return <footer className="chapter-bag-dock">
@@ -575,7 +573,7 @@ export default function Chapter({
                   ? lensClues(p).filter(clue => state.puzzles[p.id].seenClues.includes(clue.id)).map(clue => (
                       <article key={clue.id}>
                         <h3>{p.lenses.find(lens => lens.id === clue.lens)?.symbol} {clue.label} · 原始抄录</h3>
-                        <p>{clue.text}</p>
+                        <p>{clue.emblems ? <RouteArt emblems={clue.emblems}/> : clue.text}</p>
                       </article>
                     ))
                   : [],
@@ -598,7 +596,7 @@ export default function Chapter({
             </>
           ) : puzzle ? (
             <>
-              {!puzzleAvailable(CHAPTER, state, puzzle) && device()}
+              {device()}
               {puzzle.id === "pattern-tray" &&
                 (() => {
                   const engraving = CHAPTER.reveals.find(
@@ -640,7 +638,6 @@ export default function Chapter({
                   </p>
                 </div>
               )}
-              {puzzleAvailable(CHAPTER, state, puzzle) && device()}
               {puzzle.kind === "search" && (
                 <div className="chapter-search-checklist">
                   {puzzle.items.filter(id => mode === "easy" || state.found.includes(id)).map((id) => (

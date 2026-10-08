@@ -56,15 +56,16 @@ for (const mode of ['standard','challenge','easy']) {
  await click(scope().findAllByType('button').find(b=>text(b).includes('软刷')));
  await click(label('检查积灰铭牌'));
  assert.ok(text(scope()).includes('灰尘'),'Tool response describes physical change');
- const installation=scope().findByType('details');
- assert.notEqual(installation.props.open,true,'Ready device art is collapsed');
- const json=JSON.stringify(tree.toJSON());
- assert.ok(json.indexOf('动物标本柜密码')<json.indexOf('查看已装配的装置'),'Playable controls precede optional installation art');
- await click(label('检查积灰铭牌'));
- assert.ok(text(scope()).includes('铭牌上的刻痕已经清楚可见'),'Revisit describes current state');
+ assert.equal(scope().findAllByType('details').length,0,'Ready devices have no second installation panel');
+ assert.equal(scope().findAllByProps({'data-device':'animal-cabinet'}).length,0,'Ready devices show only their actual puzzle');
+ assert.ok(label('动物标本柜密码'),'Playable controls replace the installation');
+ assert.ok(text(scope()).includes('鸟 → 蜘蛛 → 龟 → 蚂蚁'),'The cleaned inscription stays on the actual puzzle');
+ await close(); await click(label('检查观察标本柜'));
+ assert.ok(label('动物标本柜密码'),'Reopening keeps the actual device');
+ assert.equal(scope().findAllByProps({'data-tool-target':'brush-plaque'}).length,0,'Finished setup no longer competes with the puzzle');
  await act(async()=>tree.unmount());
 }
-console.log('Exploration UI passed: neutral inspect props, unchanged progress, physical action feedback, persistent empty locations, visible locked installations and board-first ready devices in all modes.');
+console.log('Exploration UI passed: neutral inspect props, unchanged progress, physical action feedback, persistent empty locations, visible locked installations and single-board ready devices in all modes.');
 
 for (const [room,landmark] of [['gallery','标本收藏架'],['optics','星空观测窗'],['workshop','铜管工具架']]) {
  const markup=renderToStaticMarkup(React.createElement(A.SearchBackdrop,{scene:room,state:A.initialChapter(A.CHAPTER)}));
