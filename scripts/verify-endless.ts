@@ -521,6 +521,76 @@ function testFrontierFloor(): void {
   h3.engine.destroy();
 }
 
+/* ---- (g) respawn robustness: stripped-shaft fall must not chain-die ----
+ * 用户反馈："无尽模式复活后立马就死了"。根因是一组复活缺陷：
+ *  1) 竖井掏空超过 25 层时 hero 被放到兜网地板，锚点不动 → 深潭滞留/新段
+ *     缝隙把它再判死（链死循环）；
+ *  2) 复活点可能选到仍在塌落的积木或与上方积木重叠（弹飞）；
+ *  3) 没有复活无敌期，碎石雨里复活等于再死一次。
+ * 本用例：自然下潜过第一检查点 → 整层掏空锚点下方 28 层（刚好越过旧代码
+ * 的 25 层下寻窗口，上方塌落碎石有限）→ 强制坠出塔侧 → 掉 1 命重生 →
+ * 静置 20s 不得再掉命。修复前 6/6 种子链死（floor 落点 + 锚点不跟进），
+ * 修复后 6/6 存活。 */
+function testRespawnNoChainDeath(seed: number): void {
+  const h = makeEngine();
+  h.engine.newEndlessRound(seed, false);
+  h.engine.beginPlay();
+  for (let i = 0; i < 90; i++) h.engine.advance(TICK);
+
+  // 自然下潜过第一检查点（不瞬移，避免检查线被"闪越"）
+  const firstCpY = 200 + 3 * CELL;
+  let simMs = 0;
+  for (let pops = 0; pops < 14 && h.engine.debugHero().y < firstCpY + CELL && simMs < 60_000; ) {
+    for (let i = 0; i < 200; i++) {
+      if (h.engine.debugMaxSpeed() < 0.45 && h.engine.debugHero().speed < 0.4) break;
+      h.engine.advance(TICK);
+      simMs += TICK;
+    }
+    const hero = h.engine.debugHero();
+    const below = h.engine
+      .debugBlocks()
+      .filter((b) => !b.key && b.y > hero.y + 8)
+      .sort((a, b) => a.y - hero.y - (b.y - hero.y));
+    if (!below[0]) break;
+    h.engine.debugRemoveId(below[0].id);
+    for (let i = 0; i < 24; i++) h.engine.advance(TICK);
+  }
+  for (let i = 0; i < 90; i++) h.engine.advance(TICK);
+  if (h.engine.debugLives() !== ENDLESS_LIVES) {
+    check(`种子#${seed}: 下潜阶段未掉命（前置条件）`, false, '下潜 bot 自己死了，换种子');
+    h.engine.destroy();
+    return;
+  }
+
+  // 整层掏空锚点下方 28 层，立刻瞬移出塔侧（hero 不被塌落牵连）
+  const anchor0 = (h.engine as unknown as { respawnY: number }).respawnY;
+  for (const b of h.engine.debugBlocks()) {
+    if (b.y > anchor0 - 2 * CELL && b.y < anchor0 + 28 * CELL) h.engine.debugRemoveId(b.id);
+  }
+  h.engine.debugTeleportHero(TILE_X + COLS * CELL + 200, h.engine.debugHero().y);
+  let ticks = 0;
+  while (h.engine.debugLives() === ENDLESS_LIVES && ticks < 900 && !h.over) {
+    h.engine.advance(TICK);
+    ticks++;
+  }
+  const livesAfterFall = h.engine.debugLives();
+  check(`种子#${seed}: 坠出塔侧扣 1 命`, livesAfterFall === ENDLESS_LIVES - 1, `ticks=${ticks}`);
+
+  let idle = 0;
+  while (h.engine.debugLives() === livesAfterFall && idle < 1200 && !h.over) {
+    h.engine.advance(TICK);
+    idle++;
+  }
+  const chainDied = h.engine.debugLives() < livesAfterFall || h.over !== null;
+  check(
+    `种子#${seed}: 掏空井复活后静置 20s 不链死`,
+    !chainDied,
+    `静置=${(idle / 60).toFixed(1)}s 剩余命=${h.engine.debugLives()} over=${h.over?.outcome ?? '—'}`,
+  );
+  if (chainDied) for (const d of h.engine.debugDeaths) console.log(`   [death] ${d}`);
+  h.engine.destroy();
+}
+
 console.log('Endless mode headless verification (real GameEngine, synthetic clock)');
 testDeterminism();
 testFrontierFloor();
@@ -571,5 +641,6 @@ if (process.argv[2] === '--probe-descent') {
   testCarefulDescent(dailySeedFor(todayKey()), '当日种子·观察');
 }
 testLivesAndRespawn();
+for (const s of [424242, 987654, 31337]) testRespawnNoChainDeath(s);
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);

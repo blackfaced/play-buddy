@@ -333,6 +333,17 @@ export class GameEngine {
   private frontierY = BEAM_TOP; // world y of the generated world's bottom edge
   private lives = ENDLESS_LIVES;
   private respawnY = 0; // last checkpoint line crossed (respawn anchor)
+  /** respawn 落在兜网地板上（竖井被掏空 25+ 层）后置位；下一段新塔送达时
+   *  用来识别"该把 hero 抬上新段顶面"，而不救真正失控坠落到地板的人。
+   *  hero 踩回积木（heroOnBlock）即清除。 */
+  private floorRespawnPending = false;
+  /** 复活后的短暂无敌（时间轴 ms）：坠落往往伴随连锁塌落，hero 复活时
+   *  碎石还在砸，没无敌就会被立刻撞下去——"复活后立马就死了"。
+   *  无敌到"站稳 0.5s"为止（respawnCalmMs），硬顶 5s 防极端。
+   *  复活本来就扣了命，无敌期不存在续命漏洞。 */
+  private respawnGraceUntil = 0;
+  /** 无敌期内已连续"站稳在积木上"的时长；到 500ms 无敌提前结束 */
+  private respawnCalmMs = 0;
   private nextCheckpointY = 0; // endless: next line to append as the frontier descends
   private timeLimitMs = 0;
   private bonusTimeMs = 0; // +3s per checkpoint crossed
@@ -593,6 +604,36 @@ export class GameEngine {
     this.frontierY = seg.baseY;
     Matter.Body.setPosition(this.endFloor, { x: BEAM_X, y: this.frontierY + 12 });
     this.extendCheckpoints();
+    // 复活落网的 hero 搭"电梯"上新段：新段顶面恰好贴着旧 frontier（hero 正
+    // 坐在那儿），地板随段下沉后若不抬，hero 会跌进新段顶部的缝隙里滚落
+    // ——孩子看到的是"复活后没多久又死了"。只抬复活落网的（floorRespawn
+    // Pending），真正失控坠落坐上地板的人不抬——兜网不是电梯（防续命漏洞，
+    // 见 verify:endless 的清空井/疯狂点消用例）。
+    if (this.floorRespawnPending && this.hero && !this.heroOnBlock()) {
+      let top: Matter.Body | null = null;
+      for (const b of this.blocks) {
+        const t2 = b.bounds.min.y;
+        if (t2 < oldFrontier - 2 || t2 > oldFrontier + 4 * CELL) continue;
+        const cx = (b.bounds.min.x + b.bounds.max.x) / 2;
+        if (!this.spawnClearAbove(cx, t2)) continue;
+        const w = b.bounds.max.x - b.bounds.min.x;
+        if (!top || w > top.bounds.max.x - top.bounds.min.x) top = b;
+      }
+      if (top) {
+        const cx = (top.bounds.min.x + top.bounds.max.x) / 2;
+        Matter.Body.setPosition(this.hero, { x: cx, y: top.bounds.min.y - HEX_HALF_H - 2 });
+        Matter.Body.setVelocity(this.hero, { x: 0, y: 0 });
+        Matter.Body.setAngularVelocity(this.hero, 0);
+        Matter.Sleeping.set(this.hero, false);
+        this.respawnY = top.bounds.min.y;
+        this.perchMs = 0;
+        this.heroAirMs = 0;
+        this.heroCalmMs = 0;
+        this.heroDeepMs = 0;
+        this.camY = this.clampCamY(this.hero.position.y - this.viewH * 0.42);
+      }
+      this.floorRespawnPending = false;
+    }
     // wake the seam neighborhood: blocks that slept on the floor now rest
     // on the new segment's flush top — let them re-bed gently (new blocks
     // spawn awake on their own)
@@ -670,6 +711,8 @@ export class GameEngine {
       return;
     }
     this.respawnHero();
+    this.respawnGraceUntil = t + 5000;
+    this.respawnCalmMs = 0;
     this.addFloat(this.hero.position.x, this.hero.position.y - 56, `失误！还剩 ${this.lives} 条命`, CHECKPOINT_RED, 26, 1200);
     playHeartbeat();
     this.shakeMag = 6;
@@ -680,27 +723,61 @@ export class GameEngine {
   }
 
   /**
+   * hero 出生点净空检查：候选支撑顶面上方一格高度内不能有别的积木，
+   * 否则把 hero 塞进重叠位置，物理解耦会把它横向弹飞
+   * （"复活后莫名其妙被挤出去"）。判定窗止于支撑顶面之上 1px，
+   * 支撑自身不算遮挡。
+   */
+  private spawnClearAbove(cx: number, top: number): boolean {
+    const hx0 = cx - HEX_R;
+    const hx1 = cx + HEX_R;
+    const hy0 = top - 2 * HEX_HALF_H - 4;
+    const hy1 = top - 1;
+    for (const b of this.blocks) {
+      if (b.bounds.max.x < hx0 || b.bounds.min.x > hx1) continue;
+      if (b.bounds.max.y < hy0 || b.bounds.min.y > hy1) continue;
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Respawn the hero at the last crossed checkpoint line: on the widest
    * surviving support right around the line (tower keeps its current
    * state); if the shaft there is stripped bare, the frontier floor catches
    * the hero and the next segment arrives immediately.
    */
   private respawnHero(): void {
+    // 支撑必须是"安定的"：连锁塌落途中（块还在翻滚下滑）把 hero 放上去，
+    // 等于放在一辆正在坠毁的车顶上——hero 跟着又掉下去，"复活后立马又死"。
+    // 睡眠块 speed=0 天然通过；还在动的块等它自己停稳再当支撑。
+    const settled = (b: Matter.Body): boolean => b.speed < 0.6 && Math.abs(b.angularVelocity) < 0.05;
+
     // widest surviving support right around the checkpoint line…
     let best: Matter.Body | null = null;
     for (const b of this.blocks) {
       const top = b.bounds.min.y;
       if (top < this.respawnY - 2 * CELL || top > this.respawnY + 6 * CELL) continue;
+      if (!settled(b)) continue;
+      const cx = (b.bounds.min.x + b.bounds.max.x) / 2;
+      if (!this.spawnClearAbove(cx, top)) continue;
       const w = b.bounds.max.x - b.bounds.min.x;
       if (!best || w > best.bounds.max.x - best.bounds.min.x) best = b;
     }
     if (!best) {
       // …shaft stripped bare at the line: walk DOWNWARD to the first
-      // surviving support (bounded), else the frontier floor catches the hero
+      // surviving support. 不再限 25 层：井比 25 层深时旧代码会把 hero
+      // 放去兜网地板——地板不是落脚位，新段送达时地板下沉、hero 跌进
+      // 新段顶部缝隙滚落（"复活后立马又死"的深井路径）。塔身向下
+      // 找支撑最坏也就是落到现存塔顶，一定比地板安全。
+      // 真的全图掏空（极端）才由兜网地板接住 + floorRespawnPending 抬升。
       let lowestTop = Infinity;
       for (const b of this.blocks) {
         const top = b.bounds.min.y;
-        if (top < this.respawnY || top > this.respawnY + 25 * CELL) continue;
+        if (top < this.respawnY) continue;
+        if (!settled(b)) continue;
+        const cx = (b.bounds.min.x + b.bounds.max.x) / 2;
+        if (!this.spawnClearAbove(cx, top)) continue;
         if (top < lowestTop) {
           lowestTop = top;
           best = b;
@@ -709,12 +786,23 @@ export class GameEngine {
     }
     let x = BEAM_X;
     let y = this.respawnY - HEX_HALF_H - 2;
+    let standY = this.respawnY; // hero 实际落脚的面（支撑顶 / 兜网地板）
     if (best) {
       x = (best.bounds.min.x + best.bounds.max.x) / 2;
       y = best.bounds.min.y - HEX_HALF_H - 2;
+      standY = best.bounds.min.y;
     } else {
       y = this.frontierY - HEX_HALF_H - 2; // bare world: the floor catches the hero
+      standY = this.frontierY;
+      // 标记"这次是复活落网"：下一段送达时把 hero 抬上新段顶面。
+      // 真正失控坠落到地板的人不设这个标记（那是深潭滞留该管的）。
+      this.floorRespawnPending = true;
     }
+    // 锚点必须跟到实际落脚点：竖井被掏空的局里 hero 会在旧锚点下方
+    // 10+ 层处落地，若锚点不动，"深潭滞留"计时（低于锚点 10 层累计
+    // 2.5s）会把原地站着的 hero 再判死——死了又复活、复活又判死，
+    // 正是"复活后立马就死了"。重生点是玩家站稳的地方，理应是新锚点。
+    if (standY > this.respawnY) this.respawnY = standY;
     Matter.Body.setPosition(this.hero, { x, y });
     Matter.Body.setVelocity(this.hero, { x: 0, y: 0 });
     Matter.Body.setAngularVelocity(this.hero, 0);
@@ -1822,6 +1910,10 @@ export class GameEngine {
         // 束（"一直往下掉结束不了"）。地板是安全网，不是电梯——只有踩回塔身
         // 积木才算真正的下潜进度。
         const anchored = this.mode === 'level' || this.heroOnBlock();
+        // hero 踩回积木 → 不再是"复活落网待抬"状态
+        if (this.floorRespawnPending && this.mode === 'endless' && anchored) {
+          this.floorRespawnPending = false;
+        }
         for (const cp of this.checkpoints) {
           if (!cp.hit && hero.position.y > cp.y && (this.mode === 'level' || (hero.speed < 4 && anchored))) {
             cp.hit = true;
@@ -1910,7 +2002,14 @@ export class GameEngine {
         // fall-off condition
         const bx = hero.position.x;
         const by = hero.position.y;
-        if (this.mode === 'endless') {
+        // 复活无敌期：坠落规则全部停火，直到 hero 站稳 0.5s（或硬顶 5s）。
+        // 碎石塌落期间被撞开不算失误——那条命已经扣过了。
+        const graceActive = t < this.respawnGraceUntil && this.respawnCalmMs < 500;
+        if (this.mode === 'endless' && graceActive) {
+          if (hero.speed < 1.5 && this.heroOnBlock()) this.respawnCalmMs += this.lastDt;
+          else this.respawnCalmMs = 0;
+          this.heroDeepMs = 0; // 无敌期不攒滞留计时
+        } else if (this.mode === 'endless') {
           // rolling off / falling out costs one of 3 lives, then respawn at
           // the last checkpoint; at 0 lives the run ends
           //
