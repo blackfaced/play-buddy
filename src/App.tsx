@@ -6,6 +6,7 @@ import Marble from './pages/Marble';
 import MathIsland from './mathisland/MathIsland';
 import MulDrill from './muldrill/MulDrill';
 import WriteLab from './write/WriteLab';
+import Adventure from './escape/adventure/Adventure';
 import { BreakToast, ForcedRestOverlay, DailyCapOverlay } from '@/components/HealthOverlays';
 import { useStore } from '@/store/useStore';
 import { logDiag, setDiagSnapshotProvider } from '@/lib/diag';
@@ -79,6 +80,7 @@ export default function App() {
         <Route path="/math" element={<MathIsland />} />
         <Route path="/mul" element={<MulDrill />} />
         <Route path="/write" element={<WriteLab />} />
+        <Route path="/escape" element={<Adventure />} />
       </Routes>
       <HealthGate />
     </>

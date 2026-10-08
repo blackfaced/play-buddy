@@ -19,7 +19,8 @@
     "verify:mul-drill": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-mul-drill.js",
     "test:e2e": "node --test e2e/*.test.js",
     "test:e2e:mul": "npm run build && node --test e2e/mul-drill.test.js",
-    "verify:write": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-write.js"
+    "verify:write": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-write.js",
+    "verify:escape": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-escape.js && node node_modules/.tmp-verify/scripts/verify-escape-math.js && node node_modules/.tmp-verify/scripts/verify-escape-art.js && node node_modules/.tmp-verify/scripts/verify-escape-guidance.js && node scripts/verify-escape-ui.mjs && node node_modules/.tmp-verify/scripts/verify-escape-adventure.js && node scripts/verify-escape-adventure-ui.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -93,6 +94,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
-    "playwright": "^1.56.0"
+    "playwright": "^1.56.0",
+    "react-test-renderer": "^19.3.0"
   }
 }

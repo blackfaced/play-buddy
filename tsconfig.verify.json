@@ -7,6 +7,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
+    "jsx": "react-jsx",
     "types": [
       "node"
     ],
@@ -34,6 +35,12 @@
     "src/muldrill/pick-gen.ts",
     "scripts/verify-write.ts",
     "src/write/structure.ts",
-    "src/write/strokes.ts"
+    "src/write/strokes.ts",
+    "scripts/verify-escape.ts",
+    "scripts/verify-escape-math.ts",
+    "scripts/verify-escape-art.tsx",
+    "src/escape/logic.ts",
+    "scripts/verify-escape-guidance.tsx",
+    "scripts/verify-escape-adventure.ts"
   ]
 }
