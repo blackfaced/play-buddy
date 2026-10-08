@@ -29,6 +29,16 @@ export interface GameEntry {
 
 export const GAMES: GameEntry[] = [
   {
+    id: 'escape',
+    path: '/escape',
+    title: '星光号：航海员的钥匙',
+    emoji: '🗝️',
+    tagline: '探索船舱 · 组合道具 · 解开航海谜题',
+    category: 'play',
+    accent: '#28595B',
+    accentSoft: '#E4EDE5',
+  },
+  {
     id: 'math',
     path: '/math',
     title: '糖果口算岛',

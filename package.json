@@ -19,7 +19,8 @@
     "verify:mul-drill": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-mul-drill.js",
     "test:e2e": "node --test e2e/*.test.js",
     "test:e2e:mul": "npm run build && node --test e2e/mul-drill.test.js",
-    "verify:write": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-write.js"
+    "verify:write": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-write.js",
+    "verify:escape": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-escape.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

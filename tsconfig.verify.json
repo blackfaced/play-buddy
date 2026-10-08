@@ -34,6 +34,8 @@
     "src/muldrill/pick-gen.ts",
     "scripts/verify-write.ts",
     "src/write/structure.ts",
-    "src/write/strokes.ts"
+    "src/write/strokes.ts",
+    "scripts/verify-escape.ts",
+    "src/escape/logic.ts"
   ]
 }
