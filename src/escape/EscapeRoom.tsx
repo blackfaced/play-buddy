@@ -269,7 +269,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
       o.frequency.setValueAtTime(523, ctx.currentTime);
       o.frequency.exponentialRampToValueAtTime(784, ctx.currentTime + 0.14);
       g.gain.setValueAtTime(0.035, ctx.currentTime);
-      o.frequency.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
       o.start();
       o.stop(ctx.currentTime + 0.3);
     } catch {
