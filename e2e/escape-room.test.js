@@ -89,10 +89,17 @@ test("complete room: exploration, errors, inventory combination, reload, notes, 
   );
   await page.goto(base + "/escape");
   await page.getByRole("button", { name: "开始探索" }).click();
-  await page.getByRole("button", { name: "检查信号旗", exact: true }).click();
+  await page.getByRole("button", { name: "检查递推算图", exact: true }).click();
   assert.equal(
-    await page.getByRole("dialog", { name: "风里的信号旗" }).count(),
+    await page.getByRole("dialog", { name: "航海员的递推算图" }).count(),
     1,
+  );
+  await page.getByLabel("第2行第2格，星", { exact: true }).fill("3");
+  await close(page);
+  await page.getByRole("button", { name: "检查递推算图", exact: true }).click();
+  assert.equal(
+    await page.getByLabel("第2行第2格，星", { exact: true }).inputValue(),
+    "3",
   );
   await close(page);
   await page.getByRole("button", { name: "检查小抽屉" }).click();
@@ -103,7 +110,7 @@ test("complete room: exploration, errors, inventory combination, reload, notes, 
       "没有转动",
     ),
   );
-  await page.getByLabel("抽屉三位密码").fill("423");
+  await page.getByLabel("抽屉三位密码").fill("375");
   await page.getByRole("button", { name: "试着打开" }).click();
   await close(page);
   await page.getByRole("button", { name: "检查软布" }).click();
@@ -148,8 +155,53 @@ test("complete room: exploration, errors, inventory combination, reload, notes, 
     1,
   );
   await turn(page, "船模角");
-  await page.getByRole("button", { name: "检查明信片" }).click();
+  await page.getByRole("button", { name: "检查木条画" }).click();
+  assert.equal(
+    await page.getByRole("img", { name: "海边灯塔参考图" }).count(),
+    0,
+  );
+  await page
+    .getByRole("button", { name: "木条 3、6、9、？", exact: true })
+    .click();
+  await page.getByRole("button", { name: "槽位 8", exact: true }).click();
+  assert.ok(
+    (await page.locator(".escape-modal-status").textContent()).includes(
+      "没有嵌合",
+    ),
+  );
+  await page.getByRole("button", { name: "槽位 12", exact: true }).click();
   await close(page);
+  await page.reload();
+  await turn(page, "船模角");
+  await page.getByRole("button", { name: "检查木条画" }).click();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "槽位 12，已嵌入", exact: true })
+      .isDisabled(),
+    true,
+  );
+  for (const [sequence, slot] of [
+    ["2、4、6", 8],
+    ["1、6、11", 16],
+    ["1、4、7", 10],
+    ["2、6、10", 14],
+  ]) {
+    const strip = page.getByRole("button", {
+      name: `木条 ${sequence}、？`,
+      exact: true,
+    });
+    await strip.focus();
+    await page.keyboard.press("Enter");
+    await page
+      .getByRole("button", { name: `槽位 ${slot}`, exact: true })
+      .click();
+  }
+  assert.equal(
+    await page.getByRole("img", { name: "海边灯塔参考图" }).count(),
+    1,
+  );
+  await close(page);
+  await bag(page, "系绳磁铁");
   await page.getByRole("button", { name: "检查船模细缝" }).click();
   await page.getByRole("button", { name: "放下系绳磁铁" }).click();
   await close(page);
@@ -223,11 +275,29 @@ test("mobile layout, Escape dismissal, gradual hints, corrupted saves recover", 
   await page.keyboard.press("Escape");
   assert.equal(await page.locator("dialog").count(), 0);
   await page.getByRole("button", { name: "检查小抽屉" }).click();
-  await page.getByLabel("抽屉三位密码").fill("423");
+  await page.getByLabel("抽屉三位密码").fill("375");
   await close(page);
   await page.getByRole("button", { name: "检查小抽屉" }).click();
-  assert.equal(await page.getByLabel("抽屉三位密码").inputValue(), "423");
+  assert.equal(await page.getByLabel("抽屉三位密码").inputValue(), "375");
   await close(page);
+  await turn(page, "船模角");
+  await page.getByRole("button", { name: "检查木条画" }).click();
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+    true,
+  );
+  await page
+    .getByRole("button", { name: "木条 3、6、9、？", exact: true })
+    .tap();
+  await page.getByRole("button", { name: "槽位 12", exact: true }).tap();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "槽位 12，已嵌入", exact: true })
+      .isDisabled(),
+    true,
+  );
   await page.screenshot({ path: "/tmp/escape-mobile.png", fullPage: true });
   await page.close();
 });

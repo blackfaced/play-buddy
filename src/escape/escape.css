@@ -1046,3 +1046,184 @@
     font-size: 13px !important;
   }
 }
+
+/* Brass navigation board and tactile, keyboard-operable wooden picture. */
+.escape-sum-board {
+  padding: 16px;
+  border: 2px solid #a08250;
+  border-radius: 10px;
+  background: #e9d8b2;
+  box-shadow: inset 0 0 0 5px #dac394;
+  color: #304e4b;
+}
+.escape-sum-board svg {
+  display: block;
+  width: min(100%, 360px);
+  margin: auto;
+}
+.escape-wood-frame {
+  padding: 14px;
+  background: #785133;
+  border: 5px ridge #b88953;
+  border-radius: 5px;
+}
+.escape-wood-slot {
+  display: flex;
+  width: 100%;
+  height: 60px;
+  padding: 0 !important;
+  margin: 0;
+  border: 1px solid #c3945b !important;
+  border-radius: 0 !important;
+  overflow: hidden;
+  background: #493525 !important;
+  color: #efdeba;
+}
+.escape-wood-slot:disabled {
+  opacity: 1;
+}
+.escape-slot-number {
+  width: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  background: #b69757;
+  color: #282b25;
+  font-weight: 700;
+}
+.escape-strip-image {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  flex: 1;
+  min-width: 0;
+}
+.escape-loose-slats {
+  display: grid;
+  gap: 12px;
+}
+.escape-wood-piece {
+  display: flex;
+  align-items: stretch;
+  padding: 0 !important;
+  min-height: 58px;
+  overflow: hidden;
+  border: 3px solid #a37142 !important;
+  border-radius: 5px !important;
+  background: #c99960 !important;
+  box-shadow: 0 3px 3px #49352540;
+}
+.escape-wood-piece[aria-pressed="true"] {
+  outline: 3px solid #315f60;
+  outline-offset: 3px;
+}
+.escape-piece-image {
+  width: 42%;
+  min-width: 0;
+}
+.escape-piece-sequence {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  padding: 8px;
+  color: #30291f;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: repeating-linear-gradient(
+    3deg,
+    transparent 0 11px,
+    #82552c15 12px 13px
+  );
+}
+.escape-selected-slat {
+  min-height: 48px;
+}
+.escape-modal button:focus-visible {
+  outline: 3px solid #387c86;
+  outline-offset: 3px;
+}
+@media (max-width: 450px) {
+  .escape-wood-slot {
+    height: 50px;
+  }
+  .escape-wood-frame {
+    padding: 8px;
+  }
+  .escape-piece-image {
+    width: 34%;
+  }
+  .escape-piece-sequence {
+    font-size: 16px;
+    letter-spacing: 0;
+  }
+}
+.escape-parent-example {
+  display: grid;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 12px;
+  color: #304e4b;
+  font-size: 18px;
+  font-weight: 700;
+}
+.escape-number-triangle {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  margin: 18px auto;
+  max-width: 340px;
+}
+.escape-number-cell {
+  aspect-ratio: 1;
+  border: 1px solid #7c6745;
+  border-radius: 5px;
+  background: #f4e5bd;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  font-size: 21px;
+}
+.escape-number-cell.symbol {
+  background: #dbb879;
+}
+.escape-number-cell label {
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.escape-number-cell label > span {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 13px;
+  pointer-events: none;
+}
+.escape-number-cell input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: 19px;
+  color: #304e4b;
+  padding: 10px 0 0;
+  border-radius: 5px;
+}
+.escape-number-cell input:focus-visible {
+  outline: 3px solid #387c86;
+  outline-offset: 1px;
+}
+@media (max-width: 400px) {
+  .escape-sum-board {
+    padding: 9px;
+  }
+  .escape-number-triangle {
+    gap: 3px;
+  }
+}

@@ -26,6 +26,7 @@ import {
   type Action,
   type Item,
 } from "./logic";
+import { NavigationSumBoard, WoodenPicture } from "./MathProps";
 import "./escape.css";
 
 type View = 0 | 1 | 2 | 3;
@@ -218,6 +219,8 @@ export default function EscapeRoom() {
   const [message, setMessage] = useState(
     "海风轻轻吹进舱室。四处看看，航海员留下了什么？",
   );
+  const [scratch, setScratch] = useState<Record<string, string>>({});
+  const [selectedSlat, setSelectedSlat] = useState<number | null>(null);
   const [code, setCode] = useState("");
   const [route, setRoute] = useState("");
   const [hintLevel, setHintLevel] = useState(0);
@@ -271,7 +274,7 @@ export default function EscapeRoom() {
   const open = (d: Detail) => {
     setDetail(d);
     setMessage("仔细观察，线索就在舱室里。");
-    if (d === "flags" || d === "postcard")
+    if (d === "flags" || (d === "postcard" && s.picture))
       dispatch({ type: "observe", clue: d });
     if (d === "chart" && s.chart) dispatch({ type: "observe", clue: "chart" });
     if (d === "ship") dispatch({ type: "observe", clue: "slot" });
@@ -313,13 +316,13 @@ export default function EscapeRoom() {
   const close = () => setDetail(null);
   const titles: Record<Exclude<Detail, null>, string> = {
     intro: "欢迎登上星光号",
-    flags: "风里的信号旗",
+    flags: "航海员的递推算图",
     cloth: "桌角的软布",
     drawer: "航海员的抽屉",
     chart: "蒙着盐霜的海图",
     cabinet: "方向锁",
     ship: "一艘袖珍帆船",
-    postcard: "灯塔明信片",
+    postcard: "风化的木条画",
     safe: "双光圆环匣",
     door: "通向星光的门",
     notes: "我的航海手记",
@@ -393,7 +396,7 @@ export default function EscapeRoom() {
               <RoomArt view={view} />
               {view === 0 && (
                 <>
-                  {hotspot("flags", "信号旗", 20, 12, 60, 24)}
+                  {hotspot("flags", "递推算图", 20, 12, 60, 24)}
                   {!s.cloth && hotspot("cloth", "软布", 15, 54, 19, 18)}
                   {hotspot("drawer", "小抽屉", 38, 65, 29, 22)}
                 </>
@@ -406,7 +409,7 @@ export default function EscapeRoom() {
               )}
               {view === 2 && (
                 <>
-                  {hotspot("postcard", "明信片", 7, 18, 25, 35)}
+                  {hotspot("postcard", "木条画", 7, 18, 25, 35)}
                   {hotspot("ship", "船模细缝", 34, 44, 44, 39)}
                 </>
               )}
@@ -502,7 +505,7 @@ export default function EscapeRoom() {
                   今晚的灯塔格外明亮。我把甲板钥匙收进了圆环匣，留下一点小小的考验。
                 </p>
                 <p>
-                  观察信号旗，读懂海图，让两束光重新相遇。所有线索，都在这间温暖的船舱里。
+                  读懂递推记录，修复灯塔旧景，让两束光重新相遇。所有线索，都在这间温暖的船舱里。
                 </p>
                 <p className="signature">—— 航海员 林</p>
               </div>
@@ -522,18 +525,14 @@ export default function EscapeRoom() {
           )}
           {detail === "flags" && (
             <>
-              <div className="escape-flag-clue">
-                {["⚓", "☾", "★", "⚓", "★", "☾", "⚓", "★", "⚓"].map(
-                  (f, i) => (
-                    <span key={i}>{f}</span>
-                  ),
-                )}
-              </div>
-              <p>
-                九面信号旗被海风吹得轻轻摆动。它们不是字母，而是重复出现的三种图案。
-              </p>
+              <NavigationSumBoard
+                scratch={scratch}
+                onScratch={(cell, value) =>
+                  setScratch({ ...scratch, [cell]: value })
+                }
+              />
               <p className="escape-instruction">
-                图案已记入手记。小抽屉上也有这些符号。
+                算图已收入手记。抽屉锁上刻着相同的三个符号。
               </p>
             </>
           )}
@@ -568,10 +567,10 @@ export default function EscapeRoom() {
                 <>
                   <p>黄铜锁下刻着三个图案。每个位置，只接受一个数字。</p>
                   <div className="escape-lock-order">
-                    ⚓ <span>·</span> ☾ <span>·</span> ★
+                    ★ <span>·</span> ☾ <span>·</span> ⚓
                   </div>
                   <label className="escape-field">
-                    按「锚、月、星」的顺序输入
+                    按「星、月、锚」的顺序输入
                     <input
                       aria-label="抽屉三位密码"
                       inputMode="numeric"
@@ -589,7 +588,7 @@ export default function EscapeRoom() {
                       act(
                         { type: "drawer", code },
                         "咔哒！获得马蹄磁铁和日光徽章。",
-                        "锁芯没有转动。再看看旗子的数量与图案顺序。",
+                        "锁芯没有转动。再看看递推算图与锁上的符号顺序。",
                       )
                     }
                   >
@@ -729,17 +728,28 @@ export default function EscapeRoom() {
             </>
           )}
           {detail === "postcard" && (
-            <>
-              <div className="escape-postcard">
-                <LighthouseArt />
-              </div>
-              <p>
-                「月亮升在灯塔右上方，海岸在脚下延伸。愿每一道光，都找到回家的方向。」
-              </p>
-              <p className="escape-instruction">
-                明信片已收入手记。它看起来与圆环匣上的画很相似。
-              </p>
-            </>
+            <WoodenPicture
+              state={s}
+              selected={selectedSlat}
+              onSelect={setSelectedSlat}
+              onPlace={(slot) => {
+                if (selectedSlat === null) return;
+                const action: Action = {
+                  type: "placeSlat",
+                  slat: selectedSlat,
+                  slot,
+                };
+                const next = reduceEscape(s, action);
+                act(
+                  action,
+                  next.picture
+                    ? "最后一根木条归位，灯塔旧景重现！"
+                    : "木条稳稳嵌入，画面多了一部分。",
+                  "木条没有嵌合。看看它每次增加多少，再试一个槽位。",
+                );
+                if (next !== s) setSelectedSlat(null);
+              }}
+            />
           )}
           {detail === "safe" && (
             <>
@@ -775,7 +785,7 @@ export default function EscapeRoom() {
                 </>
               ) : (
                 <>
-                  <p>分别转动三道图环，让画面恢复成明信片里的灯塔。</p>
+                  <p>分别转动三道图环，让画面恢复成木条画里的灯塔。</p>
                   <PictureRings rings={s.rings} />
                   <div className="escape-ring-buttons">
                     {["外环", "中环", "内环"].map((r, i) => (
@@ -796,7 +806,9 @@ export default function EscapeRoom() {
                       act(
                         { type: "align" },
                         "灯塔的光连成一线。圆环匣打开，获得甲板钥匙！",
-                        "还有画面没有接上。看看灯塔、海平面与右上方的月亮。",
+                        s.picture
+                          ? "还有画面没有接上。看看灯塔、海平面与右上方的月亮。"
+                          : "匣上的刻字提醒你：先修复船模旁的木条画，找回灯塔旧景。",
                       )
                     }
                   >
@@ -804,7 +816,7 @@ export default function EscapeRoom() {
                   </button>
                   {s.seen.includes("postcard") && (
                     <details className="escape-reference">
-                      <summary>展开手记里的明信片</summary>
+                      <summary>展开手记里的木条画</summary>
                       <LighthouseArt />
                     </details>
                   )}
@@ -838,15 +850,20 @@ export default function EscapeRoom() {
                 <article>
                   <h3>航海员的邀请</h3>
                   <p>
-                    观察信号旗，读懂海图，让两束光重新相遇。甲板钥匙在圆环匣里。
+                    读懂递推记录，修复灯塔旧景，让两束光重新相遇。甲板钥匙在圆环匣里。
                   </p>
                 </article>
               )}
               {s.seen.includes("flags") && (
                 <article>
-                  <h3>九面信号旗</h3>
-                  <p className="escape-mini-flags">⚓ ☾ ★ ⚓ ★ ☾ ⚓ ★ ⚓</p>
-                  <p>抽屉锁的顺序：锚 · 月 · 星。</p>
+                  <h3>递推算图</h3>
+                  <NavigationSumBoard
+                    scratch={scratch}
+                    onScratch={(cell, value) =>
+                      setScratch({ ...scratch, [cell]: value })
+                    }
+                  />
+                  <p>抽屉锁的顺序：星 · 月 · 锚。</p>
                 </article>
               )}
               {s.chart && (
@@ -864,7 +881,7 @@ export default function EscapeRoom() {
               )}
               {s.seen.includes("postcard") && (
                 <article>
-                  <h3>灯塔明信片</h3>
+                  <h3>灯塔木条画</h3>
                   <div className="escape-postcard">
                     <LighthouseArt />
                   </div>
@@ -909,6 +926,8 @@ export default function EscapeRoom() {
                   onClick={() => {
                     dispatch({ type: "reset" });
                     setSelected(null);
+                    setScratch({});
+                    setSelectedSlat(null);
                     setCode("");
                     setRoute("");
                     setHintLevel(0);

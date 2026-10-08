@@ -32,11 +32,11 @@ for (const action of [
   assert.deepEqual(reduceEscape(s, action), s);
 act({ type: "drawer", code: "123" });
 assert.equal(s.drawer, false);
-act({ type: "drawer", code: "423" });
+act({ type: "drawer", code: "375" });
 assert.equal(s.drawer, true);
 assert.deepEqual(inventory(s), ["magnet", "token1"]);
 const once = s;
-act({ type: "drawer", code: "423" });
+act({ type: "drawer", code: "375" });
 assert.deepEqual(s, once);
 act({ type: "takeCloth" });
 act({ type: "cleanChart" });
@@ -53,6 +53,10 @@ assert.equal(s.tokensInserted, true);
 for (let ring = 0; ring < 3; ring++)
   for (let i = 0; i < [3, 2, 1][ring]; i++)
     act({ type: "rotate", ring: ring as 0 | 1 | 2 });
+act({ type: "align" });
+assert.equal(s.safe, false, "The reconstructed reference is required");
+for (const [slat, slot] of [12, 8, 16, 10, 14].entries())
+  act({ type: "placeSlat", slat, slot });
 act({ type: "align" });
 assert.equal(s.safe, true);
 act({ type: "unlockDoor" });

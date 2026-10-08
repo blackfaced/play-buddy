@@ -36,6 +36,7 @@
     "src/write/structure.ts",
     "src/write/strokes.ts",
     "scripts/verify-escape.ts",
+    "scripts/verify-escape-math.ts",
     "src/escape/logic.ts"
   ]
 }

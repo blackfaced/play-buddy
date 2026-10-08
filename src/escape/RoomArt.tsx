@@ -70,6 +70,12 @@ function SceneDefs({ id }: { id: string }) {
       <clipPath id={`${id}-safe`}>
         <circle cx="280" cy="339" r="75" />
       </clipPath>
+      <clipPath id={`${id}-safe-middle`}>
+        <circle cx="280" cy="339" r="51" />
+      </clipPath>
+      <clipPath id={`${id}-safe-inner`}>
+        <circle cx="280" cy="339" r="27" />
+      </clipPath>
     </defs>
   );
 }
@@ -260,22 +266,6 @@ function Lantern({
   );
 }
 
-function Anchor({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
-  return (
-    <g
-      transform={`translate(${x} ${y}) scale(${scale})`}
-      fill="none"
-      stroke="#f3ddab"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cy="-9" r="3" />
-      <path d="M0-6V13M-6-2H6M-11 4C-11 18 11 18 11 4M-14 8l3-4 4 4M7 8l4-4 3 4" />
-    </g>
-  );
-}
-
 function Pennants() {
   return (
     <g>
@@ -310,29 +300,34 @@ function Pennants() {
         strokeWidth="2"
         opacity=".65"
       />
-      <Anchor x={314} y={137} scale={0.9} />
-      <Anchor x={356} y={144} scale={0.9} />
-      <Anchor x={314} y={172} scale={0.9} />
-      <Anchor x={356} y={178} scale={0.9} />
-      {[471, 517].map((x) => (
-        <path
-          key={x}
-          d={`M${x + 8} 144a15 15 0 1 0 0 28a13 13 0 0 1 0-28Z`}
-          fill="#f3ddab"
-          transform={`rotate(10 ${x} 158)`}
-        />
-      ))}
       {[
-        { x: 626, y: 151 },
-        { x: 674, y: 143 },
-        { x: 651, y: 182 },
-      ].map(({ x, y }) => (
-        <path
+        { x: 335, y: 158, angle: 8 },
+        { x: 495, y: 173, angle: 1 },
+        { x: 652, y: 157, angle: -8 },
+      ].map(({ x, y, angle }) => (
+        <g
           key={x}
-          d="M0-14L4-4L15-4L7 3L10 14L0 8L-10 14L-7 3L-15-4L-4-4Z"
-          transform={`translate(${x} ${y}) scale(.9)`}
-          fill="#f3ddab"
-        />
+          transform={`translate(${x} ${y}) rotate(${angle})`}
+          stroke="#f3ddab"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {[1, 2, 3, 4, 5].map((length, row) =>
+            Array.from({ length }, (_, column) => (
+              <rect
+                key={`${row}-${column}`}
+                x={-27 + column * 11}
+                y={-27 + row * 11}
+                width="9"
+                height="9"
+                rx="1"
+                fill="none"
+                strokeWidth="1.3"
+              />
+            )),
+          )}
+        </g>
       ))}
       {[278, 390, 440, 550, 597, 705].map((x) => (
         <path
@@ -784,7 +779,7 @@ function ChartView({ id }: { id: string }) {
   );
 }
 
-/** Shared image for the room postcard and the concentric-ring puzzle. */
+/** Shared image for the wooden-slat reference and concentric-ring puzzle. */
 function LighthouseScene() {
   return (
     <g>
@@ -865,28 +860,102 @@ export function LighthouseArt({ className }: { className?: string }) {
   );
 }
 
+/** One of five horizontal picture fragments, ordered from top to bottom. */
+export function LighthouseSlice({ index }: { index: number }) {
+  return (
+    <svg
+      viewBox={`0 ${index * 48} 240 48`}
+      width="100%"
+      height="100%"
+      preserveAspectRatio="none"
+      role="presentation"
+      aria-hidden="true"
+      focusable="false"
+      style={{ display: "block" }}
+    >
+      <LighthouseScene />
+    </svg>
+  );
+}
+
 function ShipView({ id }: { id: string }) {
   return (
     <g>
       <Porthole id={id} x={842} y={211} scale={0.71} />
-      <g transform="translate(84 158) rotate(-7 82 72)">
+      <g transform="translate(84 154) rotate(-3 83 76)">
         <path
-          d="M1 0H166V145H0Z"
-          fill="#574933"
+          d="M19 0L83-28L148 0"
+          fill="none"
+          stroke="#67583c"
+          strokeWidth="3"
+        />
+        <circle cx="83" cy="-28" r="3.5" fill="#4a4130" />
+        <rect
+          x="4"
+          y="7"
+          width="168"
+          height="153"
+          rx="5"
+          fill="#3d3929"
           opacity=".3"
-          transform="translate(4 6)"
         />
-        <path
-          d="M0 0H166V145H0Z"
-          fill="#e8d6ad"
-          stroke="#8b714b"
-          strokeWidth="2"
+        <rect
+          width="168"
+          height="153"
+          rx="5"
+          fill="#785232"
+          stroke="#4c3d2b"
+          strokeWidth="4"
         />
-        <g transform="translate(13 10) scale(.58 .5)">
-          <LighthouseScene />
-        </g>
-        <path d="M28 135h46M96 134h42" stroke="#b5996c" strokeWidth="2" />
-        <path d="M72-8H98V12H72Z" fill="#bfae78" opacity=".76" />
+        <rect x="7" y="7" width="154" height="139" rx="2" fill="#413c2b" />
+        {[
+          { total: 12, slice: 3 },
+          { total: 8, slice: 0 },
+          { total: 16, slice: 4 },
+          { total: 10, slice: 1 },
+          { total: 14, slice: 2 },
+        ].map(({ total, slice }, row) => (
+          <g key={total} transform={`translate(11 ${11 + row * 27})`}>
+            <rect
+              width="146"
+              height="23"
+              rx="2"
+              fill={`url(#${id}-wood)`}
+              stroke="#362f24"
+              strokeWidth="1.5"
+            />
+            <path d="M2 3H143" stroke="#d1a067" strokeWidth="1.5" />
+            <rect x="5" y="5" width="27" height="15" rx="2" fill="#d5b779" />
+            <text
+              x="18.5"
+              y="16.5"
+              textAnchor="middle"
+              fontSize="12"
+              fontFamily="Georgia, serif"
+              fontWeight="bold"
+              fill="#4c4030"
+            >
+              {total}
+            </text>
+            <svg
+              x="38"
+              y="4"
+              width="102"
+              height="16"
+              viewBox={`0 ${slice * 48} 240 48`}
+              preserveAspectRatio="none"
+            >
+              <LighthouseScene />
+            </svg>
+          </g>
+        ))}
+        <path d="M5 4V147M163 4V147" stroke="#b68c53" strokeWidth="2" />
+        {[6, 162].map((x) => (
+          <g key={x} fill="#d4b279">
+            <circle cx={x} cy="6" r="2" />
+            <circle cx={x} cy="147" r="2" />
+          </g>
+        ))}
       </g>
       <path
         d="M104 347h111v10H104Z"
@@ -1254,11 +1323,19 @@ function DoorView({ id }: { id: string }) {
         stroke="#514b31"
         strokeWidth="5"
       />
-      <g clipPath={`url(#${id}-safe)`}>
-        <g transform="translate(194 253) scale(.7167)">
-          <LighthouseScene />
+      {[
+        { clip: "safe", rotation: 90 },
+        { clip: "safe-middle", rotation: 180 },
+        { clip: "safe-inner", rotation: 270 },
+      ].map(({ clip, rotation }) => (
+        <g key={clip} clipPath={`url(#${id}-${clip})`}>
+          <g transform={`rotate(${rotation} 280 339)`}>
+            <g transform="translate(194 253) scale(.7167)">
+              <LighthouseScene />
+            </g>
+          </g>
         </g>
-      </g>
+      ))}
       <circle
         cx="280"
         cy="339"
