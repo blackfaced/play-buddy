@@ -29,6 +29,10 @@ export interface PickupDefinition {
   requires: Requirement[];
 }
 export interface ToolDefinition {
+  /** Installed parts remain in saved discovery history but cannot be carried again. */
+  installsItem?: boolean;
+  /** Physical interface in one exact closeup; geometry is percent of its artwork. */
+  target: { closeup: string; label: string; description: string; x: number; y: number; width: number; height: number };
   id: string;
   scene: string;
   item: string;

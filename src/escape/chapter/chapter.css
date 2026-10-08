@@ -957,3 +957,9 @@
     scroll-behavior: auto !important;
   }
 }
+
+.chapter-device { position: relative; width: 100%; max-width: 800px; margin: 14px auto 22px; }
+.chapter-device > svg { display: block; width: 100%; height: auto; }
+.chapter-bag-dock { position: sticky; bottom: -1px; margin-top: 18px; padding: 12px; background: #183a3d; border-top: 1px solid #9c885a; z-index: 4; }
+.chapter-bag-dock > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.chapter-bag-dock .chapter-inventory { margin-top: 12px; max-height: 220px; overflow-y: auto; }

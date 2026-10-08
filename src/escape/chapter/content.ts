@@ -112,19 +112,19 @@ export const CHAPTER: ChapterDefinition = {
       id: "brush",
       name: "软刷",
       symbol: "▰",
-      description: "可以轻轻刷净标本柜的铭牌。",
+      description: "木柄顶端是一束细软的刷毛。",
     },
     {
       id: "hook",
       name: "长柄钩",
       symbol: "J",
-      description: "细长的钩头能够探进格栅缝隙。",
+      description: "细长的金属杆，末端弯成一个小钩。",
     },
     {
       id: "cloth",
       name: "镜布",
       symbol: "▱",
-      description: "柔软的方布，适合清洁观测窗。",
+      description: "一块柔软、细密、不掉绒的方布。",
     },
     {
       id: "arrow-tiles",
@@ -148,7 +148,7 @@ export const CHAPTER: ChapterDefinition = {
       id: "oil-can",
       name: "小油壶",
       symbol: "♧",
-      description: "壶嘴很细，可以润滑雾灯底座的轨道。",
+      description: "铜壶里盛着润滑油，壶嘴细长。",
     },
     {
       id: "lens-frame",
@@ -166,19 +166,19 @@ export const CHAPTER: ChapterDefinition = {
       id: "route-plate",
       name: "航路铭牌",
       symbol: "▤",
-      description: "观测窗开启后取出的铭牌，可以装到工坊的实验台。",
+      description: "长方形铜铭牌，背面有两枚凸出的卡榫。",
     },
     {
       id: "winding-crank",
       name: "潮汐曲柄",
       symbol: "┐",
-      description: "实验台抽屉里的曲柄，与潮汐板轴孔相配。",
+      description: "一支折角金属柄，末端是方形转轴。",
     },
     {
       id: "beacon-prism",
       name: "雾灯棱镜",
       symbol: "◇",
-      description: "潮汐板后珍藏的棱镜，能把雾灯的光投向港湾。",
+      description: "菱形玻璃棱镜，边缘闪着柔和的彩光。",
     },
   ],
   reveals: [
@@ -246,6 +246,7 @@ export const CHAPTER: ChapterDefinition = {
   tools: [
     {
       id: "brush-plaque",
+      target: { closeup: "animal-cabinet", label: "积灰铭牌", description: "铭牌蒙着一层灰，刻痕看不清。", x: 20, y: 64, width: 60, height: 24 },
       scene: "gallery",
       item: "brush",
       label: "刷净标本铭牌",
@@ -253,6 +254,7 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "hook-grate",
+      target: { closeup: "search", label: "格栅", description: "细窄的格栅后，有一叠够不到的纹片。", x: 67, y: 28, width: 27, height: 32 },
       scene: "workshop",
       item: "hook",
       label: "从格栅后钩取纹片",
@@ -260,6 +262,8 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "mount-arrow",
+      installsItem: true,
+      target: { closeup: "pattern-tray", label: "箭纹凹槽", description: "一对箭形凹槽，边缘留有卡口。", x: 10, y: 20, width: 23, height: 60 },
       scene: "gallery",
       item: "arrow-tiles",
       label: "把箭纹片放到纹片台",
@@ -267,6 +271,8 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "mount-sail",
+      installsItem: true,
+      target: { closeup: "pattern-tray", label: "帆纹凹槽", description: "一对帆形凹槽，边缘留有卡口。", x: 38, y: 20, width: 23, height: 60 },
       scene: "gallery",
       item: "sail-tiles",
       label: "把帆纹片放到纹片台",
@@ -274,6 +280,8 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "mount-vane",
+      installsItem: true,
+      target: { closeup: "pattern-tray", label: "风标凹槽", description: "一对风标形凹槽，边缘留有卡口。", x: 66, y: 20, width: 23, height: 60 },
       scene: "gallery",
       item: "vane-tiles",
       label: "把风标纹片放到纹片台",
@@ -281,6 +289,7 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "clean-window",
+      target: { closeup: "lens-chart", label: "观测窗", description: "玻璃上的盐雾遮住了窗内的纸页。", x: 7, y: 12, width: 43, height: 75 },
       scene: "optics",
       item: "cloth",
       label: "擦净光学观测窗",
@@ -288,6 +297,8 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "mount-frame",
+      installsItem: true,
+      target: { closeup: "lens-chart", label: "镜架接口", description: "窗旁有一个圆环形接口，表面沾着盐粒。", x: 55, y: 20, width: 18, height: 60 },
       scene: "optics",
       item: "lens-frame",
       label: "装上放大镜架",
@@ -295,6 +306,8 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "mount-filter",
+      installsItem: true,
+      target: { closeup: "lens-chart", label: "镜盘卡槽", description: "侧面的圆形卡槽通向镜架，里面还没有镜盘。", x: 78, y: 20, width: 17, height: 60 },
       scene: "optics",
       item: "filter-disc",
       label: "装入三色镜盘",
@@ -302,6 +315,8 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "mount-route",
+      installsItem: true,
+      target: { closeup: "gravity-lock", label: "铭牌嵌槽", description: "实验台下方有一块长方形空槽。", x: 20, y: 64, width: 60, height: 24 },
       scene: "workshop",
       item: "route-plate",
       label: "将航路铭牌装上实验台",
@@ -309,6 +324,8 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "wind-tide",
+      installsItem: true,
+      target: { closeup: "tide-sudoku", label: "摇柄插孔", description: "棋盘旁的方轴孔通向停住的齿轮。", x: 75, y: 29, width: 19, height: 46 },
       scene: "optics",
       item: "winding-crank",
       label: "用曲柄启动潮汐板",
@@ -316,6 +333,7 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "oil-track",
+      target: { closeup: "foglight-console", label: "底座轨道", description: "轨道上有干涩的锈迹，灯座卡住了。", x: 13, y: 70, width: 74, height: 19 },
       scene: "workshop",
       item: "oil-can",
       label: "润滑雾灯底座轨道",
@@ -323,6 +341,8 @@ export const CHAPTER: ChapterDefinition = {
     },
     {
       id: "mount-prism",
+      installsItem: true,
+      target: { closeup: "foglight-console", label: "棱镜座", description: "灯罩中央有菱形镜座，下面的滑轨尚未转动。", x: 33, y: 16, width: 34, height: 45 },
       scene: "workshop",
       item: "beacon-prism",
       label: "装入雾灯棱镜",

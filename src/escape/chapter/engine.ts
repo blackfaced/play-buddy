@@ -527,9 +527,19 @@ export function lintChapter(definition: ChapterDefinition): string[] {
     )
       errors.push(`Unknown scene ${entry.scene}`);
   }
-  for (const tool of definition.tools)
+  for (const tool of definition.tools) {
     if (!namespaces.item.includes(tool.item))
       errors.push(`Unknown tool item ${tool.item}`);
+    const target = tool.target;
+    const boundPuzzle = definition.puzzles.find(puzzle => puzzle.id === target?.closeup);
+    if ((tool.installsItem !== undefined && typeof tool.installsItem !== "boolean") ||
+      !target || !target.label?.trim() || !target.description?.trim() ||
+      (target.closeup !== "search" && (!boundPuzzle || boundPuzzle.kind === "search" || boundPuzzle.scene !== tool.scene)) ||
+      ![target.x, target.y, target.width, target.height].every(Number.isFinite) ||
+      target.x < 0 || target.y < 0 || target.width <= 0 || target.height <= 0 ||
+      target.x + target.width > 100 || target.y + target.height > 100)
+      errors.push(`Invalid tool target: ${tool.id}`);
+  }
   if (!namespaces.puzzle.includes(definition.finish))
     errors.push("Unknown finish puzzle");
   for (const puzzle of definition.puzzles) {

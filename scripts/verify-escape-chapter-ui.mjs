@@ -44,10 +44,18 @@ globalThis.localStorage = {
   setItem: (key, value) => storage.set(key, value),
 };
 let tree;
+let modalShows = 0;
+const focusCalls = [];
 const text = (node) =>
   typeof node === "string" ? node : (node.children ?? []).map(text).join("");
 const json = () => JSON.stringify(tree.toJSON());
 const scope = () => tree.root.findAllByType("dialog")[0] ?? tree.root;
+const hosts = (where, props) =>
+  where.findAll(
+    (node) =>
+      typeof node.type === "string" &&
+      Object.entries(props).every(([key, value]) => node.props[key] === value),
+  );
 const button = (name, where = scope()) => {
   const found = where
     .findAllByType("button")
@@ -66,7 +74,12 @@ const wrap = () =>
 async function mount() {
   await act(async () => {
     tree = create(wrap(), {
-      createNodeMock: (e) => (e.type === "dialog" ? { showModal() {} } : null),
+      createNodeMock: (e) =>
+        e.type === "dialog"
+          ? { showModal() { modalShows++; } }
+          : e.type === "button"
+            ? { focus() { focusCalls.push(e.props); } }
+            : null,
     });
   });
 }
@@ -90,28 +103,133 @@ async function collect(id) {
   const point = A.SEARCH_HOTSPOTS[saved().scene].find((p) => p.id === id);
   await click(label(`检查${point.label}`));
 }
+function bagToggle() {
+  const toggles = scope().findAllByType("button").filter(
+    (node) =>
+      text(node).includes("工具袋") &&
+      typeof node.props["aria-expanded"] === "boolean",
+  );
+  assert.equal(toggles.length, 1, "Each closeup has one compact bag toggle");
+  return toggles[0];
+}
+async function inventory() {
+  if (tree.root.findAllByType("dialog").length && !bagToggle().props["aria-expanded"])
+    await click(bagToggle());
+  const bags = hosts(tree.root, { "aria-label": "工具袋" });
+  assert.equal(bags.length, 1, "Only one inventory may be rendered globally");
+  assert.equal(hosts(scope(), { "aria-label": "工具袋" }).length, 1);
+  if (tree.root.findAllByType("dialog").length) {
+    const controlled = bagToggle().props["aria-controls"];
+    assert.ok(controlled, "The bag toggle identifies its expanded drawer");
+    assert.equal(hosts(tree.root, { id: controlled }).length, 1);
+  }
+  return bags[0];
+}
 async function select(id) {
   const item = A.CHAPTER.items.find((candidate) => candidate.id === id);
-  const bag = scope().findByProps({ "aria-label": "工具袋" });
-  await click(
-    bag.findAllByType("button").find((node) => text(node).includes(item.name)),
-  );
+  const bag = await inventory();
+  const itemButton = bag.findAllByType("button").find((node) => text(node).includes(item.name));
+  assert.ok(itemButton, `Missing inventory item: ${id}`);
+  if (!itemButton.props["aria-pressed"]) {
+    const previousFocusCalls = focusCalls.length;
+    await click(itemButton);
+    if (tree.root.findAllByType("dialog").length) {
+      assert.equal(focusCalls.length, previousFocusCalls + 1, "Selection restores focus before hiding the inventory");
+      assert.equal(focusCalls.at(-1)["aria-controls"], bagToggle().props["aria-controls"]);
+    }
+  }
+  else if (tree.root.findAllByType("dialog").length) await click(bagToggle());
+  if (tree.root.findAllByType("dialog").length) {
+    assert.equal(bagToggle().props["aria-expanded"], false, "Selecting an item closes the drawer");
+    assert.equal(hosts(tree.root, { "aria-label": "工具袋" }).length, 0);
+  }
+}
+async function assertSelected(id) {
+  const bag = await inventory();
+  const item = A.CHAPTER.items.find((candidate) => candidate.id === id);
+  const pressed = bag.findAllByType("button").filter((node) => node.props["aria-pressed"]);
+  assert.equal(pressed.length, 1, "Only one shared item selection exists");
+  assert.ok(text(pressed[0]).includes(item.name), `Selection must remain ${id}`);
+  if (tree.root.findAllByType("dialog").length) await click(bagToggle());
+}
+function target(id) {
+  const tool = A.CHAPTER.tools.find((candidate) => candidate.id === id);
+  const matches = hosts(scope(), { "data-tool-target": id });
+  assert.equal(matches.length, 1, `One physical target for ${id}`);
+  const node = matches[0];
+  assert.equal(node.type, "button");
+  assert.equal(node.props["aria-label"], `检查${tool.target.label}`);
+  assert.ok(!node.props.disabled, `${id} remains inspectable before and after use`);
+  return node;
 }
 async function use(id, itemId) {
   await select(itemId);
+  await click(target(id));
+  target(id);
+  assertTargets(
+    A.CHAPTER.tools.find((candidate) => candidate.id === id).target.closeup,
+    tree.root.findAllByType("select")[0].props.value,
+  );
+  assert.equal(hosts(tree.root, { "aria-label": "工具袋" }).length, 0);
   const tool = A.CHAPTER.tools.find((candidate) => candidate.id === id);
-  const section = scope().findByProps({ "aria-label": "使用道具的位置" });
-  const row = section
-    .findAllByType("div")
-    .find((node) =>
-      node.children.some(
-        (child) =>
-          typeof child !== "string" &&
-          child.type === "span" &&
-          text(child) === tool.label,
-      ),
-    );
-  await click(row.findByType("button"));
+  if (tool.item === itemId && saved().usedTools.includes(id)) {
+    const bag = await inventory();
+    const item = A.CHAPTER.items.find((candidate) => candidate.id === itemId);
+    const row = bag.findAllByType("button").find((node) => text(node).includes(item.name));
+    if (tool.installsItem) {
+      assert.equal(row.props.disabled, true, `${itemId} stays recorded but cannot be selected after installation`);
+      assert.ok(text(row).includes("已装配"));
+      assert.equal(row.props["aria-pressed"], false);
+      assert.equal(bag.findAllByType("button").filter((node) => node.props["aria-pressed"]).length, 0);
+    } else {
+      assert.ok(!row.props.disabled, `${itemId} is reusable after use`);
+      assert.equal(row.props["aria-pressed"], true);
+      assert.ok(!text(row).includes("已装配"));
+    }
+    await click(bagToggle());
+  }
+}
+function assertDialogStructure() {
+  assert.equal(tree.root.findAllByType("dialog").length, 1);
+  const dialog = scope();
+  assert.ok(modalShows > 0, "The native dialog is opened modally");
+  assert.equal(dialog.findAllByProps({ id: dialog.props["aria-labelledby"] }).length, 1);
+  assert.equal(label("关闭近景").props.autoFocus, true);
+  assert.equal(typeof dialog.props.onCancel, "function");
+  assert.equal(typeof dialog.props.onClick, "function");
+  const toggle = bagToggle();
+  assert.equal(toggle.props["aria-expanded"], false);
+  assert.equal(hosts(tree.root, { "aria-label": "工具袋" }).length, 0);
+  const globalToggles = tree.root.findAllByType("button").filter(
+    (node) => text(node).includes("工具袋") && typeof node.props["aria-expanded"] === "boolean",
+  );
+  assert.equal(globalToggles.length, 1, "No duplicate bag behind the modal");
+  assert.equal(hosts(tree.root, { "aria-label": "使用道具的位置" }).length, 0);
+}
+function assertTargets(closeup, guidance) {
+  const expected = A.CHAPTER.tools.filter(
+    (tool) => tool.scene === saved().scene && tool.target.closeup === closeup,
+  );
+  const actual = scope().findAllByType("button").filter((node) => node.props["data-tool-target"]);
+  assert.deepEqual(
+    actual.map((node) => node.props["data-tool-target"]).sort(),
+    expected.map((tool) => tool.id).sort(),
+    `${saved().scene}/${closeup} exposes only its own device targets in ${guidance}`,
+  );
+  assert.equal(
+    tree.root.findAllByType("button").filter((node) => node.props["data-tool-target"]).length,
+    actual.length,
+    "No duplicate physical controls remain behind the current dialog",
+  );
+  for (const tool of expected) {
+    const node = target(tool.id);
+    assert.equal(typeof node.props.onClick, "function");
+    assert.notEqual(node.props.tabIndex, -1, "Physical targets stay keyboard reachable");
+    assert.equal(node.props.className?.includes("unmarked"), guidance === "challenge");
+    assert.equal(text(node).includes("＋"), guidance !== "challenge");
+    for (const [property, field] of [["left", "x"], ["top", "y"], ["width", "width"], ["height", "height"]])
+      assert.equal(node.props.style[property], `${tool.target[field]}%`);
+  }
 }
 async function code(id, value) {
   const puzzle = A.CHAPTER.puzzles.find((p) => p.id === id);
@@ -132,6 +250,18 @@ assert.ok(json().includes("推开工作舱的门"));
 await click(button("推开工作舱的门 →"));
 assert.equal(saved().started, true);
 assert.equal(tree.root.findAllByProps({ "data-guidance": "rule" }).length, 0);
+await open("animal-cabinet");
+assert.equal(
+  tree.root.findAllByProps({ "aria-label": "工具袋" }).length,
+  0,
+  "A closed compact bag must not leave a second inventory outside the dialog",
+);
+assert.equal(
+  scope().findAllByProps({ "data-tool-target": "brush-plaque" }).length,
+  1,
+  "The cabinet must expose its own painted plaque as an inspectable tool target",
+);
+await close();
 // Source-backed CSS checks supplement renderer actions; they do not claim browser layout.
 const css = postcss.parse(
   readFileSync("src/escape/chapter/chapter.css", "utf8"),
@@ -155,6 +285,41 @@ assert.equal(
   "1",
 );
 assert.equal(declarations(".chapter-point > span")["pointer-events"], "none");
+const closeupByTool = {
+  "brush-plaque": "animal-cabinet",
+  "hook-grate": "search",
+  "mount-arrow": "pattern-tray",
+  "mount-sail": "pattern-tray",
+  "mount-vane": "pattern-tray",
+  "clean-window": "lens-chart",
+  "mount-frame": "lens-chart",
+  "mount-filter": "lens-chart",
+  "mount-route": "gravity-lock",
+  "wind-tide": "tide-sudoku",
+  "oil-track": "foglight-console",
+  "mount-prism": "foglight-console",
+};
+const installedParts = new Set([
+  "mount-arrow", "mount-sail", "mount-vane", "mount-frame",
+  "mount-filter", "mount-route", "wind-tide", "mount-prism",
+]);
+assert.equal(A.CHAPTER.tools.length, Object.keys(closeupByTool).length);
+for (const tool of A.CHAPTER.tools) {
+  assert.equal(Boolean(tool.installsItem), installedParts.has(tool.id), `${tool.id} has the correct installed/reusable lifecycle`);
+  assert.equal(tool.target.closeup, closeupByTool[tool.id], `Explicit device ownership for ${tool.id}`);
+  assert.ok(tool.target.label.trim());
+  assert.ok(tool.target.description.trim());
+  for (const field of ["x", "y", "width", "height"])
+    assert.ok(Number.isFinite(tool.target[field]), `${tool.id} has physical ${field}`);
+  assert.ok(tool.target.x >= 0 && tool.target.y >= 0);
+  assert.ok(tool.target.width > 0 && tool.target.height > 0);
+  assert.ok(tool.target.x + tool.target.width <= 100);
+  assert.ok(tool.target.y + tool.target.height <= 100);
+}
+const hookTool = A.CHAPTER.tools.find((tool) => tool.id === "hook-grate");
+const grate = A.SEARCH_HOTSPOTS.workshop.find((point) => point.id === hookTool.id);
+for (const field of ["x", "y", "width", "height"])
+  assert.equal(hookTool.target[field], grate[field], `The hook uses the painted search grate's ${field}`);
 for (const value of ["easy", "standard", "challenge"]) {
   await mode(value);
   const points = tree.root
@@ -172,6 +337,72 @@ for (const value of ["easy", "standard", "challenge"]) {
   );
   await open("search");
   await close();
+  // Every physical target is local to this exact closeup, in every guidance mode.
+  // Inspecting unavailable equipment must still respond, without silently using anything.
+  for (const scene of A.CHAPTER.scenes) {
+    await room(scene.id);
+    for (const point of A.SCENE_HOTSPOTS[scene.id]) {
+      await open(point.id);
+      assertDialogStructure();
+      assertTargets(point.id, value);
+      const puzzle = A.CHAPTER.puzzles.find((candidate) => candidate.id === point.id);
+      if (puzzle && !A.puzzleAvailable(A.CHAPTER, saved(), puzzle)) {
+        const device = hosts(scope(), { "data-device": puzzle.id });
+        assert.equal(device.length, 1, `Locked ${puzzle.id} keeps its illustrated device`);
+        assert.ok(device[0].findAllByType("svg").length > 0);
+      }
+      const targets = A.CHAPTER.tools.filter(
+        (tool) => tool.scene === scene.id && tool.target.closeup === point.id,
+      );
+      for (const tool of targets) {
+        const before = saved();
+        await click(target(tool.id));
+        assert.deepEqual(saved(), before, `Inspection cannot use unselected ${tool.id}`);
+        assert.ok(
+          hosts(scope(), { role: "status" }).some((node) => text(node).trim()),
+          `${tool.id} inspection gives feedback inside the modal even with unmet prerequisites`,
+        );
+        assertTargets(point.id, value);
+      }
+      if (point.id === "search") {
+        await click(button("查看检修清单"));
+        assertDialogStructure();
+        assertTargets("search-kit", value);
+      }
+      await close();
+      assert.equal(hosts(tree.root, { "aria-label": "工具袋" }).length, 1);
+    }
+  }
+  await room("gallery");
+  // Exercise actual item selection and application in all three modes, not only static controls.
+  await open("search");
+  await collect("gallery-curtain");
+  await collect("brush");
+  await collect("shell-fan");
+  await collect("arrow-tiles");
+  await close();
+  await open("animal-cabinet");
+  const owned = saved();
+  await click(target("brush-plaque"));
+  assert.deepEqual(saved(), owned, `${value}: ownership cannot automatically use the brush`);
+  await use("brush-plaque", "arrow-tiles");
+  assert.deepEqual(saved(), owned, `${value}: a wrong tool changes no progress and consumes no item`);
+  await assertSelected("arrow-tiles");
+  await close();
+  await open("pattern-tray");
+  await assertSelected("arrow-tiles");
+  await close();
+  await open("animal-cabinet");
+  await use("brush-plaque", "brush");
+  assert.ok(saved().usedTools.includes("brush-plaque"));
+  const used = saved();
+  await click(target("brush-plaque"));
+  assert.deepEqual(saved(), used, `${value}: a used target remains safely inspectable`);
+  await close();
+  await click(button("重玩这一章"));
+  await click(button("确认重玩这一章"));
+  assert.equal(saved().found.length, 0);
+  assert.equal(saved().usedTools.length, 0);
 }
 await mode("standard");
 await open("pattern-tray");
@@ -190,12 +421,33 @@ await collect("gallery-curtain");
 await collect("brush");
 await collect("shell-fan");
 await collect("arrow-tiles");
+assert.deepEqual(saved().usedTools, [], "Picking up a matching item never applies it automatically");
 await close();
 await open("animal-cabinet");
+const beforeOwnedInspection = saved();
+await click(target("brush-plaque"));
+assert.deepEqual(saved(), beforeOwnedInspection, "Owning the brush does not auto-select or auto-use it");
+assert.ok(hosts(scope(), { role: "status" }).some((node) => text(node).trim()));
 await use("brush-plaque", "arrow-tiles");
+assert.deepEqual(saved(), beforeOwnedInspection, "Wrong-tool feedback must not alter chapter progress");
 assert.equal(saved().usedTools.includes("brush-plaque"), false);
 assert.ok(saved().found.includes("arrow-tiles"));
+await assertSelected("arrow-tiles");
+// Cancel is the native Escape-key path; preserve one shared selection through it.
+let cancelPrevented = false;
+await act(async () => scope().props.onCancel({ preventDefault() { cancelPrevented = true; } }));
+assert.equal(cancelPrevented, true);
+assert.equal(tree.root.findAllByType("dialog").length, 0);
+await assertSelected("arrow-tiles");
+await open("pattern-tray");
+await assertSelected("arrow-tiles");
+await close();
+await open("animal-cabinet");
+await assertSelected("arrow-tiles");
 await use("brush-plaque", "brush");
+const afterBrushing = saved();
+await click(target("brush-plaque"));
+assert.deepEqual(saved(), afterBrushing, "An already-used physical target remains safely inspectable");
 assert.equal(scope().findAllByType("figure").length, 4);
 await code("animal-cabinet", "0000");
 await confirm();
@@ -210,6 +462,13 @@ await open("search");
 await collect("rolled-chart");
 await collect("hook");
 await collect("cloth");
+await close();
+await open("lens-chart");
+const beforeFrame = saved();
+await use("mount-frame", "lens-frame");
+assert.deepEqual(saved(), beforeFrame, "An owned frame cannot bypass the dirty-window prerequisite");
+assert.ok(hosts(scope(), { role: "status" }).some((node) => text(node).trim()));
+await assertSelected("lens-frame");
 await room("workshop");
 await open("search");
 await collect("rope-coil");
@@ -292,6 +551,11 @@ assert.equal(saved().puzzles[pattern.id].solved, false);
 await confirm();
 await room("optics");
 await open("lens-chart");
+const beforeFilter = saved();
+await use("mount-filter", "filter-disc");
+assert.deepEqual(saved(), beforeFilter, "The owned filter cannot bypass the unmounted-frame prerequisite");
+assert.ok(hosts(scope(), { role: "status" }).some((node) => text(node).trim()));
+await assertSelected("filter-disc");
 await use("clean-window", "cloth");
 await use("mount-frame", "lens-frame");
 await use("mount-filter", "filter-disc");
@@ -386,6 +650,11 @@ await act(async () =>
 await confirm();
 await room("workshop");
 await open("foglight-console");
+const beforePrism = saved();
+await use("mount-prism", "beacon-prism");
+assert.deepEqual(saved(), beforePrism, "The owned prism cannot bypass the unlubricated track");
+assert.ok(hosts(scope(), { role: "status" }).some((node) => text(node).trim()));
+await assertSelected("beacon-prism");
 await use("oil-track", "oil-can");
 await use("mount-prism", "beacon-prism");
 const final = A.CHAPTER.puzzles.find((p) => p.id === "foglight-console");
@@ -479,5 +748,5 @@ for (const puzzle of A.CHAPTER.puzzles) {
   assert.ok(!/class="[^\"]*(?:correct|incorrect)/.test(markup));
 }
 console.log(
-  "Chapter UI actions passed: three modes, hidden finds, no-loss tools, source journal, seven mechanisms, real SVG lens layers, exact gravity, reversible arrangement/Sudoku, completion, health lock, replay, future-save protection and SSR/CSS contracts.",
+  "Chapter UI actions passed: all closeups and contextual targets in three modes, one compact bag with retained focus/selection, explicit no-loss tool use and prerequisite feedback, persistent used devices, hidden finds, source journal, seven mechanisms, real SVG lens layers, exact gravity, reversible arrangement/Sudoku, completion, health lock, replay, future-save protection and SSR/CSS contracts.",
 );

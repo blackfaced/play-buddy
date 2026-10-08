@@ -416,3 +416,10 @@ assert.deepEqual(
 console.log(
   "Chapter: complete solve path; 512 drop boards; unique sudoku; gates, undo/redo/reset/reload, hints, save provenance and lint passed",
 );
+
+// Physical tool targets must bind to the same scene's closeup and finite geometry.
+for (const target of [undefined, { closeup: "missing", label: "孔", description: "孔", x: 0, y: 0, width: 10, height: 10 }, { closeup: "search", label: "孔", description: "孔", x: 99, y: 0, width: 10, height: 10 }]) {
+  const broken = structuredClone(CHAPTER);
+  Object.assign(broken.tools[0], { target });
+  assert.ok(lintChapter(broken).some(error => error.includes("tool target")));
+}

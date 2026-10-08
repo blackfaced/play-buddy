@@ -17,8 +17,9 @@ import {
   SCENE_HOTSPOTS,
   SEARCH_HOTSPOTS,
 } from "./SceneArt";
-import type { ChapterAction, ChapterState } from "./types";
+import type { ChapterAction, ChapterState, ToolDefinition } from "./types";
 import PuzzleView from "./PuzzleView";
+import DeviceArt from "./DeviceArt";
 import "./chapter.css";
 
 function readSaved(key: string) {
@@ -41,7 +42,9 @@ function Closeup({
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
-    ref.current?.showModal();
+    const dialog = ref.current;
+    dialog?.showModal();
+    return () => dialog?.close?.();
   }, []);
   return (
     <dialog
@@ -82,7 +85,9 @@ function Point({
   point,
   mode,
   onClick,
+  toolId,
 }: {
+  toolId?: string;
   point: Hotspot;
   mode: GuidanceMode;
   onClick: () => void;
@@ -96,6 +101,7 @@ function Point({
         width: `${point.width}%`,
         height: `${point.height}%`,
       }}
+      data-tool-target={toolId}
       aria-label={`检查${point.label}`}
       onClick={onClick}
     >
@@ -126,6 +132,8 @@ export default function Chapter({
   );
   const mode = controlledMode ?? localMode;
   const [detail, setDetail] = useState<string | null>(null);
+  const bagToggle = useRef<HTMLButtonElement>(null);
+  const [bagOpen, setBagOpen] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [revisiting, setRevisiting] = useState(false);
@@ -146,13 +154,14 @@ export default function Chapter({
   }, [mode]);
   const scene = CHAPTER.scenes.find((s) => s.id === state.scene)!;
   const puzzle = CHAPTER.puzzles.find((p) => p.id === detail);
+  const installed = (item: string) => CHAPTER.tools.some(tool => tool.item === item && tool.installsItem && state.usedTools.includes(tool.id));
   const selectedItem =
-    selected && state.found.includes(selected) ? selected : null;
+    selected && state.found.includes(selected) && !installed(selected) ? selected : null;
   const inventory = CHAPTER.items.filter((item) =>
     state.found.includes(item.id),
   );
   const tools = CHAPTER.tools.filter(
-    (tool) => tool.scene === state.scene && !state.usedTools.includes(tool.id),
+    (tool) => tool.scene === state.scene && tool.target.closeup === detail,
   );
   const points = SCENE_HOTSPOTS[state.scene] ?? [];
   function act(action: ChapterAction) {
@@ -201,35 +210,34 @@ export default function Chapter({
   }
   function open(id: string) {
     setDetail(id);
+    setBagOpen(false);
     setMessage("");
   }
-  function toolControls() {
-    return (
-      tools.length > 0 && (
-        <section className="chapter-tool-targets" aria-label="使用道具的位置">
-          <h3>近处的装置</h3>
-          {tools.map((tool) => (
-            <div key={tool.id}>
-              <span>{tool.label}</span>
-              <button
-                disabled={
-                  !selectedItem || !requirementsMet(state, tool.requires)
-                }
-                onClick={() => {
-                  if (selectedItem)
-                    act({ type: "use", id: tool.id, item: selectedItem });
-                }}
-              >
-                使用选中道具
-              </button>
-            </div>
-          ))}
-          <p className="chapter-controls-note">
-            从工具袋选一件，再选择使用位置。尝试不会丢失道具。
-          </p>
-        </section>
-      )
-    );
+  function inspectTool(tool: ToolDefinition) {
+    if (state.usedTools.includes(tool.id)) {
+      setMessage(`${tool.target.label}已经处理过，可以继续观察装置。`);
+    } else if (!selectedItem) {
+      setMessage(`${tool.target.description} 可以打开工具袋，选一件再试。`);
+    } else if (!requirementsMet(state, tool.requires)) {
+      setMessage(`${tool.target.description} 接口暂时还不能活动。道具仍在工具袋里。`);
+    } else act({ type: "use", id: tool.id, item: selectedItem });
+  }
+  function toolPoint(tool: ToolDefinition) {
+    return <Point key={tool.id} toolId={tool.id} point={{ id: tool.id, ...tool.target }} mode={mode} onClick={() => inspectTool(tool)} />;
+  }
+  function device() {
+    return puzzle && puzzle.kind !== "search" && <div className="chapter-device" data-device={puzzle.id}>
+      <DeviceArt puzzle={puzzle} state={state} tools={tools} />
+      {tools.map(toolPoint)}
+    </div>;
+  }
+  function compactBag() {
+    return <footer className="chapter-bag-dock">
+      <div><span>{selectedItem ? `手中：${inventory.find(item => item.id === selectedItem)?.name}` : "手中未选道具"}</span>
+        <button ref={bagToggle} className="chapter-secondary" aria-expanded={bagOpen} aria-controls="chapter-closeup-bag" onClick={() => setBagOpen(!bagOpen)}>工具袋</button>
+      </div>
+      {bagOpen && <div id="chapter-closeup-bag">{bag()}</div>}
+    </footer>;
   }
   function bag() {
     return (
@@ -245,26 +253,21 @@ export default function Chapter({
               <button
                 key={item.id}
                 aria-pressed={selectedItem === item.id}
-                title={item.description}
-                onClick={() =>
-                  setSelected(selectedItem === item.id ? null : item.id)
-                }
+                disabled={installed(item.id)}
+                onClick={() => {
+                  setSelected(selectedItem === item.id ? null : item.id);
+                  setBagOpen(false);
+                  bagToggle.current?.focus();
+                }}
               >
                 <span aria-hidden="true">{item.symbol}</span>
                 {item.name}
-                {CHAPTER.tools.some(
-                  (tool) =>
-                    tool.item === item.id &&
-                    tool.id.startsWith("mount-") &&
-                    state.usedTools.includes(tool.id),
-                )
-                  ? " · 已装配"
-                  : ""}
+                {installed(item.id) ? " · 已装配" : ""}
               </button>
             ))}
           </div>
         )}
-        {selectedItem && (
+        {selectedItem && mode === "easy" && (
           <p className="chapter-item-description">
             {
               CHAPTER.items.find((item) => item.id === selectedItem)
@@ -285,7 +288,6 @@ export default function Chapter({
           {searchPoints.map((point) => {
             const reveal = CHAPTER.reveals.find((r) => r.id === point.id);
             const pickup = CHAPTER.pickups.find((p) => p.item === point.id);
-            const tool = CHAPTER.tools.find((t) => t.id === point.id);
             if (reveal)
               return !state.revealed.includes(reveal.id) &&
                 requirementsMet(state, reveal.requires) ? (
@@ -306,24 +308,10 @@ export default function Chapter({
                   onClick={() => act({ type: "collect", item: pickup.item })}
                 />
               ) : null;
-            if (tool)
-              return !state.usedTools.includes(tool.id) ? (
-                <Point
-                  key={point.id}
-                  point={point}
-                  mode={mode}
-                  onClick={() => {
-                    if (selectedItem)
-                      act({ type: "use", id: tool.id, item: selectedItem });
-                    else setMessage("先从工具袋选一件道具。");
-                  }}
-                />
-              ) : null;
             return null;
           })}
+          {tools.map(toolPoint)}
         </div>
-        {toolControls()}
-        {bag()}
         <button
           className="chapter-secondary"
           onClick={() => open("search-kit")}
@@ -489,7 +477,7 @@ export default function Chapter({
               </div>
               <p className="chapter-room-caption">{scene.description}</p>
             </section>
-            {bag()}
+            {!detail && bag()}
           </div>
           <footer className="chapter-footer">
             <span>进度自动保存在本机 · 可随时离开近景</span>
@@ -582,6 +570,7 @@ export default function Chapter({
             </>
           ) : puzzle ? (
             <>
+              {device()}
               {puzzle.id === "pattern-tray" &&
                 (() => {
                   const engraving = CHAPTER.reveals.find(
@@ -619,7 +608,7 @@ export default function Chapter({
               ) : (
                 <div className="chapter-locked">
                   <p>
-                    这件装置还没有准备好。可以查看近处的接口，也可以先去另一间舱室。
+                    装置还未转动。可以检查上面的实物与接口。
                   </p>
                 </div>
               )}
@@ -633,13 +622,11 @@ export default function Chapter({
                   ))}
                 </div>
               )}
-              {toolControls()}
-              {bag()}
-              <p className="chapter-status" role="status">
-                {message}
-              </p>
+
             </>
           ) : null}
+          {(detail === "search" || puzzle) && compactBag()}
+          <p className="chapter-status" role="status" aria-live="polite">{message}</p>
         </Closeup>
       )}
     </main>
