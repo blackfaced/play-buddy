@@ -87,7 +87,7 @@ test("complete room: exploration, errors, inventory combination, reload, notes, 
   await page.route("**/*", (route) =>
     route.request().url().startsWith(base) ? route.continue() : route.abort(),
   );
-  await page.goto(base + "/escape");
+  await page.goto(base + "/escape?scene=cabin");
   await page.getByRole("button", { name: "开始探索" }).click();
   await page.getByRole("button", { name: "检查递推算图", exact: true }).click();
   assert.equal(
@@ -113,17 +113,20 @@ test("complete room: exploration, errors, inventory combination, reload, notes, 
   await page.getByLabel("抽屉三位密码").fill("375");
   await page.getByRole("button", { name: "试着打开" }).click();
   await close(page);
-  await page.getByRole("button", { name: "检查软布" }).click();
-  await page.getByRole("button", { name: "收进背包", exact: true }).click();
+  await page.getByRole("button", { name: "检查搪瓷杯" }).click();
+  await page.getByRole("button", { name: "移开搪瓷杯" }).click();
+  await page.getByRole("button", { name: "拿起软布" }).click();
+  await close(page);
+  await page.getByRole("button", { name: "检查航海日志" }).click();
+  assert.equal(await page.locator('.escape-log-entry').count(), 6);
+  await close(page);
   await turn(page, "海图墙");
   await page.getByRole("button", { name: "检查海图", exact: true }).click();
-  assert.equal(
-    await page.getByRole("button", { name: "擦去盐霜" }).isDisabled(),
-    true,
-  );
-  await close(page);
-  await bag(page, "软布");
-  await page.getByRole("button", { name: "检查海图", exact: true }).click();
+  // Tools remain selectable inside the open native dialog.
+  await page.getByRole("button", { name: "选用软布", exact: true }).click();
+  await page.getByRole("button", { name: "擦去盐霜" }).click();
+  assert.equal(await page.locator('.escape-dirty-chart').count(), 1);
+  await page.getByRole("button", { name: "选用软布", exact: true }).click();
   await page.getByRole("button", { name: "擦去盐霜" }).click();
   await close(page);
   await page.reload();
@@ -200,9 +203,10 @@ test("complete room: exploration, errors, inventory combination, reload, notes, 
     1,
   );
   await close(page);
-  await bag(page, "系绳磁铁");
   await page.getByRole("button", { name: "检查船模细缝" }).click();
-  await page.getByRole("button", { name: "放下系绳磁铁" }).click();
+  const fishingTool = page.getByRole("button", { name: "选用系绳磁铁", exact: true });
+  if (await fishingTool.getAttribute("aria-pressed") !== "true") await fishingTool.click();
+  await page.getByRole("button", { name: "探入船模细缝" }).click();
   await close(page);
   await bag(page, "日光徽章");
   await turn(page, "甲板舱门");
@@ -216,7 +220,7 @@ test("complete room: exploration, errors, inventory combination, reload, notes, 
   await page.getByRole("button", { name: "按下中央锁扣" }).click();
   assert.ok(
     (await page.locator(".escape-modal-status").textContent()).includes(
-      "没有接上",
+      "还没有复原",
     ),
   );
   for (const [i, name] of ["外环", "中环", "内环"].entries())
@@ -236,18 +240,15 @@ test("complete room: exploration, errors, inventory combination, reload, notes, 
     await page.getByText("星光，是给好奇心的礼物。", { exact: true }).count(),
     1,
   );
-  await page.getByRole("button", { name: "继续探索 · 导航室 →" }).click();
-  assert.equal(await page.locator(".adventure-app").count(), 1);
-  await page.reload();
-  assert.equal(await page.locator(".adventure-app").count(), 1);
-  await page.getByRole("button", { name: "重新探索", exact: true }).click();
-  await page.getByRole("button", { name: "继续现在的进度", exact: true }).click();
-  assert.equal(await page.locator("dialog").count(), 0);
-  await page.getByRole("button", { name: "重新探索", exact: true }).click();
-  await page.getByRole("button", { name: "确认重新探索后两间房", exact: true }).click();
+  await page.getByRole("button", { name: "本场景已完成 · 选择下一场景 →" }).click();
+  assert.equal(await page.locator('.scene-library').count(), 1);
+  await page.getByRole("button", { name: "进入航海员的钥匙", exact: true }).click();
+  assert.equal(await page.locator('.escape-finale').count(), 1);
+  await page.getByRole("button", { name: "回船舱看看", exact: true }).click();
+  await page.getByRole("button", { name: "检查圆环匣", exact: true }).click();
+  assert.equal(await page.getByText("圆环匣打开了", { exact: false }).count(), 1);
+  await close(page);
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("play-buddy:escape:starlight:v1")).state.escaped), true);
-  await page.getByRole("button", { name: "← 船舱", exact: true }).click();
-  assert.equal(await page.locator(".escape-finale").count(), 1);
   assert.deepEqual(errors, []);
   await page.close();
 });
@@ -264,7 +265,7 @@ test("mobile layout, Escape dismissal, gradual hints, corrupted saves recover", 
       '{"version":1,"state":{"escaped":true}}',
     ),
   );
-  await page.goto(base + "/escape");
+  await page.goto(base + "/escape?scene=cabin");
   assert.equal(await page.locator(".escape-scene").count(), 1);
   assert.equal(
     await page.evaluate(
@@ -313,7 +314,7 @@ test("global health lock interrupts a native puzzle dialog without losing progre
     localStorage.setItem("bb.lastVisibleAt", String(Date.now()));
     localStorage.setItem("bb.sound", "off");
   });
-  await page.goto(base + "/escape");
+  await page.goto(base + "/escape?scene=cabin");
   await page.getByRole("button", { name: "开始探索" }).click();
   await page.getByRole("button", { name: "检查递推算图" }).click();
   await page
@@ -344,8 +345,7 @@ test("legacy cabin migration preserves solved puzzles across guidance changes", 
       seen: ["letter", "postcard"],
     } }),
   ));
-  await page.goto(base + "/escape");
-  assert.equal(await page.getByText("三场景版 · v3.0", { exact: true }).count(), 1);
+  await page.goto(base + "/escape?scene=cabin");
   assert.equal(await page.locator('[data-puzzle="number-triangle"]').count(), 1);
   assert.equal(await page.locator('[data-number-cell]').count(), 15);
   await page.getByRole("button", { name: "检查递推算图", exact: true }).click();

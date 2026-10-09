@@ -1,0 +1,4 @@
+import type {EpisodeDefinition} from '../types';
+import {initialShadow, maskMatches, normalizeShadow, projectionMatches, weightTorque} from './shadowLogic';
+import {ShadowEpisode} from './shadowScene';
+export const shadowEpisode:EpisodeDefinition={id:'shadow',title:'幕后的纸月亮',place:'海边纸剧场',description:'让纸偶的影子拼回一座月下港湾。',motif:'☾',initial:initialShadow,normalize:normalizeShadow,isComplete:s=>s.values.lit===true&&projectionMatches(s.values.pieces as number[],s.values.depths as number[],s.values.turns as number[]),hints:s=>weightTorque(s.values.weights as number[])!==10?['幕布歪了，横梁两边的力量还不一样。','左边挂钩距支点越远，铜盘的作用就越大。','从内侧到外侧挂三片、两片、一片铜盘。']:!(s.values.traces as number[]).every((r,i)=>maskMatches(i,r))?['拓印纸有固定朝向，纸偶可以转。','让每个纸偶的完整轮廓和纸下的灰影重合。','月亮顺时针转一格，小船转三格，飞鸟转两格。']:['幕布上的旧港湾，与拓印上的影子留下了同样的轮廓。','侧边试灯能让你看见：纸片离灯越近，影子越大。','左到右放船、月亮、鸟；影子大小依次为大、中、小，并保留拓印的朝向。'],Component:ShadowEpisode};

@@ -1,0 +1,4 @@
+import type {EpisodeDefinition} from '../types';
+import {growthJoined, initialGreenhouse, normalizeGreenhouse, potsWatered, waterCircuit} from './greenhouseLogic';
+import {GreenhouseEpisode} from './greenhouseScene';
+export const greenhouseEpisode:EpisodeDefinition={id:'greenhouse',title:'玻璃温室的雨',place:'海边温室',description:'把雨水、昆虫和新生的叶子重新连起来。',motif:'❧',initial:initialGreenhouse,normalize:normalizeGreenhouse,isComplete:s=>s.values.pumped===true&&potsWatered(s.values.pipes as number[],s.values.pots as number[]),hints:s=>!waterCircuit(s.values.pipes as number[]).connected?['水从灌溉板左上方流进来。','每个管口都要与邻居相接，不能把水送到外边。','从入口先向下，再右、上、右、下，最后流出。']:!['sun','bell','fern'].every(k=>growthJoined(s.values[k] as number[]))?['同一种叶片出现在不同的画片里。','把卷芽或种子、初生的叶片、成熟的植株接成一排。','成熟的画片上，有不同的小访客。']:['水流会经过那些昆虫浮雕。','画片上的访客，把管道与花盆联系起来。','沿水流依次是甲虫、蜜蜂、蝴蝶；对应蕨、向日葵、风铃草。'],Component:GreenhouseEpisode};

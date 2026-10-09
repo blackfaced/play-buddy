@@ -1238,3 +1238,42 @@
 .escape-hotspot.unmarked > span, .escape-hotspot.unmarked:hover > span { opacity:0; }
 .escape-hotspot.unmarked:focus-visible { outline:3px solid #f3dba4; outline-offset:2px; }
 .escape-hotspot.unmarked:focus-visible > span { opacity:1; }
+
+/* Cabin props remain objects, with tools reachable while their close-up is open. */
+.escape-modal-inventory {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-block: 1px solid #b7aa8c;
+  padding: 9px 0;
+  margin-bottom: 16px;
+}
+.escape-modal .escape-modal-inventory button { padding: 6px 9px; font-size: 13px; background: #ece0c3; color: #284647; }
+.escape-modal-inventory button span { margin-right: 5px; font-size: 21px; }
+.escape-modal .escape-modal-inventory button[aria-pressed="true"] { background: #28595b; color: #fff4db; border: 2px solid #163e40; }
+.escape-modal .escape-physical-target { width: 100%; cursor: pointer; }
+.escape-modal .escape-slot { border: 12px solid #af8150; color: #f5e2b8; padding: 0; }
+.escape-modal .escape-slot span { color: #fff0cb; font-size: 14px; }
+.escape-modal .escape-token-slots { border: 10px solid #846439; background: #b59a68; padding: 25px; border-radius: 18px; }
+.escape-modal .escape-door-lock { display: block; width: 180px; margin: 0 auto; padding: 0; border: none; }
+.escape-cup-discovery { background: #a4774d; border: 8px solid #754c31; padding: 12px; border-radius: 10px; text-align: center; }
+.escape-modal .escape-cup-target, .escape-modal .escape-cloth-target { width: 220px; max-width: 100%; border: none; color: #203f40; }
+.escape-cup-target svg { width: 100%; display: block; }
+.escape-cloth-target span { display: block; font-size: 100px; color: #ecedd7; line-height: 1.3; }
+.escape-modal .escape-cloth-target:disabled { opacity: 1; }
+.escape-voyage-log { padding: 12px 20px; border: 1px solid #bca576; border-left: 9px solid #806442; background: #eaddb9; color: #284647; box-shadow: 2px 4px 7px #4e382325; }
+.escape-modal .escape-log-heading { font-size: 20px; margin: 0 0 8px; }
+.escape-log-entry { display: grid; grid-template-columns: 62px 56px 1fr; gap: 12px; align-items: center; min-height: 64px; border-bottom: 1px solid #b6aa86; }
+.escape-log-entry time { font-variant-numeric: tabular-nums; font-size: 17px; }
+.escape-log-entry svg { width: 56px; height: 56px; }
+.escape-log-entry span { font-size: 15px; line-height: 1.5; }
+.escape-modal .escape-log-signature { text-align: right; font-size: 14px; margin-bottom: 0; }
+@media (max-width: 420px) {
+  .escape-voyage-log { padding: 8px; }
+  .escape-log-entry { grid-template-columns: 52px 48px 1fr; gap: 6px; }
+  .escape-log-entry svg { width: 48px; height: 48px; }
+  .escape-log-entry time, .escape-log-entry span { font-size: 14px; }
+}
+.escape-modal .escape-dirty-chart { background: repeating-linear-gradient(25deg, #dedcc8, #e8e4d5 8px, #d4d5c5 12px); border: 8px solid #97754b; color: #475e53; }
+.escape-modal .escape-dirty-chart span { color: #384e43; font-size: 15px; }
+.escape-modal .escape-cloth-target { color: #fff4db; }

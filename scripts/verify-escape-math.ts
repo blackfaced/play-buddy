@@ -12,7 +12,6 @@ import {
   inventory,
   isPictureFull,
   isPictureCorrect,
-  CLUES,
   SAVE_KEY,
   type EscapeState,
   type Action,
@@ -216,7 +215,7 @@ const legacyActions: Action[] = [
   { type: "drawer", code: "423" },
   { type: "cabinet", route: "↑→↓→↑" },
   ...([0, 1, 2] as const).map((ring) => ({ type: "rotate" as const, ring })),
-  ...CLUES.map((clue) => ({ type: "observe" as const, clue })),
+  ...(["letter", "flags", "chart", "postcard", "slot"] as const).map((clue) => ({ type: "observe" as const, clue })),
 ];
 const canonical = (s: LegacyState) =>
   JSON.stringify({ ...s, seen: [...s.seen].sort() });

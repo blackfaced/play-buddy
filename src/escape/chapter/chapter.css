@@ -984,7 +984,37 @@
 .chapter-pattern-fixed{background:#d0ba90}
 .chapter-stamp-art{width:100%;height:100%;max-height:105px;display:block}
 .chapter-pattern-cell .chapter-slot{width:100%;height:100%;min-height:0;padding:0;border-radius:0;border:0;background:#f5e6c3;display:block}
-.chapter-pattern-cell .chapter-remove{position:absolute;right:0;bottom:0;font-size:10px;padding:1px 3px;line-height:1.2;background:#fff5dc}
+/* Physical evidence remains readable when editing is locked. Never dim a clue
+   via its button state; unavailable action controls may still be subdued. */
+.chapter-puzzle .chapter-slot:disabled,
+.chapter-puzzle .chapter-sudoku button:disabled {
+  opacity: 1;
+  -webkit-text-fill-color: currentColor;
+}
+.chapter-puzzle input:disabled {
+  opacity: 1;
+  -webkit-text-fill-color: currentColor;
+}
+.chapter-pattern-cell .chapter-slot[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 3px #73532c;
+}
+.chapter-piece-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px auto;
+  font-size: 13px;
+}
+.chapter-piece-actions .chapter-remove {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #9c8a61;
+  border-radius: 6px;
+  background: #284244;
+  color: #ecdfc1;
+}
 .chapter-piece-tray .chapter-stamp-art{height:86px;width:86px}
 .chapter-frame-seal{display:block;width:140px;margin:12px auto}
 .chapter-tide-frame .chapter-sudoku{width:100%;margin:0;border-color:#806644}

@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useStore } from "../store/useStore";
+import { RouteChart, VoyageLog } from "./NavigationClues";
 import RoomArt, { LighthouseArt } from "./RoomArt";
 import {
   SAVE_KEY,
@@ -32,6 +33,7 @@ import "./escape.css";
 
 type View = 0 | 1 | 2 | 3;
 type Detail =
+  | "log"
   | "intro"
   | "flags"
   | "cloth"
@@ -119,73 +121,6 @@ function Modal({
     </dialog>
   );
 }
-function RouteChart() {
-  const pts = [
-    [55, 155],
-    [55, 55],
-    [135, 55],
-    [135, 155],
-    [215, 155],
-    [215, 55],
-  ];
-  return (
-    <svg
-      className="escape-chart"
-      viewBox="0 0 270 210"
-      role="img"
-      aria-label="海图：网格上的六个航标按编号连线。0在左下，1在左上，2在中上，3在中下，4在右下，5在右上灯塔旁。北朝上"
-    >
-      <defs>
-        <pattern
-          id="chart-grid"
-          width="40"
-          height="40"
-          patternUnits="userSpaceOnUse"
-        >
-          <path d="M40 0H0V40" fill="none" stroke="#b8a77e" strokeWidth=".6" />
-        </pattern>
-      </defs>
-      <rect width="270" height="210" rx="10" fill="#e6d8ad" />
-      <rect x="15" y="15" width="240" height="180" fill="url(#chart-grid)" />
-      <path
-        d="M55 155V55H135V155H215V55"
-        fill="none"
-        stroke="#38656c"
-        strokeWidth="3"
-        strokeDasharray="6 4"
-      />
-      {pts.map(([x, y], i) => (
-        <g key={i}>
-          <circle
-            cx={x}
-            cy={y}
-            r="15"
-            fill={i === 0 ? "#ba6546" : "#fcf1d0"}
-            stroke="#38656c"
-          />
-          <text
-            x={x}
-            y={y + 5}
-            textAnchor="middle"
-            fontSize="14"
-            fill={i === 0 ? "white" : "#284950"}
-          >
-            {i}
-          </text>
-        </g>
-      ))}
-      <text x="55" y="191" textAnchor="middle" fontSize="11" fill="#794634">
-        起点
-      </text>
-      <text x="215" y="28" textAnchor="middle" fontSize="11" fill="#284950">
-        灯塔
-      </text>
-      <text x="252" y="25" textAnchor="middle" fontSize="10" fill="#284950">
-        北↑
-      </text>
-    </svg>
-  );
-}
 function PictureRings({ rings }: { rings: number[] }) {
   return (
     <div className="escape-rings" aria-label="三道可旋转的灯塔图环">
@@ -233,6 +168,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
     setMessage("探索模式已切换，解谜进度保持不变。");
     try { localStorage.setItem(MODE_KEY, next); } catch { /* Preference persistence is optional. */ }
   };
+  const [cupMoved, setCupMoved] = useState(false);
   const [selected, setSelected] = useState<Item | null>(null);
   const [message, setMessage] = useState(
     "海风轻轻吹进舱室。四处看看，航海员留下了什么？",
@@ -296,6 +232,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
     if (d === "flags" || (d === "postcard" && s.picture))
       dispatch({ type: "observe", clue: d });
     if (d === "chart" && s.chart) dispatch({ type: "observe", clue: "chart" });
+    if (d === "log") dispatch({ type: "observe", clue: "log" });
     if (d === "ship") dispatch({ type: "observe", clue: "slot" });
   };
   const pick = (item: Item) => {
@@ -327,9 +264,10 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
   );
   const close = () => setDetail(null);
   const titles: Record<Exclude<Detail, null>, string> = {
+    log: "航海员的日志",
     intro: "欢迎登上星光号",
     flags: "航海员的递推算图",
-    cloth: "桌角的软布",
+    cloth: "桌角的搪瓷杯",
     drawer: "航海员的抽屉",
     chart: "蒙着盐霜的海图",
     cabinet: "方向锁",
@@ -407,12 +345,13 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
               <span>点击物件，靠近看看</span>
             </div>
             <div className="escape-scene">
-              <RoomArt view={view} />
+              <RoomArt view={view} chartClean={s.chart} />
               {view === 0 && (
                 <>
                   {hotspot("flags", "递推算图", 33, 6, 35, 43)}
-                  {!s.cloth && hotspot("cloth", "软布", 15, 54, 19, 18)}
+                  {!s.cloth && hotspot("cloth", "搪瓷杯", 15, 54, 19, 18)}
                   {hotspot("drawer", "小抽屉", 38, 65, 29, 22)}
+                  {hotspot("log", "航海日志", 40, 50, 19, 14)}
                 </>
               )}
               {view === 1 && (
@@ -511,6 +450,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
       </footer>
       {detail && lock === null && (
         <Modal key={detail} title={titles[detail]} onClose={close}>
+          {!["intro", "notes", "hints", "reset"].includes(detail) && inventory(s).length > 0 && <nav className="escape-modal-inventory" aria-label="近景随身物品">{inventory(s).map(item => <button key={item} aria-label={`选用${props[item].name}`} aria-pressed={selected === item} onClick={() => pick(item)}><span aria-hidden="true">{props[item].icon}</span>{props[item].name}</button>)}</nav>}
           {detail === "intro" && (
             <>
               <div className="escape-letter">
@@ -519,7 +459,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                   今晚的灯塔格外明亮。我把甲板钥匙收进了圆环匣，留下一点小小的考验。
                 </p>
                 <p>
-                  读懂递推记录，修复灯塔旧景，让两束光重新相遇。所有线索，都在这间温暖的船舱里。
+                  记得那次晨航吗？石下的浪声，雾里的山峰，还有守塔人的灯。我把它们留在了这间温暖的船舱里。
                 </p>
                 <p className="signature">—— 航海员 林</p>
               </div>
@@ -547,26 +487,17 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                 }
               />
               <p className="escape-instruction">
-                算图已收入手记。抽屉锁上刻着相同的三个符号。
+                算图已收入手记。
               </p>
             </>
           )}
-          {detail === "cloth" && (
-            <>
-              <div className="escape-prop-large">▱</div>
-              <p>折叠的棉布压在桌角。航海员用它擦拭被海风打湿的仪器。</p>
-              <button
-                className="escape-primary"
-                disabled={s.cloth}
-                onClick={() => {
-                  act({ type: "takeCloth" }, "获得软布。它摸起来很柔软。");
-                  close();
-                }}
-              >
-                {s.cloth ? "已收进背包" : "收进背包"}
-              </button>
-            </>
-          )}
+          {detail === "log" && <VoyageLog />}
+          {detail === "cloth" && <>
+            <div className="escape-cup-discovery">
+              {!cupMoved && !s.cloth ? <button className="escape-cup-target" aria-label="移开搪瓷杯" onClick={() => { setCupMoved(true); setMessage("杯底露出了一块折好的棉布。"); }}><svg viewBox="0 0 200 140" aria-hidden="true"><path d="M40 100L145 98L163 122L51 129Z" fill="#a5b9a1" /><path d="M61 29H126V87Q93 117 61 87Z" fill="#f1e3bd" stroke="#36575a" strokeWidth="4" /><path d="M127 40Q163 38 156 65Q150 83 129 77" fill="none" stroke="#36575a" strokeWidth="6" /><ellipse cx="94" cy="29" rx="32" ry="9" fill="#81654a" /></svg></button> : <button className="escape-cloth-target" aria-label="拿起软布" disabled={s.cloth} onClick={() => { act({ type: "takeCloth" }, "软布收进了背包。"); setSelected("cloth"); }}><span aria-hidden="true">▱</span>{s.cloth ? "软布已收好" : "折叠的棉布"}</button>}
+            </div>
+            <p>{cupMoved || s.cloth ? "棉布上留着一个浅浅的杯印。" : "杯子压着一角褪色的织物。"}</p>
+          </>}
           {detail === "drawer" && (
             <>
               {s.drawer ? (
@@ -618,40 +549,24 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
               {s.chart ? (
                 <>
                   <RouteChart />
-                  <p>航线重现了！图上标着启程处、航标编号和灯塔。</p>
-                  {assistance.automaticRules && <p>从红色 0 号起点出发，依次经过 1—5 号航标。记下每一段航向。</p>}
+                  <p>盐霜下面，是航海员画下的近海地貌。</p>
+                  {assistance.automaticRules && <p>看看航海日志的时间和小画，在海图上找到同样的地方。</p>}
                   <p className="escape-instruction">
                     海图已保留在手记中，可以随时查看。
                   </p>
                 </>
               ) : (
                 <>
-                  <div className="escape-dirty-chart">
+                  <button className="escape-dirty-chart escape-physical-target" aria-label="擦去盐霜" onClick={() => {
+                    if (!held("cloth")) { setMessage("盐霜粘在纸面上，指尖只留下浅浅的痕迹。"); return; }
+                    act({ type: "cleanChart" }, "盐霜擦干净了，地貌显露出来。");
+                    dispatch({ type: "observe", clue: "chart" });
+                  }}>
                     <Compass size={76} />
-                    <span>一层盐霜，遮住了航线……</span>
-                  </div>
-                  <p>
-                    纸张完好，白色盐霜却让人看不清航标。
-                    {assistance.automaticRules && "用柔软的东西擦一擦，也许能恢复。"}
-                  </p>
-                  <button
-                    className="escape-primary"
-                    disabled={!held("cloth")}
-                    onClick={() => {
-                      act(
-                        { type: "cleanChart" },
-                        "盐霜擦干净了，航线显露出来。",
-                      );
-                      dispatch({ type: "observe", clue: "chart" });
-                    }}
-                  >
-                    擦去盐霜
+                    <span>盐霜覆盖的纸面</span>
                   </button>
-                  {!held("cloth") && (
-                    <small className="escape-instruction">
-                      先关闭近景，在背包选中合适的道具。
-                    </small>
-                  )}
+                  <p>纸张完好，白色盐霜却让人看不清地貌。</p>
+                  {assistance.automaticRules && <p className="escape-instruction">选中软布，再点纸面擦拭。</p>}
                 </>
               )}
             </>
@@ -668,7 +583,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
               ) : (
                 <>
                   <p>
-                    锁旁刻着：「沿海图，从启程到灯塔。五段航向，一段不少。」
+                    锁面上磨出了几道手指的痕迹，铜牌刻着「晨航」。
                   </p>
                   <output
                     className="escape-route-output"
@@ -696,9 +611,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                         act(
                           { type: "cabinet", route },
                           "柜门打开了。获得一卷细绳。",
-                          s.chart
-                            ? "锁没有打开。按海图的编号，从起点走一次。"
-                            : "锁没有回应。需要先找到完整的海图航线。",
+                          "锁舌轻响了一声，又弹回了原处。",
                         )
                       }
                     >
@@ -711,35 +624,15 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
           )}
           {detail === "ship" && (
             <>
-              <div className="escape-slot">
-                <span>细窄的船舱缝隙</span>
-                <i>{s.token2 ? "" : "☾"}</i>
-              </div>
-              {s.token2 ? (
-                <p>月光徽章已被你稳稳提起。船模里不再有遗漏的东西。</p>
-              ) : (
-                <>
-                  <p>
-                    缝隙深处闪着一点银光：一枚挂着铁环的徽章。手指够不到，硬拉会碰坏船模。
-                  </p>
-                  <button
-                    className="escape-primary"
-                    disabled={!held("fishingTool")}
-                    onClick={() =>
-                      act(
-                        { type: "retrieve" },
-                        "磁铁吸住铁环，你稳稳提起了月光徽章！",
-                      )
-                    }
-                  >
-                    {assistance.automaticRules || s.combined ? "放下系绳磁铁" : "使用选中的道具"}
-                  </button>
-                  <small className="escape-instruction">
-                    从背包选中道具再使用。
-                    {assistance.automaticRules && "也许两件小物品能组合成工具。"}
-                  </small>
-                </>
-              )}
+              <button className="escape-slot escape-physical-target" aria-label="探入船模细缝" onClick={() => {
+                if (s.token2) { setMessage("船模内已经空了。"); return; }
+                if (!held("fishingTool")) { setMessage("缝隙太深，碰不到里面的铁环。"); return; }
+                act({ type: "retrieve" }, "磁铁吸住铁环，你稳稳提起了月光徽章！");
+              }}>
+                <span>细窄的船舱缝隙</span><i>{s.token2 ? "" : "☾"}</i>
+              </button>
+              <p>{s.token2 ? "船模里的徽章已经取出。" : "缝隙深处闪着一点银光：一枚挂着铁环的徽章。手指够不到，硬拉会碰坏船模。"}</p>
+              {assistance.automaticRules && !s.token2 && <p className="escape-instruction">可在随身物品里组合工具，选中它再点船模的缝隙。</p>}
             </>
           )}
           {detail === "postcard" && (
@@ -782,30 +675,15 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                 </>
               ) : !s.tokensInserted ? (
                 <>
-                  <div className="escape-token-slots">
-                    <span>☼</span>
-                    <span>☾</span>
-                  </div>
-                  <p>
-                    两个凹槽围住一幅错乱的灯塔画。刻字写着：「双光齐至，旧景重现。」
-                  </p>
-                  <button
-                    className="escape-primary"
-                    disabled={!s.drawer || !s.token2}
-                    onClick={() =>
-                      act(
-                        { type: "insertTokens" },
-                        "两枚徽章嵌合，三道图环松动了。",
-                      )
-                    }
-                  >
-                    嵌入两枚徽章
-                  </button>
+                  <button className="escape-token-slots escape-physical-target" aria-label="嵌入两枚徽章" onClick={() => {
+                    if (!held("token1") && !held("token2")) { setMessage("铜面上留着一明一暗两个圆形凹槽。"); return; }
+                    act({ type: "insertTokens" }, "两枚徽章嵌合，三道图环松动了。", "另一处凹槽还空着。");
+                  }}><span>☼</span><span>☾</span></button>
+                  <p>两个凹槽围住一幅错乱的灯塔画。刻字写着：「双光齐至，旧景重现。」</p>
                 </>
               ) : (
                 <>
                   <p>三道图环可以分别转动。匣上刻着：「双光齐至，旧景重现。」</p>
-                  {assistance.automaticRules && <p>让画面恢复成木条画里的灯塔。</p>}
                   <PictureRings rings={s.rings} />
                   <div className="escape-ring-buttons">
                     {["外环", "中环", "内环"].map((r, i) => (
@@ -846,21 +724,12 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
           )}
           {detail === "door" && (
             <>
-              <div className="escape-prop-large">⚿</div>
+              <button className="escape-door-lock escape-physical-target" aria-label="转动钥匙" onClick={() => {
+                if (!held("key")) { setMessage("钥匙孔被海风磨得光亮。"); return; }
+                act({ type: "unlockDoor" }, "甲板舱门打开了！");
+                if (s.safe) close();
+              }}><svg viewBox="0 0 180 170" aria-hidden="true"><rect x="39" y="12" width="102" height="146" rx="48" fill="#bc9753" stroke="#664b2a" strokeWidth="5" /><circle cx="90" cy="73" r="18" fill="#253c3c" /><path d="M83 80L76 115H104L97 80" fill="#253c3c" /><circle cx="90" cy="30" r="4" fill="#775c36" /><circle cx="90" cy="140" r="4" fill="#775c36" /></svg></button>
               <p>门缝里透进海风。门上的木牌写着：「把好奇心带上甲板。」</p>
-              <button
-                className="escape-primary"
-                disabled={!held("key")}
-                onClick={() => {
-                  act({ type: "unlockDoor" }, "甲板舱门打开了！");
-                  if (s.safe) close();
-                }}
-              >
-                转动钥匙
-              </button>
-              {!held("key") && (
-                <p className="escape-instruction">先在背包选中甲板钥匙。</p>
-              )}
             </>
           )}
           {detail === "notes" && (
@@ -870,7 +739,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                 <article>
                   <h3>航海员的邀请</h3>
                   <p>
-                    读懂递推记录，修复灯塔旧景，让两束光重新相遇。甲板钥匙在圆环匣里。
+                    甲板钥匙在圆环匣里。航海员还记着晨航时的浪声、山峰和灯光。
                   </p>
                 </article>
               )}
@@ -883,14 +752,15 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                       setScratch({ ...scratch, [cell]: value })
                     }
                   />
-                  <p>抽屉锁的顺序：星 · 月 · 锚。</p>
+
                 </article>
               )}
+              {s.seen.includes("log") && <article><h3>晨航日志</h3><VoyageLog /></article>}
               {s.chart && (
                 <article>
                   <h3>擦净的海图</h3>
                   <RouteChart />
-                  <p>从 0 号起点，按编号到达 5 号灯塔。</p>
+
                 </article>
               )}
               {s.seen.includes("slot") && (
@@ -925,6 +795,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                   onClick={() => {
                     dispatch({ type: "reset" });
                     setRevisiting(false);
+                    setCupMoved(false);
                     setSelected(null);
                     setScratch({});
                     setSelectedSlat(null);

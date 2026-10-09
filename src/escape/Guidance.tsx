@@ -17,7 +17,7 @@ const descriptions: Record<GuidanceMode, string> = {
 };
 export function ModeControls({ mode, onChange }: { mode: GuidanceMode; onChange: (mode: GuidanceMode) => void }) {
   return <aside className="escape-mode-controls" aria-label="探索模式">
-    <span className="escape-version">三场景版 · v3.0</span>
+    <span className="escape-version">十场景版 · v4.0</span>
     <label>探索模式 <select value={mode} onChange={event => onChange(event.target.value as GuidanceMode)} aria-describedby="escape-mode-description">
       <option value="easy">简单</option><option value="standard">标准</option><option value="challenge">挑战</option>
     </select></label>

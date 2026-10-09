@@ -742,3 +742,63 @@
     min-height: 44px;
   }
 }
+
+/* Close-ups use the full available width instead of a clipped desktop inventory. */
+.adventure-search-scroll .adventure-search { min-width: 0; aspect-ratio: 1.25; }
+.adventure-search-setting { position:absolute; inset:0; pointer-events:none; }
+.chart-desk { inset:12% 13%; background:#bfba91; border:2px solid #cfc7a0; transform:rotate(-6deg); box-shadow:0 3px 8px #18211f80; background-image:repeating-linear-gradient(0deg,transparent 0 30px,#657f7036 31px 32px),repeating-linear-gradient(90deg,transparent 0 38px,#657f7036 39px 40px); }
+.chart-desk span { position:absolute; left:38%; top:48%; color:#344f49; font-size:13px; }
+.chart-desk i { position:absolute; width:55%; height:60%; border:3px dashed #6e8065; border-radius:43% 20% 48% 28%; top:13%; left:24%; }
+.cargo-crates { display:grid; grid-template-columns:1fr 1fr; gap:6%; padding:3%; }
+.cargo-crates i { border:9px ridge #9a7548; background:repeating-linear-gradient(90deg,#584432 0 24px,#765636 25px 28px); box-shadow:inset 0 0 18px #151f20; }
+.cargo-crates i:last-of-type { grid-column:1 / -1; }
+.cargo-crates span { position:absolute; right:9%; top:55%; color:#e5c995; font-size:13px; transform:rotate(-3deg); }
+.adventure-search-prop { transition:transform .25s ease,filter .25s ease; }
+.adventure-search-prop.inspected { filter:drop-shadow(7px 10px 4px #101c1f80); }
+.adventure-search-prop.inspected svg { transform:perspective(250px) rotateY(-15deg); }
+.adventure-depth-sections { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.adventure-depth-sections svg { width:100%; background:#e7dfc0; border:1px solid #8d9277; border-radius:6px; }
+.adventure-depth-sections text { fill:#273d39; font:12px sans-serif; }
+.adventure-panel-evidence { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:18px; margin:18px 0; }
+.adventure-record-frame { position:relative; padding:19px; border:6px solid #9d875a; border-radius:2px 19px 2px 2px; background:#233d40; box-shadow:inset 0 0 0 2px #233d40,0 4px 10px #1e2b2433; width:fit-content; max-width:100%; }
+.adventure-record-frame:before { content:""; position:absolute; width:19px; height:16px; left:-7px; top:10px; background:#e7dfc8; border-right:3px solid #716042; }
+.adventure-record-frame:after { content:"● ●"; position:absolute; right:4px; bottom:0; color:#e1cfa0; font-size:11px; letter-spacing:2px; }
+.adventure-clue { margin:0; padding:12px; }
+.adventure-clue figcaption { color:#314c48; font-weight:700; margin-bottom:10px; }
+.adventure-clue.wall-projection { background:radial-gradient(ellipse,#f5f1ce,#c2c5a9); border:1px solid #a3b4a4; }
+.adventure-clue.raw-photo { background:#f2eedc; transform:rotate(2deg); box-shadow:2px 4px 8px #14262c33; }
+.adventure-clue .adventure-record-frame { background:#e5e8bb; }
+.adventure-projected-record { border-collapse:collapse; color:#233d40; table-layout:fixed; }
+.adventure-projected-record td { border:1px solid #899b76; width:29px; height:29px; }
+.adventure-projected-record th { font-size:17px; min-width:29px; height:36px; text-align:center; color:#243c36; padding:3px; }
+.adventure-projected-record th span { display:block; line-height:1.1; }
+.adventure-projected-record tbody th { min-width:55px; }
+.adventure-nonogram { margin:0; border-collapse:collapse; }
+.adventure-nonogram td button { width:42px; height:42px; }
+.adventure-nonogram td button:disabled { opacity:1; color:#fff5ce; }
+.adventure-winch-mechanism { position:relative; background:linear-gradient(#abc5bf,#dfd9ba); border:2px solid #798675; border-radius:12px; overflow:hidden; }
+.adventure-winch-mechanism svg { display:block; width:100%; }
+.adventure-winch-mechanism .bridge-leaf { transform-origin:220px 174px; transform:rotate(-62deg); transition:transform 1.1s ease; }
+.adventure-winch-mechanism .winch-wheel { transform-origin:95px 92px; transition:transform 1.1s ease; }
+.adventure-winch-mechanism.lowered .bridge-leaf { transform:rotate(0deg); }
+.adventure-winch-mechanism.lowered .winch-wheel { transform:rotate(540deg); }
+.adventure-crank-target { position:absolute; left:8%; top:64%; padding:9px 12px; border:2px solid #72623f; background:#efe0af; color:#2c403a; border-radius:8px; font-weight:700; }
+@media(max-width:520px) {
+  .adventure-search-scroll .adventure-search { aspect-ratio:.88; border-width:4px; }
+  .adventure-search-prop { min-width:36px; min-height:44px; }
+  .adventure-depth-sections { grid-template-columns:1fr; }
+  .adventure-depth-sections svg { max-height:190px; }
+  .adventure-record-frame { padding:14px; }
+  .adventure-nonogram td button { width:40px; height:40px; }
+  .adventure-scroll-tip { display:block; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .adventure-search-prop,.adventure-winch-mechanism .bridge-leaf,.adventure-winch-mechanism .winch-wheel { transition:none; }
+}
+.adventure-projector-slot { flex:1; border:2px solid #7a846c; background:#d6d7b8; border-radius:9px; color:#263c38; padding:13px 7px; min-width:0; }
+.adventure-projector-slot i { display:block; height:45px; margin:0 auto 9px; width:52px; background:#233c3b; box-shadow:inset 2px 3px 5px #101c1c; border:4px solid #9a8459; }
+.adventure-projector-slot.lens i { border-radius:50%; }
+.adventure-projector-slot.card i { height:10px; margin-top:20px; margin-bottom:24px; }
+.adventure-projector-slot.installed i { background:#91b59b; box-shadow:inset 0 0 12px #e4eabd; }
+.adventure-nonogram { border:0; padding:0; }
+@media(max-width:360px) { .adventure-record-frame { padding:10px; } }

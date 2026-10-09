@@ -98,7 +98,7 @@ export function WoodenPicture({
           <LighthouseArt />
         </div>
         <p>
-          木条严丝合缝，灯塔旧景重现。图画已经收入手记，可以带去比对圆环匣。
+          木条严丝合缝。褪色的画里，灯塔映着月光，海平线伸向远方。图画已收入手记。
         </p>
       </>
     );

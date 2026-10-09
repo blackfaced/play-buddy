@@ -27,3 +27,5 @@ assert.ok(!bare.includes('data-route-art'),'No inscription rendered when lens pu
 const away=render(A.LensMap,{puzzle,input:{kind:'filter',lens:'sun',position:A.LENS_START},onChange(){}});
 assert.ok(away.includes('镜下没有清晰刻记'),'Unobserved routes never leak into live accessibility text');
 console.log('Shared nautical symbol identity, render, aperture and discovery checks passed');
+
+await import("./verify-escape-clue-legibility.mjs");

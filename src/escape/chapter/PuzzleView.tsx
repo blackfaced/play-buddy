@@ -25,6 +25,7 @@ export default function PuzzleView({
   onAction,
 }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [cell, setCell] = useState<number | null>(null);
   const input = progress.input;
   const change = (next: PuzzleInput) =>
@@ -63,7 +64,7 @@ export default function PuzzleView({
                 ))}
               </div>
             )}
-            <div className="chapter-piece-tray" aria-label="可用图形">
+            {!progress.solved && <div className="chapter-piece-tray" aria-label="可用图形">
               {[...puzzle.pieces]
                 .sort(
                   (a, b) =>
@@ -75,28 +76,29 @@ export default function PuzzleView({
                   <button
                     key={piece.id}
                     aria-pressed={selected === piece.id}
-                    onClick={() => setSelected(piece.id)}
+                    onClick={() => { setSelected(piece.id); setSelectedSlot(null); }}
                     className="chapter-shape"
                   >
                     {piece.stamp ? <StampArt stamp={piece.stamp} /> : <span aria-hidden="true">{piece.symbol}</span>}
                     <small>{piece.label}</small>
                   </button>
                 ))}
-            </div>
-            <p className="chapter-controls-note">
-              先选图形，再点位置。已放下的图形可以换位置；选中格子里的图形后，可移回托盘。
-            </p>
+            </div>}
+            {!progress.solved && <p className="chapter-controls-note">
+              先选图形，再点位置。已放下的图形可以换位置；选中格子里的图形后，可用下方按钮移回托盘。
+            </p>}
             {puzzle.grid ? <div className="chapter-maker-frame" aria-label="左上斜切角、右下双铆钉的纹片铜框"><div className="chapter-pattern-grid">
               {puzzle.grid.map((entry,index) => {
                 if ('stamp' in entry) return <div className="chapter-pattern-fixed" key={index} aria-label={`第${Math.floor(index/4)+1}行第${index%4+1}列，固定纹片`}><StampArt stamp={entry.stamp} /></div>;
                 const slot=entry.slot;
                 const piece=puzzle.pieces.find(p=>p.id===input.slots[slot]);
                 return <div className="chapter-pattern-cell" key={index}>
-                  <button className="chapter-slot" aria-label={`${puzzle.slots[slot]}：${piece?.label ?? '空'}`} onClick={()=>{
-                    if(!selected){setSelected(piece?.id ?? null);return;}
+                  <button className="chapter-slot" aria-pressed={!progress.solved && selectedSlot === slot} aria-label={`${puzzle.slots[slot]}：${piece?.label ?? '空'}`} onClick={()=>{
+                    setSelectedSlot(slot);
+                    if(!selected || selected === piece?.id){setSelected(piece?.id ?? null);return;}
                     change(placePiece(input,selected,slot));
+                    setSelected(null);
                   }}>{piece?.stamp ? <StampArt stamp={piece.stamp}/> : <span aria-hidden="true">·</span>}</button>
-                  {piece && <button className="chapter-remove" aria-label={`取回${puzzle.slots[slot]}的${piece.label}`} onClick={()=>change({kind:'arrangement',slots:input.slots.map((v,i)=>i===slot?null:v)})}>取回</button>}
                 </div>;
               })}
             </div></div> : (            <div className="chapter-arrangement">
@@ -120,7 +122,7 @@ export default function PuzzleView({
                       <span aria-hidden="true">{piece?.symbol ?? "·"}</span>
                       <small>{slot}</small>
                     </button>
-                    {piece && (
+                    {piece && !progress.solved && (
                       <button
                         className="chapter-remove"
                         aria-label={`取回${slot}的${piece.label}`}
@@ -140,7 +142,16 @@ export default function PuzzleView({
                 );
               })}
             </div>)}
-
+            {puzzle.grid && !progress.solved && selectedSlot !== null && input.slots[selectedSlot] && (
+              <div className="chapter-piece-actions" role="group" aria-label="纹片操作">
+                <span>{puzzle.slots[selectedSlot]}已选中</span>
+                <button className="chapter-remove" aria-label={`取回${puzzle.slots[selectedSlot]}的${puzzle.pieces.find(piece => piece.id === input.slots[selectedSlot])?.label}`} onClick={() => {
+                  change({kind: 'arrangement', slots: input.slots.map((value, index) => index === selectedSlot ? null : value)});
+                  setSelected(null);
+                  setSelectedSlot(null);
+                }}>取回选中纹片</button>
+              </div>
+            )}
           </>
         )}
         {puzzle.kind === "code" && input.kind === "code" && (
@@ -300,9 +311,9 @@ export default function PuzzleView({
               {input.cells.map((value, index) => (
                 <button
                   key={index}
-                  className={`${puzzle.givens[index] ? "given" : ""}${cell === index ? " selected" : ""}`}
+                  className={`${puzzle.givens[index] ? "given" : ""}${!progress.solved && cell === index ? " selected" : ""}`}
                   aria-label={`第${Math.floor(index / 4) + 1}行第${(index % 4) + 1}列，${value || "空"}${puzzle.givens[index] ? "，固定" : ""}`}
-                  aria-pressed={cell === index}
+                  aria-pressed={!progress.solved && cell === index}
                   disabled={!!puzzle.givens[index]}
                   onClick={() => setCell(index)}
                   onKeyDown={(event) => {
@@ -329,7 +340,7 @@ export default function PuzzleView({
                 </button>
               ))}
             </div>
-            </div><div className="chapter-number-pad" aria-label="填写或擦除">
+            </div>{!progress.solved && <div className="chapter-number-pad" aria-label="填写或擦除">
               {[1, 2, 3, 4, 0].map((value) => (
                 <button
                   key={value}
@@ -346,11 +357,11 @@ export default function PuzzleView({
                   {value || "擦除"}
                 </button>
               ))}
-            </div>
-            <p className="chapter-controls-note">
+            </div>}
+            {!progress.solved && <p className="chapter-controls-note">
               选一个空格，再点数字。键盘也可输入 1–4，Delete
               擦除；整张棋盘一起检查。
-            </p>
+            </p>}
           </>
         )}
         {puzzle.kind === "search" && (

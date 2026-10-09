@@ -163,6 +163,18 @@ async function verifyHotspots(count, target) {
   await mode("standard");
 }
 await verifyHotspots(5, "检查航海桌的物件堆");
+for (const v of ["standard", "challenge", "easy"]) {
+  await mode(v);
+  await click(label("检查航海桌的物件堆"));
+  assert.equal(tree.root.findAllByProps({"aria-label":"本处待寻物件"}).length, v === "easy" ? 1 : 0, "Only easy mode may list hidden targets");
+  await click(label("检查航海笔记"));
+  assert.ok(label("检查航海笔记").props.className.includes("inspected"));
+  assert.ok(txt().includes("旧航线和修船日期"));
+  await click(label("检查航海笔记"));
+  assert.ok(!label("检查航海笔记").props.className.includes("inspected"));
+  await close();
+}
+await mode("standard");
 console.log("Hotspot CSS/markup: all modes, idle/hover/focus, readable labels and accessible clicks passed.");
 await click(label("检查航海桌的物件堆"));
 assert.equal(
@@ -219,6 +231,10 @@ for (const n of ["小电池组", "圆镜片", "信号卡"]) {
   await click(btn("使用选中的道具"));
 }
 assert.ok(saved().projectorOn);
+const sourceRecord = tree.root.findByProps({"aria-label":"光影中的行列数值记录"});
+assert.deepEqual(sourceRecord.findByType("thead").findAllByType("th").map(nt), ["2", "11", "5", "11", "2"]);
+assert.deepEqual(sourceRecord.findByType("tbody").findAllByType("th").map(nt), ["1", "1", "5", "1 · 1 · 1", "3"]);
+
 await close();
 // Revisit search after using battery: no resurrected target.
 await click(label("检查航海桌的物件堆"));
@@ -242,6 +258,15 @@ assert.equal(
 await mode("standard");
 await click(btn("甲板储物舱"));
 await click(label("检查栈桥控制板"));
+const panel = tree.root.findByProps({"aria-label":"五行五列栈桥控制板"});
+assert.equal(panel.findAllByType("th").length, 0, "Remote board never imports source clues");
+assert.equal(tree.root.findAllByProps({"data-record-frame":"notch-left-rivet-right"}).length, 1);
+await click(btn("夹上投影原照"));
+assert.equal(tree.root.findAllByProps({"data-record-frame":"notch-left-rivet-right"}).length, 2);
+assert.ok(txt().includes("投影原照"));
+const unsolved = storage.get(A.ADVENTURE_KEY);
+await click(btn("确认整张图"));
+assert.equal(storage.get(A.ADVENTURE_KEY), unsolved, "Wrong whole confirmation preserves board and inventory");
 for (let i = 0; i < 25; i++)
   if (A.ANCHOR[i])
     await click(label(`第${Math.floor(i / 5) + 1}行第${(i % 5) + 1}列，暗格`));
@@ -254,6 +279,7 @@ for (const n of ["曲柄", "吊钩"]) {
   await click(btn("使用选中的道具"));
 }
 await click(btn("转动绞盘"));
+assert.equal(tree.root.findAllByProps({className:"adventure-winch-mechanism lowered"}).length, 1, "Physical bridge and wheel reflect operation");
 assert.equal(saved().complete, false);
 await click(btn("走向观星甲板 →"));
 assert.equal(saved().complete, true);

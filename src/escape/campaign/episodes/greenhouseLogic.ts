@@ -1,0 +1,10 @@
+import type { EpisodeState } from '../types';
+import { fresh, permutation, rotations } from './clockworkState';
+const DELTA=[[-1,0],[0,1],[1,0],[0,-1]];
+export function waterCircuit(turns:number[]):{connected:boolean;path:number[];leak:number|null}{if(turns.length!==6)return {connected:false,path:[],leak:0};let cell=0,incoming=3;const path:number[]=[];while(!path.includes(cell)){path.push(cell);const ports=[turns[cell],(turns[cell]+1)%4];if(!ports.includes(incoming))return {connected:false,path,leak:cell};const exit=ports.find(x=>x!==incoming)!;const [dy,dx]=DELTA[exit],r=Math.floor(cell/3)+dy,c=cell%3+dx;if(r<0||r>1||c<0||c>2)return {connected:cell===5&&exit===1&&path.length===6,path,leak:cell===5&&exit===1?null:cell};cell=r*3+c;incoming=(exit+2)%4;}return {connected:false,path,leak:cell};}
+export const RELIEFS:Record<number,number>={3:2,1:0,5:1}; // visitor index matches its host plant
+export const waterVisitors=(turns:number[])=>waterCircuit(turns).path.filter(c=>c in RELIEFS).map(c=>RELIEFS[c]);
+export const growthJoined=(row:number[])=>row.length===3&&row.every((x,i)=>x===i);
+export const potsWatered=(turns:number[],pots:number[])=>waterCircuit(turns).connected&&pots.length===3&&pots.every((p,i)=>p===waterVisitors(turns)[i]);
+export const initialGreenhouse=()=>fresh({pipes:[0,0,0,0,0,0],sun:[2,0,1],bell:[1,2,0],fern:[2,1,0],pots:[0,1,2],wiped:false,pumped:false});
+export function normalizeGreenhouse(s:EpisodeState):EpisodeState{const pipes=rotations(s.values.pipes,6,4),pots=permutation(s.values.pots,[0,1,2],[0,1,2]),sun=permutation(s.values.sun,[0,1,2],[2,0,1]),bell=permutation(s.values.bell,[0,1,2],[1,2,0]),fern=permutation(s.values.fern,[0,1,2],[2,1,0]);const solved=[...(waterCircuit(pipes).connected?['pipes']:[]),...([sun,bell,fern].every(growthJoined)?['growth']:[])];return {values:{pipes,pots,sun,bell,fern,wiped:s.values.wiped===true,pumped:s.values.pumped===true&&potsWatered(pipes,pots)},solved,inventory:solved.map(x=>x==='pipes'?'连通的雨水管':'展开的生长图'),inspected:s.inspected.filter(x=>['pipes','growth','bench'].includes(x))};}

@@ -12,7 +12,7 @@ import {
 import { useStore } from "../../store/useStore";
 import { RoomScene, DeckScene } from "./SceneArt";
 import { SearchObject } from "./SearchArt";
-import { chartProps, storageProps } from "./search";
+import { chartProps, storageProps, inspectProp } from "./search";
 import {
   ADVENTURE_KEY,
   parseAdventure,
@@ -156,6 +156,7 @@ export function SearchPile({
   onAction: (a: AdventureAction, message: string) => void;
   onMessage: (message: string) => void;
 }) {
+  const [moved, setMoved] = useState<string[]>([]);
   const navigation = state.room === "navigation";
   const objects = navigation ? chartProps : storageProps;
   const targets: ExpeditionItem[] = navigation
@@ -179,23 +180,26 @@ export function SearchPile({
           : "储物架上挤着缆绳、帆布和用过的船具。"}
         点击想检查的物件，可以随时离开再回来。
       </p>
-      <ul className="adventure-find-list" aria-label="本处待寻物件">
+      {mode === "easy" && <ul className="adventure-find-list" aria-label="本处待寻物件">
         {targets.map((item) => (
           <li key={item} className={state.found.includes(item) ? "found" : ""}>
             {state.found.includes(item) ? "✓ " : ""}
             {itemNames[item]}
           </li>
         ))}
-      </ul>
+      </ul>}
       <div
         className="adventure-search-scroll"
         tabIndex={0}
-        aria-label="物件近景；窄屏可横向滚动"
+        aria-label="物件近景"
       >
         <div
           className={`adventure-search${navigation ? "" : " storage"}`}
           aria-label={navigation ? "放大的航海桌物品堆" : "放大的储物架物品堆"}
         >
+          <div className={`adventure-search-setting ${navigation ? "chart-desk" : "cargo-crates"}`} aria-hidden="true">
+            {navigation ? <><span>航海图 · 北</span><i /></> : <><i /><i /><i /><span>船具 · 干燥存放</span></>}
+          </div>
           {objects.map((object) => {
             const cover = (
               ["compassCase", "manifest", "canvas"].includes(object.id)
@@ -211,13 +215,13 @@ export function SearchPile({
             return (
               <button
                 key={object.id}
-                className={`adventure-search-prop${mode === "easy" ? " easy" : ""}`}
+                className={`adventure-search-prop${mode === "easy" ? " easy" : ""}${moved.includes(object.id) ? " inspected" : ""}`}
                 style={{
                   left: `${object.x}%`,
                   top: `${object.y}%`,
                   width: `${object.w}%`,
                   height: `${object.h}%`,
-                  transform: `rotate(${object.rotate}deg)`,
+                  transform: `translate(${moved.includes(object.id) ? "8%, -8%" : "0, 0"}) rotate(${object.rotate + (moved.includes(object.id) ? 13 : 0)}deg)`,
                 }}
                 aria-label={`检查${object.name}`}
                 onClick={() => {
@@ -235,7 +239,10 @@ export function SearchPile({
                       { type: "collect", item: object.item },
                       `收好了${object.name}。`,
                     );
-                  else onMessage(`仔细看了看${object.name}，把它留在了原处。`);
+                  else {
+                    setMoved(moved.includes(object.id) ? moved.filter(id => id !== object.id) : [...moved, object.id]);
+                    onMessage(inspectProp(object.kind, moved.includes(object.id)));
+                  }
                 }}
               >
                 <SearchObject kind={object.kind} />
@@ -246,7 +253,7 @@ export function SearchPile({
         </div>
       </div>
       <p className="adventure-scroll-tip">
-        近景可横向滑动，查看物件堆的另一侧。
+        可以移动、翻开或拿起近景里的物件。
       </p>
       {mode === "easy" && (
         <p data-guidance="rule">
@@ -268,6 +275,21 @@ function Ledger({ clean }: { clean: boolean }) {
     >
       <h3>航海日志 · 水深记录</h3>
       {clean ? (
+        <>
+        <div className="adventure-depth-sections" aria-label="三次船体剖面记录">
+          {[["早晨", 8, 3], ["中午", 6, 4], ["傍晚", 9, 2]].map(([time, depth, draft]) => (
+            <svg key={time} viewBox="0 0 180 180" role="img" aria-label={`${time}：水面到海底${depth}米，水面到船底${draft}米`}>
+              <rect x="12" y="45" width="156" height="115" fill="#a9d3d0" />
+              <path d="M12 45H168" stroke="#246278" strokeWidth="3" />
+              <path d={`M55 30H115L105 ${45 + Number(draft) * 10}H65Z`} fill="#906a41" stroke="#463f32" strokeWidth="2" />
+              <path d={`M28 45V${45 + Number(depth) * 10}M22 45H34M22 ${45 + Number(depth) * 10}H34`} stroke="#234b50" strokeWidth="2" />
+              <path d={`M135 45V${45 + Number(draft) * 10}M130 45H140M130 ${45 + Number(draft) * 10}H140`} stroke="#234b50" strokeWidth="2" />
+              <path d={`M12 ${45 + Number(depth) * 10}H168V160H12Z`} fill="#b29a72" />
+              <text x="90" y="20" textAnchor="middle">{time}</text>
+              <text x="17" y="150">水深 {depth} 米</text><text x="107" y="36">吃水 {draft}</text>
+            </svg>
+          ))}
+        </div>
         <table>
           <thead>
             <tr>
@@ -294,6 +316,7 @@ function Ledger({ clean }: { clean: boolean }) {
             </tr>
           </tbody>
         </table>
+        </>
       ) : (
         <div className="adventure-dust" aria-hidden="true">
           ··· ░░ ···
@@ -314,31 +337,16 @@ export function Nonogram({
   state: AdventureState;
   onAction: (a: AdventureAction, message: string) => void;
 }) {
+  const [pinned, setPinned] = useState(false);
   return (
     <>
       <p>铜牌刻着：「数字记下连续亮格的长度；两段之间，至少留一格暗格。」</p>
-      {!state.projectorOn && (
-        <p>控制板的记录架是空的。需要找到它的行列记录。</p>
-      )}
+      <div className="adventure-panel-evidence">
+      <div className="adventure-record-frame panel-frame" data-record-frame="notch-left-rivet-right" aria-label="控制板边框：左上缺口，右下双铆钉">
       <table className="adventure-nonogram" aria-label="五行五列栈桥控制板">
-        <thead>
-          <tr>
-            <td />
-            {COL_CLUES.map((clue, i) => (
-              <th key={i} scope="col">
-                <span className="adventure-sr-only">第{i + 1}列：</span>
-                {state.projectorOn ? clue.join(" · ") : "?"}
-              </th>
-            ))}
-          </tr>
-        </thead>
         <tbody>
-          {ROW_CLUES.map((clue, row) => (
+          {Array.from({length: 5}, (_, row) => (
             <tr key={row}>
-              <th scope="row">
-                <span className="adventure-sr-only">第{row + 1}行：</span>
-                {state.projectorOn ? clue.join(" · ") : "?"}
-              </th>
               {Array.from({ length: 5 }, (_, col) => {
                 const index = row * 5 + col;
                 return (
@@ -364,6 +372,10 @@ export function Nonogram({
           ))}
         </tbody>
       </table>
+      </div>
+      {pinned && state.projectorOn && <ProjectionClues photo />}
+      </div>
+      {state.projectorOn && <button className="adventure-secondary" onClick={() => setPinned(!pinned)}>{pinned ? "收起投影原照" : "夹上投影原照"}</button>}
       <div className="adventure-actions">
         <button
           className="adventure-primary"
@@ -391,15 +403,32 @@ export function Nonogram({
     </>
   );
 }
-function ProjectionClues() {
+export function ProjectionClues({photo = false}: {photo?: boolean}) {
   return (
-    <div className="adventure-clue">
-      <h3>投影抄录 · 方格信号</h3>
-      <p>行（从上到下）：{ROW_CLUES.map((c) => c.join("、")).join(" / ")}</p>
-      <p>列（从左到右）：{COL_CLUES.map((c) => c.join("、")).join(" / ")}</p>
-      <p>卡片底部刻着：连续亮格的长度；段与段之间留空。</p>
-    </div>
+    <figure className={`adventure-clue ${photo ? "raw-photo" : "wall-projection"}`}>
+      <figcaption>{photo ? "投影原照" : "墙上的光影记录"}</figcaption>
+      <div className="adventure-record-frame" data-record-frame="notch-left-rivet-right" aria-label="记录边框：左上缺口，右下双铆钉">
+        <table className="adventure-projected-record" aria-label="光影中的行列数值记录">
+          <thead><tr><td />{COL_CLUES.map((clue, col) => <th key={col} scope="col" aria-label={`第${col + 1}列记录：${clue.join("、")}`}>{clue.map((n,i) => <span key={i}>{n}</span>)}</th>)}</tr></thead>
+          <tbody>{ROW_CLUES.map((clue,row) => <tr key={row}><th scope="row" aria-label={`第${row + 1}行记录：${clue.join("、")}`}>{clue.join(" · ")}</th>{Array.from({length:5}, (_,col) => <td key={col} />)}</tr>)}</tbody>
+        </table>
+      </div>
+    </figure>
   );
+}
+function WinchMechanism({state, onAction}: {state: AdventureState; onAction: (a: AdventureAction, message: string) => void}) {
+  return <div className={`adventure-winch-mechanism${state.gangwayDown ? " lowered" : ""}`}>
+    <svg viewBox="0 0 460 200" role="img" aria-label={state.gangwayDown ? "绞索绕上转轮，栈桥已放平" : "绞盘连着抬起的栈桥"}>
+      <path d="M10 174H220M405 174H450" stroke="#795a3c" strokeWidth="14" />
+      <path className="bridge-leaf" d="M220 174H407" stroke="#9b743e" strokeWidth="18" />
+      <path d="M103 83L260 60" stroke="#c4a675" strokeWidth="4" />
+      <circle cx="95" cy="92" r="48" fill="#6b7771" stroke="#293e3c" strokeWidth="7" />
+      <g className="winch-wheel"><path d="M95 48V136M51 92H139" stroke="#bd9961" strokeWidth="8" />{state.crankMounted && <path d="M95 92L125 112H148" stroke="#f0c883" strokeWidth="10" />}</g>
+      {state.hookMounted && <path d="M260 60V77Q260 92 274 80" fill="none" stroke="#42595a" strokeWidth="6" />}
+      <rect x="70" y="143" width="50" height="25" fill={state.panelOpen ? "#6b8b61" : "#865542"} />
+    </svg>
+    {!state.gangwayDown && <button className="adventure-crank-target" aria-label="转动绞盘" onClick={() => onAction({type:"operateWinch"}, "绞索绕过转轮，栈桥缓缓放下。")}>转动绞盘</button>}
+  </div>;
 }
 export default function Adventure({ onSceneSelect, onNextScene, onComplete, standalone = false }: { onSceneSelect?: () => void; onNextScene?: () => void; onComplete?: () => void; standalone?: boolean } = {}) {
   const lock = useStore((s) => s.lock);
@@ -627,7 +656,7 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
             className="adventure-scene"
             aria-label={`${roomNames[state.room]}全景`}
           >
-            <RoomScene room={state.room} />
+            <RoomScene room={state.room} cells={state.cells} />
             {state.room === "navigation" ? (
               <>
                 <Point
@@ -815,27 +844,21 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
           {detail === "projector" && (
             <>
               <div className="adventure-projector" aria-label="投影仪安装位置">
-                <span className={state.batteryMounted ? "installed" : ""}>
-                  电池仓
-                  <br />
-                  {state.batteryMounted ? "已接通" : "空着"}
-                </span>
-                <span className={state.lensMounted ? "installed" : ""}>
-                  镜片座
-                  <br />
-                  {state.lensMounted ? "已安装" : "空着"}
-                </span>
-                <span className={state.cardMounted ? "installed" : ""}>
-                  卡片槽
-                  <br />
-                  {state.cardMounted ? "已放入" : "空着"}
-                </span>
+                {(["battery", "lens", "card"] as const).map((part) => {
+                  const installed = state[`${part}Mounted`];
+                  const slot = {battery:"电池仓",lens:"镜片座",card:"卡片槽"}[part];
+                  return <button key={part} className={`adventure-projector-slot ${part}${installed ? " installed" : ""}`} aria-label={`检查投影仪${slot}`} onClick={() => {
+                    if (installed) setMessage(`${slot}已经固定好。`);
+                    else if (selectedItem === part) act({type:"use", item:part,target:"projector"}, `${itemNames[part]}扣进${slot}。`);
+                    else setMessage(part === "battery" ? "仓内有两个金属接点。" : part === "lens" ? "圆座边缘有三处卡口。" : "狭长的缝隙刚好容得下一张薄卡。");
+                  }}><i aria-hidden="true" />{slot}<br />{installed ? "已安装" : "空着"}</button>;
+                })}
               </div>
               <p>机身刻着：「接上电源，装好镜片，把信号留在光里。」</p>
               {state.projectorOn ? (
                 <>
                   <ProjectionClues />
-                  <p>已抄进随身手记，去别的房间也可以查看。</p>
+                  <p>原照收在随身手记里，可以随时重看。</p>
                 </>
               ) : (
                 renderTools("projector")
@@ -865,6 +888,7 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
           {detail === "panel" && <Nonogram state={state} onAction={act} />}
           {detail === "winch" && (
             <>
+              <WinchMechanism state={state} onAction={act} />
               <div className="adventure-winch-slots">
                 <span>
                   方形轴孔：{state.crankMounted ? "曲柄已装好" : "空着"}
@@ -881,17 +905,7 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
                 <>
                   {(!state.crankMounted || !state.hookMounted) &&
                     renderTools("winch")}
-                  <button
-                    className="adventure-primary"
-                    onClick={() =>
-                      act(
-                        { type: "operateWinch" },
-                        "栈桥缓缓放下，星光铺在木板上。",
-                      )
-                    }
-                  >
-                    转动绞盘
-                  </button>
+
                 </>
               ) : (
                 <>

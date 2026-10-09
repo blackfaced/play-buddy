@@ -38,7 +38,7 @@ export type Action =
   | { type: "rotate"; ring: 0 | 1 | 2 }
   | { type: "observe"; clue: string };
 export const SAVE_KEY = "play-buddy:escape:starlight:v1";
-export const CLUES = ["letter", "flags", "chart", "postcard", "slot"] as const;
+export const CLUES = ["letter", "flags", "chart", "postcard", "slot", "log"] as const;
 // Each wooden strip has a constant positive step; its next number is its slot.
 export const SLATS = [
   [3, 6, 9],
@@ -278,19 +278,19 @@ export function hints(s: EscapeState): string[] {
   if (!s.cloth)
     return [
       "航海桌上还留着一块可带走的东西。",
-      "检查桌布旁那块折叠的小布。",
-      "取走桌上的软布，到海图前选中它，再擦拭海图。",
+      "移开桌角的搪瓷杯，看看杯底。",
+      "移开杯子并拿起软布，在海图近景的随身物品里选中它，再点盐霜。",
     ];
   if (!s.chart)
     return [
       "海图上的盐霜掩住了航线。",
       "从背包选中软布，再检查海图。",
-      "选中软布，在海图近景里按「擦去盐霜」。",
+      "选中软布，再点海图上的盐霜。",
     ];
   if (!s.cabinet)
     return [
-      "航线与旁边的方向锁有关。",
-      "从红色起点开始，按编号走到灯塔。记下每段移动的方向。",
+      "方向锁上刻着「晨航」。航海员把那次航行记在哪里了？",
+      "日志中的小画与海图地标相同。按日志时间排列地标，北朝上，比较相邻两个地方的方向。",
       "路线为：上、右、下、右、上。输入 ↑→↓→↑。",
     ];
   if (!s.combined)
@@ -303,13 +303,13 @@ export function hints(s: EscapeState): string[] {
     return [
       "你做好的小工具正好能伸进狭窄的地方。",
       "选中系绳磁铁，再检查船模的细缝。",
-      "在船模近景里按「放下系绳磁铁」。",
+      "在近景里选中系绳磁铁，再点船模的细缝。",
     ];
   if (!s.tokensInserted)
     return [
       "门旁的圆形机关缺了两枚航海徽章。",
       "带着两枚徽章检查圆环匣。",
-      "在圆环匣里按「嵌入两枚徽章」。",
+      "收齐两枚徽章，在近景里选中其中一枚，再点双光凹槽。",
     ];
   if (!s.picture)
     return [

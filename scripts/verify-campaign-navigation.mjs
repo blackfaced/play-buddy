@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {build} from 'esbuild';
+await build({stdin:{contents:"export * from './src/escape/campaign/episodes/cargoLogic'; export * from './src/escape/campaign/episodes/observatoryLogic';",resolveDir:process.cwd()},outfile:'node_modules/.tmp-navigation.mjs',bundle:true,platform:'node',format:'esm'});
+const M=await import('../node_modules/.tmp-navigation.mjs');
+const perms=a=>a.length?a.flatMap((x,i)=>perms(a.filter((_,j)=>j!==i)).map(p=>[x,...p])):[[]];
+const balanced=perms([0,1,2,3]).filter(a=>M.cargoTorque(a)===0);
+assert.deepEqual(balanced,[[1,3,0,2],[2,0,3,1]]);
+assert.deepEqual(balanced.filter(M.cargoReady),[[1,3,0,2]]);
+assert.equal(M.cargoReady([-1,-1,-1,-1]),false);
+assert.equal(M.cargoReady([1,3,0,0]),false);
+const plates=[];for(let a=0;a<4;a++)for(let b=0;b<4;b++)for(let c=0;c<4;c++)if(M.plateJoined([a,b,c]))plates.push([a,b,c]);assert.deepEqual(plates,[[2,1,3]]);
+assert.deepEqual(Array.from({length:8},(_,i)=>i).filter(M.discAligned),[3]);
+assert.deepEqual(M.visibleConstellations(3),['gull','shell','crown']);
+const strips=[];for(let a=-2;a<=2;a++)for(let b=-2;b<=2;b++)for(let fa=0;fa<2;fa++)for(let fb=0;fb<2;fb++)if(M.stripsRegistered([a,b],[fa,fb]))strips.push([a,b,fa,fb]);assert.deepEqual(strips,[[0,0,0,0]]);
+assert.deepEqual(M.sightIntersection([0,0]),[2,2]);
+const targets=[];for(let a=0;a<8;a++)for(let e=0;e<3;e++)if(M.telescopeAligned(a,e))targets.push([a,e]);assert.deepEqual(targets,[[4,0]]);
+console.log('Cargo and observatory: independent domains, uniqueness and invalid arrangements passed.');
