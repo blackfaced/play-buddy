@@ -1,0 +1,27 @@
+.cw-gears { max-width: 760px; margin: 0 auto; }
+.cw-gear-instructions { margin: 0 0 12px; color: #f0dfbc; font-size: 14px; line-height: 1.7; }
+.cw-gears .cw-gear-board { width: 100%; max-height: 490px; display: block; touch-action: none; overflow: hidden; user-select: none; }
+.cw-art-heading { font-size: 14px; fill: #e6cea0; letter-spacing: 2px; }
+.cw-art-label { font-size: 13px; fill: #f9e8bd; text-anchor: middle; font-weight: 600; }
+.cw-physical-control { cursor: grab; }
+.cw-physical-control:active { cursor: grabbing; }
+.cw-selected-ring { stroke: #ffe49e; fill: none; stroke-width: 3; stroke-dasharray: 6 4; pointer-events: none; }
+.cw-drop-target { stroke: #8ce5df; stroke-width: 4; fill: #8ce5df22; pointer-events: none; }
+.cw-gear-rotation { animation: cw-gear-turn 1.3s cubic-bezier(.3,0,.35,1) both; transform-origin: 0 0; }
+@keyframes cw-gear-turn { from { transform: rotate(0deg); } to { transform: rotate(var(--cw-turn)); } }
+.cw-gear-controls { display: grid; gap: 8px; margin-top: 12px; }
+.cw-control-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.cw-gears button { min-height: 44px; padding: 9px 8px; border: 1px solid #aa895b; border-radius: 10px; background: #4e4132; color: #fae6bb; cursor: pointer; font: inherit; font-size: 13px; }
+.cw-gears button[aria-pressed="true"] { border-color: #ffe49e; background: #77613a; box-shadow: inset 0 0 0 1px #ffe49e; }
+.cw-gears button:focus-visible { outline: 3px solid #8ce5df; outline-offset: 3px; }
+.cw-gears button:disabled { opacity: .5; cursor: default; }
+.cw-gear-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.cw-gear-actions button { flex: 1; }
+.cw-gears .cw-crank-button { background: #ddb77a; color: #30251b; font-weight: 700; flex: 1.5; }
+.cw-gear-status { min-height: 3em; font-size: 14px; color: #f0dfbc; line-height: 1.6; margin: 12px 0 0; }
+@media (max-width: 480px) { .cw-gears button { font-size: 12px; padding: 8px 4px; } .cw-gear-instructions { font-size: 13px; } }
+@media (prefers-reduced-motion: reduce) { .cw-gear-rotation { animation-duration: .01ms; } }
+
+.cw-gear-ticks path[stroke] { stroke: #cbb68b; }
+.cw-gear-ticks path[fill] { fill: #ffd591; }
+.cw-gear-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

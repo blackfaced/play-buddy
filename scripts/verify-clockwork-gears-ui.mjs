@@ -1,0 +1,77 @@
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import React from 'react';
+import { create, act } from 'react-test-renderer';
+await build({ entryPoints: ['src/escape/campaign/episodes/ClockworkGears.tsx'], outfile: 'node_modules/.tmp-clockwork-gears-ui.mjs', bundle: true, platform: 'node', format: 'esm', packages: 'external', jsx: 'automatic', loader: { '.css': 'empty' } });
+const { ClockworkGears } = await import('../node_modules/.tmp-clockwork-gears-ui.mjs');
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.DOMPoint = class { constructor(x,y) { this.x=x;this.y=y; } matrixTransform() { return this; } };
+let gears=[0,0,0], testedGears=[], crank=0, tree, writes=0;
+const props=()=>({ gears, testedGears, foundGears:[24,36,48], crank, onChange: next=>{ gears=next;writes++;tree.update(React.createElement(ClockworkGears,props())); }, onCrank:()=>{ testedGears=gears.slice();crank++;tree.update(React.createElement(ClockworkGears,props())); } });
+await act(async()=>{ tree=create(React.createElement(ClockworkGears,props()),{createNodeMock:node=>node.type==='svg'?{getScreenCTM:()=>({inverse:()=>({})})}:null}); });
+const text=n=>typeof n==='string'?n:(n.children??[]).map(text).join('');
+const click=async label=>act(async()=>{ const button=tree.root.findAllByType('button').find(n=>text(n)===label);assert.ok(button, label);button.props.onClick(); });
+const controls=()=>tree.root.findAll(n=>n.type==='g'&&n.props.className==='cw-physical-control');
+const board=()=>tree.root.findByProps({className:'cw-gear-board'});
+const event=(x,y)=>({button:0,pointerId:1,clientX:x,clientY:y,currentTarget:{setPointerCapture(){}}});
+const tapPhysical=async(index,x,y)=>{await act(async()=>controls()[index].props.onPointerDown?.(event(x,y)));await act(async()=>board().props.onPointerUp(event(x,y)));await act(async()=>controls()[index].props.onClick());};
+// Escape also cancels a pending press before it crossed the drag threshold.
+await act(async()=>controls()[3].props.onPointerDown(event(100,402)));
+await act(async()=>tree.root.findByProps({className:'cw-gears'}).props.onKeyDown({key:'Escape'}));
+await act(async()=>board().props.onPointerUp(event(100,402)));
+await act(async()=>controls()[3].props.onClick());
+assert.equal(tree.root.findAllByType('button').filter(n=>n.props['aria-pressed']===true).length,0);
+await tapPhysical(3,100,402); // Actual pointerdown/up/click selects tray gear.
+await tapPhysical(0,300,103);
+assert.deepEqual(gears,[24,0,0]);
+await click('36 齿 · 托盘');await click('装到海浪轴');
+// First physical tap selects source. The second must not replace the selected source.
+await tapPhysical(0,300,103);await tapPhysical(1,362,193);
+assert.deepEqual(gears,[36,24,0]);
+await click('36 齿 · 在轴上');await click('放回托盘');assert.deepEqual(gears,[0,24,0]);
+// Drag a loose gear onto an occupied axle; old gear returns to the tray.
+await act(async()=>controls()[3].props.onPointerDown(event(300,402)));
+await act(async()=>controls()[4].props.onPointerDown({...event(500,402),pointerId:2,isPrimary:false}));
+await act(async()=>controls()[4].props.onPointerDown({...event(500,402),pointerId:2,isPrimary:true}));
+await act(async()=>board().props.onPointerMove(event(362,193)));
+await act(async()=>board().props.onPointerCancel({pointerId:2}));
+await act(async()=>board().props.onLostPointerCapture({pointerId:2}));
+assert.ok(tree.root.findAllByProps({className:'cw-drop-target'}).length);
+assert.ok(tree.root.findAll(n=>n.type==='g'&&n.props.pointerEvents==='none').length);
+await act(async()=>board().props.onPointerUp(event(362,193)));
+assert.deepEqual(gears,[0,36,0]);
+// A removed tray source can lose its click entirely. The next empty-axle
+// pointer press must clear that old suppression even though it starts no drag.
+await click('24 齿 · 托盘');
+await act(async()=>tree.root.findByProps({className:'cw-gears'}).props.onPointerDownCapture({isPrimary:true}));
+await act(async()=>controls()[0].props.onClick());
+assert.deepEqual(gears,[24,36,0]);
+await click('24 齿 · 在轴上');await click('放回托盘');
+const before=gears.slice(), beforeWrites=writes;
+await act(async()=>controls()[1].props.onPointerDown(event(362,193)));
+await act(async()=>board().props.onPointerMove(event(700,500)));
+await act(async()=>board().props.onPointerUp(event(700,500)));
+assert.deepEqual(gears,before);assert.equal(writes,beforeWrites);
+await act(async()=>controls()[1].props.onPointerDown(event(362,193)));
+await act(async()=>board().props.onPointerMove(event(300,103)));
+await act(async()=>board().props.onPointerCancel({pointerId:1}));assert.deepEqual(gears,before);
+await act(async()=>controls()[1].props.onPointerDown(event(362,193)));
+await act(async()=>board().props.onPointerMove(event(300,103)));
+await act(async()=>tree.root.findByProps({className:'cw-gears'}).props.onKeyDown({key:'Escape'}));
+await act(async()=>board().props.onPointerUp(event(300,103)));assert.deepEqual(gears,before);
+await click('24 齿 · 托盘');await click('装到芦苇轴');await click('48 齿 · 托盘');await click('装到松树轴');
+assert.equal(tree.root.findAllByProps({className:'cw-gear-rotation'}).length,0);
+await click('摇动曲柄一圈 ↻');assert.equal(tree.root.findAllByProps({className:'cw-gear-rotation'}).length,4);
+assert.match(text(tree.root.findByProps({className:'cw-gear-status'})),/芦苇 6 格，海浪 8 格，松树 9 格/);
+await click('摇动曲柄一圈 ↻');assert.equal(crank,2);
+await click('24 齿 · 在轴上');await click('装到海浪轴');
+assert.equal(tree.root.findAllByProps({className:'cw-gear-rotation'}).length,0);
+assert.doesNotMatch(text(tree.root.findByProps({className:'cw-gear-status'})),/6 格/);
+await act(async()=>tree.unmount());
+await act(async()=>{ tree=create(React.createElement(ClockworkGears,props())); });
+assert.equal(tree.root.findAllByProps({className:'cw-gear-rotation'}).length,0,'reopening changed gears must not pretend they were tested');
+assert.doesNotMatch(text(tree.root.findByProps({className:'cw-gear-status'})),/6 格/);
+await click('摇动曲柄一圈 ↻');
+assert.equal(tree.root.findAllByProps({className:'cw-gear-rotation'}).length,1,'a failed trial still turns the center wheel');
+await act(async()=>tree.unmount());
+console.log('Clockwork gear UI: physical pointer clicks, loose mounting, swapping, tray removal, tracked dragging, neutral targets, outside/cancel/Escape safety, and repeated whole-board trials pass.');
