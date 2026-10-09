@@ -192,13 +192,13 @@ await click(label("检查小电池组"));
 await click(label("检查曲柄"));
 await close();
 await click(label("检查储物舱门"));
-assert.equal(btn("使用选中的道具").props.disabled, true);
+assert.equal(label("检查储物舱门锁孔").type, "button");
 await click(btn("小电池组"));
-await click(btn("使用选中的道具"));
+await click(label("检查储物舱门锁孔"));
 assert.equal(saved().storeroomOpen, false);
 assert.ok(A.availableItems(saved()).includes("battery"));
 await click(btn("黄铜小钥匙"));
-await click(btn("使用选中的道具"));
+await click(label("检查储物舱门锁孔"));
 await click(btn("走进甲板储物舱 →"));
 await verifyHotspots(3, "检查栈桥控制板");
 await click(label("检查储物架的物件堆"));
@@ -212,7 +212,7 @@ await close();
 await click(btn("导航室"));
 await click(label("检查水深记录"));
 await click(btn("软毛刷"));
-await click(btn("使用选中的道具"));
+await click(label("检查记录纸面"));
 await close();
 await click(label("检查保险柜"));
 await act(async () =>
@@ -228,7 +228,7 @@ await close();
 await click(label("检查投影仪"));
 for (const n of ["小电池组", "圆镜片", "信号卡"]) {
   await click(btn(n));
-  await click(btn("使用选中的道具"));
+  await click(label(`检查投影仪${{"小电池组":"电池仓","圆镜片":"镜片座","信号卡":"卡片槽"}[n]}`));
 }
 assert.ok(saved().projectorOn);
 const sourceRecord = tree.root.findByProps({"aria-label":"光影中的行列数值记录"});
@@ -276,7 +276,7 @@ await close();
 await click(label("检查绞盘与栈桥"));
 for (const n of ["曲柄", "吊钩"]) {
   await click(btn(n));
-  await click(btn("使用选中的道具"));
+  await click(label(n === "曲柄" ? "检查绞盘方形轴孔" : "检查吊索末端"));
 }
 await click(btn("转动绞盘"));
 assert.equal(tree.root.findAllByProps({className:"adventure-winch-mechanism lowered"}).length, 1, "Physical bridge and wheel reflect operation");

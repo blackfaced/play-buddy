@@ -6,5 +6,11 @@ export const RELIEFS:Record<number,number>={3:2,1:0,5:1}; // visitor index match
 export const waterVisitors=(turns:number[])=>waterCircuit(turns).path.filter(c=>c in RELIEFS).map(c=>RELIEFS[c]);
 export const growthJoined=(row:number[])=>row.length===3&&row.every((x,i)=>x===i);
 export const potsWatered=(turns:number[],pots:number[])=>waterCircuit(turns).connected&&pots.length===3&&pots.every((p,i)=>p===waterVisitors(turns)[i]);
-export const initialGreenhouse=()=>fresh({pipes:[0,0,0,0,0,0],sun:[2,0,1],bell:[1,2,0],fern:[2,1,0],pots:[0,1,2],wiped:false,pumped:false});
-export function normalizeGreenhouse(s:EpisodeState):EpisodeState{const pipes=rotations(s.values.pipes,6,4),pots=permutation(s.values.pots,[0,1,2],[0,1,2]),sun=permutation(s.values.sun,[0,1,2],[2,0,1]),bell=permutation(s.values.bell,[0,1,2],[1,2,0]),fern=permutation(s.values.fern,[0,1,2],[2,1,0]);const solved=[...(waterCircuit(pipes).connected?['pipes']:[]),...([sun,bell,fern].every(growthJoined)?['growth']:[])];return {values:{pipes,pots,sun,bell,fern,wiped:s.values.wiped===true,pumped:s.values.pumped===true&&potsWatered(pipes,pots)},solved,inventory:solved.map(x=>x==='pipes'?'连通的雨水管':'展开的生长图'),inspected:s.inspected.filter(x=>['pipes','growth','bench'].includes(x))};}
+export const initialGreenhouse=()=>fresh({explorationVersion:2,pipes:[0,0,0,0,0,0],sun:[2,0,1],bell:[1,2,0],fern:[2,1,0],pots:[0,1,2],wiped:false,pumped:false,cloth:false,floatRaised:false,cabinet:false,cards:false,room:'entrance'});
+export function normalizeGreenhouse(s:EpisodeState):EpisodeState{
+ const pipes=rotations(s.values.pipes,6,4),pots=permutation(s.values.pots,[0,1,2],[0,1,2]),sun=permutation(s.values.sun,[0,1,2],[2,0,1]),bell=permutation(s.values.bell,[0,1,2],[1,2,0]),fern=permutation(s.values.fern,[0,1,2],[2,1,0]);
+ const legacy=s.values.explorationVersion!==2;
+ const cloth=legacy||s.values.cloth===true, cards=legacy||s.values.cards===true;
+ const solved=[...(waterCircuit(pipes).connected?['pipes']:[]),...([sun,bell,fern].every(growthJoined)?['growth']:[])];
+ return {values:{explorationVersion:2,pipes,pots,sun,bell,fern,wiped:s.values.wiped===true,cloth,cards,floatRaised:legacy||s.values.floatRaised===true,cabinet:legacy||s.values.cabinet===true,room:['entrance','tools','rain'].includes(String(s.values.room))?s.values.room:'entrance',pumped:s.values.pumped===true&&potsWatered(pipes,pots)},solved,inventory:[...(cloth?['擦布']:[]),...(cards?['生长画片']:[]),...solved.map(x=>x==='pipes'?'连通的雨水管':'展开的生长图')],inspected:s.inspected.filter(x=>['pipes','growth','bench'].includes(x))};
+}

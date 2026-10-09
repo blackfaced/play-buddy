@@ -36,11 +36,16 @@ assert.ok(tree.root.findAllByType('path').length>0,'source bird artwork is rende
 await act(async()=>tree.update(React.createElement(M.ObjectRow,{...props(),disabled:true})));await tap(0);assert.equal(changes,4);
 await act(async()=>tree.unmount());
 // Exercise each actual shared scene in every difficulty; help is independent of answer hints.
-for(const [def,label] of [[M.shadowEpisode,'查看幕布配重'],[M.shadowEpisode,'走到灯后的舞台'],[M.greenhouseEpisode,'展开生长画片'],[M.greenhouseEpisode,'查看接雨花盆']])for(const mode of ['easy','standard','challenge']){
- let state=def.initial(); const p=()=>({state,mode,update:patch=>{state=M.updateEpisode(def,state,patch);tree.update(React.createElement(def.Component,p()));},announce(){},complete(){},openDetail(){},closeDetail(){}});
+for(const [def,label] of [[M.shadowEpisode,'查看幕布配重'],[M.shadowEpisode,'查看灯后的舞台'],[M.greenhouseEpisode,'展开生长画片'],[M.greenhouseEpisode,'查看接雨花盆']])for(const mode of ['easy','standard','challenge']){
+ // Focus this test on mounted ObjectRow event behavior; full discovery is covered separately.
+ let state=M.updateEpisode(def,def.initial(),{values:def.id==='shadow'?{chest:true,puppetsFound:true,puppetsMounted:true,lampHandle:true,lampOpen:true}:{cloth:true,wiped:true,floatRaised:true,cabinet:true,cards:true}}); const p=()=>({state,mode,update:patch=>{state=M.updateEpisode(def,state,patch);tree.update(React.createElement(def.Component,p()));},announce(){},complete(){},openDetail(){},closeDetail(){}});
  await act(async()=>{tree=create(React.createElement(def.Component,p()));});
  const text=n=>typeof n==='string'?n:(n.children??[]).map(text).join('');
- await act(async()=>tree.root.findAllByType('button').find(n=>text(n)===label).props.onClick());
+ const activate=async name=>act(async()=>{const target=tree.root.findAll(n=>(n.type==='button'||n.type==='g')&&typeof n.props.onClick==='function'&&(n.props['aria-label']===name||text(n)===name))[0];assert.ok(target,`missing scene target ${name}`);target.props.onClick();});
+ if(label==='查看灯后的舞台')await activate('走到放映廊');
+ if(label==='展开生长画片')await activate('走进工具间');
+ if(label==='查看接雨花盆')await activate('沿小径走到雨棚');
+ await activate(label);
  assert.ok(tree.root.findAllByProps({className:'mech-object-help'}).length);
  assert.equal(tree.root.findAll(n=>n.props.style?.opacity<1).length,0);
  const row=()=>tree.root.findAllByType(M.ObjectRow)[0];

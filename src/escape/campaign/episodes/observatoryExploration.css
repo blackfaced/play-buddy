@@ -1,0 +1,5 @@
+.observatory-art-target { cursor: pointer; outline: none; touch-action: manipulation; }
+.observatory-art-target:focus-visible { outline: 3px solid #f7df9d; outline-offset: 5px; filter: drop-shadow(0 0 5px #f0d391); }
+.observatory-operation { line-height: 1.65; padding: .5rem .2rem; }
+.observatory-exploration .navigation-controls button { min-height: 44px; }
+.observatory-exploration .navigation-chart { touch-action: none; }

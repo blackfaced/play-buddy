@@ -90,10 +90,12 @@ function Dialog({
   title,
   children,
   onClose,
+  onCancel,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  onCancel: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -104,7 +106,7 @@ function Dialog({
       ref={ref}
       className="adventure-dialog"
       aria-labelledby="adventure-dialog-title"
-      onCancel={onClose}
+      onCancel={onCancel}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -263,7 +265,7 @@ export function SearchPile({
     </>
   );
 }
-function Ledger({ clean }: { clean: boolean }) {
+function Ledger({ clean, onInspect }: { clean: boolean; onInspect: () => void }) {
   return (
     <div
       className={`adventure-ledger${clean ? " clean" : ""}`}
@@ -318,13 +320,15 @@ function Ledger({ clean }: { clean: boolean }) {
         </table>
         </>
       ) : (
-        <div className="adventure-dust" aria-hidden="true">
+        <button className="adventure-dust adventure-surface-target" aria-label="检查记录纸面" onClick={onInspect}>
+          <span aria-hidden="true">
           ··· ░░ ···
           <br />
           ░░ ··· ░░
           <br />
           ··· ░░ ···
-        </div>
+          </span><small>纸面浮尘</small>
+        </button>
       )}
       <p>页边小注：吃水，是水面到船底的距离。</p>
     </div>
@@ -416,7 +420,7 @@ export function ProjectionClues({photo = false}: {photo?: boolean}) {
     </figure>
   );
 }
-function WinchMechanism({state, onAction}: {state: AdventureState; onAction: (a: AdventureAction, message: string) => void}) {
+function WinchMechanism({state, onAction, onShaft, onRope}: {state: AdventureState; onAction: (a: AdventureAction, message: string) => void; onShaft: () => void; onRope: () => void}) {
   return <div className={`adventure-winch-mechanism${state.gangwayDown ? " lowered" : ""}`}>
     <svg viewBox="0 0 460 200" role="img" aria-label={state.gangwayDown ? "绞索绕上转轮，栈桥已放平" : "绞盘连着抬起的栈桥"}>
       <path d="M10 174H220M405 174H450" stroke="#795a3c" strokeWidth="14" />
@@ -427,6 +431,8 @@ function WinchMechanism({state, onAction}: {state: AdventureState; onAction: (a:
       {state.hookMounted && <path d="M260 60V77Q260 92 274 80" fill="none" stroke="#42595a" strokeWidth="6" />}
       <rect x="70" y="143" width="50" height="25" fill={state.panelOpen ? "#6b8b61" : "#865542"} />
     </svg>
+    <button className={`adventure-shaft-target adventure-surface-target${state.crankMounted ? " installed" : ""}`} aria-label="检查绞盘方形轴孔" onClick={onShaft}><i aria-hidden="true">{state.crankMounted ? "┛" : "□"}</i><span>{state.crankMounted ? "曲柄已固定" : "方形轴孔"}</span></button>
+    <button className={`adventure-rope-target adventure-surface-target${state.hookMounted ? " installed" : ""}`} aria-label="检查吊索末端" onClick={onRope}><i aria-hidden="true">{state.hookMounted ? "ϳ" : "○"}</i><span>{state.hookMounted ? "吊钩已挂稳" : "吊索末端"}</span></button>
     {!state.gangwayDown && <button className="adventure-crank-target" aria-label="转动绞盘" onClick={() => onAction({type:"operateWinch"}, "绞索绕过转轮，栈桥缓缓放下。")}>转动绞盘</button>}
   </div>;
 }
@@ -500,13 +506,22 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
     setDetail(null);
     setMessage(`来到${roomNames[room]}。`);
   }
-  function renderTools(target: Target) {
+  function applyToSurface(target: Target, expected: ExpeditionItem, installed: boolean, description: string, wrong: string, success: string) {
+    if (installed) { setMessage(success); return; }
+    if (!selectedItem) { setMessage(description); return; }
+    if (selectedItem !== expected) {
+      setMessage(`${itemNames[selectedItem]}${wrong}，物件仍在背包里。`);
+      return;
+    }
+    act({ type: "use", item: selectedItem, target }, success);
+  }
+  function renderTools() {
     return (
       <div className="adventure-use">
-        <p>
+        <p aria-live="polite">
           {selectedItem
-            ? `已选：${itemNames[selectedItem]}`
-            : "从背包选择一件道具，再试着使用。"}
+            ? `手里拿着${itemNames[selectedItem]}，点近景中的物件试一试。`
+            : "选择背包物件，再点近景中的位置。也可以空手检查。"}
         </p>
         <div className="adventure-tool-row">
           {items.map((item) => (
@@ -514,25 +529,13 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
               key={item}
               className={`adventure-tool-chip${selectedItem === item ? " selected" : ""}`}
               aria-pressed={selectedItem === item}
-              onClick={() => setSelected(item)}
+              onClick={() => { setSelected(selectedItem === item ? null : item); setMessage(""); }}
             >
               {itemNames[item]}
             </button>
           ))}
+          {selectedItem && <button className="adventure-tool-chip" onClick={() => { setSelected(null); setMessage("已把物件放回背包。"); }}>取消选择</button>}
         </div>
-        <button
-          className="adventure-primary"
-          disabled={!selectedItem}
-          onClick={() => {
-            if (selectedItem)
-              act(
-                { type: "use", item: selectedItem, target },
-                `已使用${itemNames[selectedItem]}。`,
-              );
-          }}
-        >
-          使用选中的道具
-        </button>
       </div>
     );
   }
@@ -759,7 +762,8 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
         {message || "慢慢看，线索就在船上的物件与记录里。"}
       </div>
       {detail && lock === null && (
-        <Dialog title={titles[detail]} onClose={() => setDetail(null)}>
+        <Dialog title={titles[detail]} onClose={() => setDetail(null)} onCancel={() => { setSelected(null); setDetail(null); setMessage("已取消操作，物件放回背包。"); }}>
+          <p className="adventure-detail-message" role="status" aria-live="polite">{message || "观察近景中的物件。"}</p>
           {detail === "search" && (
             <SearchPile
               state={state}
@@ -770,11 +774,11 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
           )}
           {detail === "ledger" && (
             <>
-              <Ledger clean={state.ledgerClean} />
+              <Ledger clean={state.ledgerClean} onInspect={() => applyToSurface("ledger", "brush", state.ledgerClean, "纸页很脆，浮尘停在表面。", "会刮伤纸页", "浮尘轻轻扫落，三次水深记录露出来了。")} />
               {!state.ledgerClean && (
                 <>
                   <p>浮尘盖住了几行数字，纸页已经很脆。</p>
-                  {renderTools("ledger")}
+                  {renderTools()}
                 </>
               )}
               {mode === "easy" && state.ledgerClean && (
@@ -848,9 +852,9 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
                   const installed = state[`${part}Mounted`];
                   const slot = {battery:"电池仓",lens:"镜片座",card:"卡片槽"}[part];
                   return <button key={part} className={`adventure-projector-slot ${part}${installed ? " installed" : ""}`} aria-label={`检查投影仪${slot}`} onClick={() => {
-                    if (installed) setMessage(`${slot}已经固定好。`);
-                    else if (selectedItem === part) act({type:"use", item:part,target:"projector"}, `${itemNames[part]}扣进${slot}。`);
-                    else setMessage(part === "battery" ? "仓内有两个金属接点。" : part === "lens" ? "圆座边缘有三处卡口。" : "狭长的缝隙刚好容得下一张薄卡。");
+                    applyToSurface("projector", part, installed,
+                      part === "battery" ? "仓内有两个金属接点。" : part === "lens" ? "圆座边缘有三处卡口。" : "狭长的缝隙刚好容得下一张薄卡。",
+                      `无法固定在${slot}`, `${itemNames[part]}已经扣进${slot}。`);
                   }}><i aria-hidden="true" />{slot}<br />{installed ? "已安装" : "空着"}</button>;
                 })}
               </div>
@@ -861,12 +865,18 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
                   <p>原照收在随身手记里，可以随时重看。</p>
                 </>
               ) : (
-                renderTools("projector")
+                renderTools()
               )}
             </>
           )}
           {detail === "door" && (
             <>
+              <div className={`adventure-door-closeup${state.storeroomOpen ? " unlocked" : ""}`}>
+                <span className="adventure-door-plaque">甲板储物舱</span>
+                <button className="adventure-keyhole-target adventure-surface-target" aria-label="检查储物舱门锁孔" onClick={() => applyToSurface("door", "key", state.storeroomOpen, "黄铜锁孔很窄，里面有细细的齿槽。", "放不进锁孔", "黄铜钥匙在锁孔里转动，门锁已经打开。") }>
+                  <i aria-hidden="true">{state.storeroomOpen ? "⚿" : "●"}</i><span>{state.storeroomOpen ? "钥匙留在锁里" : "黄铜锁孔"}</span>
+                </button>
+              </div>
               {state.storeroomOpen ? (
                 <>
                   <p>钥匙留在锁孔里。门后是一间暖色的船具储物舱。</p>
@@ -880,7 +890,7 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
               ) : (
                 <>
                   <p>门牌写着「甲板储物舱」。锁孔很小，边缘透出黄铜的光泽。</p>
-                  {renderTools("door")}
+                  {renderTools()}
                 </>
               )}
             </>
@@ -888,7 +898,10 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
           {detail === "panel" && <Nonogram state={state} onAction={act} />}
           {detail === "winch" && (
             <>
-              <WinchMechanism state={state} onAction={act} />
+              <WinchMechanism state={state} onAction={act}
+                onShaft={() => applyToSurface("winch", "crank", state.crankMounted, "转轮中央留着一个方形轴孔。", "无法咬合方形轴孔", "曲柄的方头嵌进轴孔，手柄已经固定。")}
+                onRope={() => applyToSurface("winch", "hook", state.hookMounted, "吊索末端的绳圈离栈桥拉环还有一点距离。", "无法把绳圈连接到拉环", "吊钩连住吊索和栈桥拉环，已经挂稳。")}
+              />
               <div className="adventure-winch-slots">
                 <span>
                   方形轴孔：{state.crankMounted ? "曲柄已装好" : "空着"}
@@ -902,11 +915,7 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
                 绞盘旁的铜牌：「挂稳栈桥拉环，转动手柄，观星的路就在前面。」
               </p>
               {!state.gangwayDown ? (
-                <>
-                  {(!state.crankMounted || !state.hookMounted) &&
-                    renderTools("winch")}
-
-                </>
+                (!state.crankMounted || !state.hookMounted) && renderTools()
               ) : (
                 <>
                   <p>栈桥已经放稳，另一端是安静的观星甲板。</p>

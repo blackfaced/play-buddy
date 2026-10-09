@@ -802,3 +802,29 @@
 .adventure-projector-slot.installed i { background:#91b59b; box-shadow:inset 0 0 12px #e4eabd; }
 .adventure-nonogram { border:0; padding:0; }
 @media(max-width:360px) { .adventure-record-frame { padding:10px; } }
+
+/* Tool use happens on the material itself; native buttons support touch and keys. */
+.adventure-surface-target { touch-action:manipulation; cursor:pointer; min-width:44px; min-height:44px; color:#263c38; font:inherit; }
+.adventure-surface-target:focus-visible { outline:3px solid #285a66; outline-offset:4px; }
+.adventure-surface-target:hover { box-shadow:0 0 0 3px #f9df93; }
+.adventure-dust.adventure-surface-target { width:100%; border:1px dashed #817353; background:#c8b78e77; color:#675737; }
+.adventure-dust small { font:600 14px/1.5 system-ui; letter-spacing:normal; text-shadow:none; }
+.adventure-door-closeup { position:relative; height:230px; max-width:390px; margin:12px auto; border:9px solid #655439; border-radius:12px 12px 2px 2px; background:repeating-linear-gradient(90deg,#a18350 0px,#a18350 65px,#705939 67px,#b3945c 70px); box-shadow:inset 0 0 30px #3e301b; }
+.adventure-door-closeup.unlocked { box-shadow:inset -12px 0 8px #243631; }
+.adventure-door-plaque { display:block; width:max-content; margin:26px auto; padding:7px 16px; background:#d5bc80; border:2px solid #73623c; color:#342d21; font-weight:700; }
+.adventure-keyhole-target { position:absolute; right:12%; top:43%; padding:9px; border:3px solid #6e572a; border-radius:45% 45% 12px 12px; background:#d8b363; }
+.adventure-keyhole-target i { display:block; font-style:normal; font-size:34px; line-height:1.2; }
+.adventure-keyhole-target span { font-size:13px; }
+.adventure-shaft-target,.adventure-rope-target { position:absolute; top:28%; padding:4px 8px; border:2px solid #675c40; border-radius:8px; background:#ebd7a5; }
+.adventure-shaft-target { left:12%; }
+.adventure-rope-target { left:52%; top:19%; }
+.adventure-shaft-target i,.adventure-rope-target i { display:block; font-style:normal; font-size:24px; line-height:1; }
+.adventure-shaft-target span,.adventure-rope-target span { font-size:12px; }
+.adventure-surface-target.installed { background:#b9d1ac; }
+.adventure-detail-message { padding:10px 12px; background:#e5eddb; border-left:4px solid #56746b; color:#203e3b; }
+@media(max-width:520px) {
+  .adventure-winch-mechanism svg { min-height:195px; }
+  .adventure-shaft-target { top:30%; left:10%; }
+  .adventure-rope-target { top:19%; }
+  .adventure-crank-target { top:auto; bottom:7px; min-height:44px; }
+}
