@@ -729,7 +729,7 @@ export const useStore = create<StoreState>((set, get) => ({
         daily: d,
         lastEndless: {
           depth,
-          removed,
+          removed: u.removed,
           maxCombo: u.maxCombo,
           coins: u.coins,
           daily: s.mode === 'daily',
