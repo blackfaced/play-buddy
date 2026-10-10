@@ -1,0 +1,103 @@
+.campaign{min-height:100dvh;background:#152d32;color:#f0e4c9;padding:22px max(18px,calc((100vw - 1120px)/2)) 48px;font-family:Georgia,'Noto Serif SC',serif}.campaign *,.campaign-modal *{box-sizing:border-box}.campaign button,.campaign select,.campaign-modal button{font:14px/1.5 system-ui;min-height:44px;border:1px solid #b3a47e;border-radius:6px;padding:9px 15px;color:#f4e6c5;background:#2c494e;cursor:pointer;touch-action:manipulation}.campaign button:disabled,.campaign-modal button:disabled{cursor:not-allowed;border-style:dashed}.campaign button:focus-visible,.campaign select:focus-visible,.campaign-modal button:focus-visible{outline:3px solid #ffe198;outline-offset:4px}.campaign-top{display:flex;justify-content:space-between;align-items:center;gap:12px}.campaign-top span{font:11px system-ui;letter-spacing:.15em}.campaign-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:28px 0 18px}.campaign-heading p{font:12px system-ui;letter-spacing:.12em;color:#c3c8ba}.campaign-heading h1{font-size:clamp(28px,5vw,42px);font-weight:500;margin:10px 0}.campaign-heading label{font:13px system-ui}.campaign-heading select{margin-left:8px}.campaign-inventory{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:18px;padding:14px;background:#0e2429;border:1px solid #577075;border-radius:8px;font:14px system-ui}.campaign-item{border:1px solid #baac7e;padding:9px 14px;border-radius:4px}.campaign-inventory small{color:#bcc8c3}.campaign-tools{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:18px}.campaign-tools>span{font:12px/1.6 system-ui;color:#b9c7c4}.campaign-status{min-height:1.6em;font:14px/1.7 system-ui;color:#f5d994}.campaign-success,.campaign-protected{border:1px solid #d2bf88;padding:24px;margin-top:20px;background:#263f42;border-radius:8px}.campaign-success h2{font-weight:500}.campaign-modal{width:min(900px,calc(100vw - 28px));max-height:88dvh;overflow:auto;background:#213b40;color:#f3e7c9;border:1px solid #d0bd8c;border-radius:12px;padding:22px;box-shadow:0 20px 80px #0009;font:16px/1.8 system-ui}.campaign-modal::backdrop{background:#081a21d9}.campaign-modal header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:18px}.campaign-modal h2{font:26px Georgia,serif;margin:0}.campaign-modal svg{max-width:100%;height:auto}.campaign-modal button{margin:5px}.campaign-dial{display:inline-flex;flex-direction:column;align-items:center;gap:7px;padding:10px}.campaign-dial>div{display:flex;align-items:center;gap:8px}.campaign-dial output{display:grid;place-items:center;min-width:48px;min-height:48px;border:2px solid #bdb38c;border-radius:50%;font-size:22px}.campaign-object{display:flex;flex-direction:column;align-items:center}.campaign-object svg{max-width:100%;height:auto}.campaign-scene{position:relative;overflow:hidden;border:1px solid #73817b;border-radius:10px;background:#203b42}.campaign-scene>svg{display:block;width:100%;height:auto}.campaign-apparatus{padding:18px;background:#1b353a;border:1px solid #647878;border-radius:10px}.campaign-mode-challenge .campaign-object>span{opacity:0}.campaign-mode-challenge .campaign-object:focus-visible>span{opacity:1}@media(max-width:600px){.campaign-top{flex-wrap:wrap}.campaign-top span{order:3;width:100%;text-align:center}.campaign-heading{align-items:start;flex-direction:column}.campaign-modal{padding:15px}.campaign-modal h2{font-size:21px}.campaign button{padding:9px 12px}.campaign-tools>span{width:100%}}@media(prefers-reduced-motion:reduce){.campaign *{transition:none!important;animation:none!important}}
+
+/* Episodes 05 and 07–10 use a viewport-sized play surface. */
+.campaign-feedback,.campaign-playfield{display:contents}
+.campaign-viewport {
+  box-sizing:border-box; height:100dvh; min-height:0; overflow:auto;
+  display:flex; flex-direction:column; gap:6px;
+  padding:8px max(12px,calc((100vw - 1280px)/2)) max(8px,env(safe-area-inset-bottom));
+}
+.campaign-viewport > * { flex-shrink:0; }
+.campaign-viewport .campaign-top { order:-3; gap:8px; }
+.campaign-viewport .campaign-heading { order:-2; padding:0; gap:12px; }
+.campaign-viewport .campaign-heading > div { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.campaign-viewport .campaign-heading p { margin:0; }
+.campaign-viewport .campaign-heading h1 { margin:0; font-size:clamp(22px,2.5vw,30px); }
+.campaign-viewport .campaign-heading label { white-space:nowrap; }
+/* Reserve one stable row: success never moves the artwork or pointer targets. */
+.campaign-viewport .campaign-feedback { display:flex; align-items:center; gap:8px; height:48px; min-width:0; }
+.campaign-viewport .completion-record { flex:1; min-width:0; margin:0; padding:4px 10px; flex-wrap:nowrap; overflow:auto; white-space:nowrap; }
+.campaign-viewport .campaign-next { margin-left:auto; }
+.campaign-viewport .campaign-playfield { display:block; flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain; }
+.campaign-viewport .shadow-world { display:flex; flex-direction:column; width:100%; height:100%; min-height:340px; max-width:none; margin:0; overflow:visible; }
+.campaign-viewport .shadow-location { flex:none; display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 16px; padding:6px 12px; }
+.campaign-viewport .shadow-location h2 { font-size:1rem; }
+.campaign-viewport .shadow-location p { margin:0; font-size:.9rem; }
+/* SVG's native xMidYMid meet letterboxes both art and its own interactive groups.
+   Never stretch the viewBox or position a separate hit layer over the fitted art. */
+.campaign-viewport .shadow-world > svg { display:block; flex:1 1 0; width:100%; height:100%; min-height:250px; border-radius:12px; box-shadow:none; }
+.campaign-viewport .shadow-world > .shadow-inventory { flex:none; padding:4px 10px; }
+.campaign-viewport .shadow-world > .shadow-inventory span { flex-basis:auto; align-self:center; font-size:.85rem; }
+.campaign-viewport .shadow-world > .shadow-operation { flex:none; padding:5px 12px; font-size:.85rem; }
+.campaign-viewport .campaign-inventory { margin:0; padding:5px 10px; gap:6px 12px; min-height:32px; }
+.campaign-viewport .campaign-item { padding:3px 8px; }
+.campaign-viewport .campaign-tools { margin:0; gap:8px; }
+.campaign-viewport .campaign-status { margin:0; min-height:1.6em; font-size:13px; }
+.campaign-viewport .campaign-playfield > .mech-bench { max-width:900px; }
+/* Keep content and 44px controls reachable at text zoom / short window heights.
+   Scroll the page instead of cropping clues or reducing targets indefinitely. */
+@media (max-height:620px), (max-width:600px) {
+  .campaign-viewport { height:auto; min-height:100dvh; overflow:visible; }
+  .campaign-viewport .campaign-playfield { flex:none; overflow:visible; }
+  .campaign-viewport .shadow-world { height:auto; min-height:0; }
+  .campaign-viewport .shadow-world > svg { flex:none; height:auto; min-height:0; }
+  .campaign-viewport .campaign-feedback { height:auto; min-height:48px; flex-wrap:wrap; }
+  .campaign-viewport .completion-record { white-space:normal; flex-wrap:wrap; }
+  .campaign-viewport .campaign-heading { flex-direction:row; align-items:center; flex-wrap:wrap; }
+}
+
+/* Desktop close-ups share the same screen budget as the room, rather than
+   stacking a full-width painting above the controls. Native SVG hit mapping stays intact. */
+@media (min-width:901px) and (min-height:621px) {
+  .campaign-viewport .campaign-playfield > .mech-bench {
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:6px 14px; width:100%; max-width:1100px; padding:8px 12px;
+  }
+  .campaign-viewport .campaign-playfield > .mech-bench > header { grid-column:1; margin:0; gap:8px; }
+  .campaign-viewport .campaign-playfield > .mech-bench > header h2 { font-size:1rem; }
+  .campaign-viewport .campaign-playfield > .mech-bench > .shadow-inventory { grid-column:2; padding:0; align-items:center; }
+  .campaign-viewport .campaign-playfield > .mech-bench > .shadow-inventory span { flex-basis:auto; font-size:.8rem; }
+  .campaign-viewport .campaign-playfield > .mech-bench > svg { grid-column:1; grid-row:2 / 4; height:100%; min-height:180px; max-height:260px; align-self:center; }
+  .campaign-viewport .campaign-playfield > .mech-bench > div:has(> .mech-object-row) { grid-column:2; grid-row:2; min-width:0; }
+  .campaign-viewport .campaign-playfield > .mech-bench > .mech-tools { grid-column:2; grid-row:3; margin:0; }
+  .campaign-viewport .campaign-playfield > .mech-bench .mech-object-row { margin:0; }
+  .campaign-viewport .campaign-playfield > .mech-bench .mech-object-row > svg { width:300px; max-width:100%; height:100px; max-height:100px; margin:0 auto; }
+  .campaign-viewport .campaign-playfield > .mech-bench .mech-object-help,
+  .campaign-viewport .campaign-playfield > .mech-bench .mech-object-status { margin:3px 0; font-size:.8rem; line-height:1.4; }
+  .campaign-viewport .campaign-playfield > .mech-bench .mech-slot-controls { margin-top:4px; }
+  .campaign-viewport .campaign-playfield > .mech-bench > .mech-caption,
+  .campaign-viewport .campaign-playfield > .mech-bench > .mech-rules,
+  .campaign-viewport .campaign-playfield > .mech-bench > .shadow-operation { grid-column:1 / -1; margin:0; padding:4px 8px; font-size:.85rem; line-height:1.45; }
+  .campaign-viewport .shadow-trace-workarea { grid-column:1 / -1; width:min(100%,660px,max(350px,calc((100dvh - 550px)*2.64))); }
+  .campaign-viewport .shadow-trace-controls { margin:4px 0; }
+}
+
+/* Late chapters retain native art coordinates. The radio/music hit layer scales
+   with its stage, never independently from the image beneath it. */
+.campaign-late-viewport .radio-exploration-stage {
+ width:min(100%,calc((100dvh - 470px)*2.04)); margin:0 auto;
+}
+.campaign-late-viewport .cargo-exploration > .campaign-scene,
+.campaign-late-viewport .observatory-exploration > .campaign-scene {
+ width:min(100%,calc((100dvh - 370px)*2.27)); margin:0 auto;
+}
+.campaign-late-viewport .signal-exploration > .signal-nav,
+.campaign-late-viewport .signal-exploration > .signal-toolbar,
+.campaign-late-viewport .cargo-exploration > .navigation-controls,
+.campaign-late-viewport .observatory-exploration > .navigation-controls { margin:4px 0; gap:6px; }
+.campaign-late-viewport .signal-exploration > .signal-toolbar:empty,
+.campaign-late-viewport .observatory-exploration > .navigation-controls:empty { display:none; }
+.campaign-late-viewport .signal-memory:not(.sr-only),
+.campaign-late-viewport .cargo-exploration > p:not(.sr-only),
+.campaign-late-viewport .observatory-exploration > p:not(.sr-only) { margin:4px 0; padding:3px 8px; font:13px/1.5 system-ui; }
+.campaign-late-viewport .signal-room > button { margin:2px 0; }
+/* Preserve readable targets under narrow windows, short screens and text zoom. */
+@media (max-height:700px), (max-width:900px) {
+ .campaign-late-viewport { height:auto; min-height:100dvh; overflow:visible; }
+ .campaign-late-viewport .campaign-playfield { flex:none; overflow:visible; }
+ .campaign-late-viewport .radio-exploration-stage,
+ .campaign-late-viewport .cargo-exploration > .campaign-scene,
+ .campaign-late-viewport .observatory-exploration > .campaign-scene { width:100%; }
+ .campaign-late-viewport .campaign-feedback { height:auto; min-height:48px; flex-wrap:wrap; }
+ .campaign-late-viewport .completion-record { white-space:normal; flex-wrap:wrap; }
+}

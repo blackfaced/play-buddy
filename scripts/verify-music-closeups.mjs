@@ -1,0 +1,64 @@
+import assert from 'node:assert/strict';
+import {readFileSync, existsSync} from 'node:fs';
+import {build} from 'esbuild';
+import React from 'react';
+import {create, act} from 'react-test-renderer';
+const path='src/escape/campaign/episodes/MusicDialog.tsx';
+assert.ok(existsSync(path),'music apparatus needs a bounded native close-up');
+await build({entryPoints:[path],outfile:'node_modules/.tmp-music-dialog.mjs',bundle:true,platform:'node',format:'esm',packages:'external',jsx:'automatic',loader:{'.css':'empty'}});
+const {MusicDialog}=await import('../node_modules/.tmp-music-dialog.mjs');
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+const roots=[{style:{overflow:'clip'}},{style:{overflow:'auto'}}];
+let shown=0,closed=0,focused=0,dismissed=0,prevented=0;
+globalThis.document={documentElement:roots[0],body:roots[1],querySelectorAll:()=>[{textContent:'打开八音盒',closest:()=>null,focus:()=>focused++}]};
+let tree;
+const render=held=>React.createElement(MusicDialog,{kind:'drum',title:'打开的针筒',returnLabel:'打开八音盒',held,onClose:()=>dismissed++},React.createElement('button',null,'转动'));
+await act(async()=>{tree=create(render(true),{createNodeMock:n=>n.type==='dialog'?{showModal:()=>shown++,close:()=>closed++}:null});});
+assert.equal(shown,1);assert.deepEqual(roots.map(r=>r.style.overflow),['hidden','hidden']);
+let dialog=tree.root.findByType('dialog');
+assert.equal(dialog.props['aria-label'],'打开的针筒');
+dialog.props.onKeyDownCapture({key:'Escape',preventDefault:()=>prevented++});assert.equal(prevented,1);
+await act(async()=>tree.update(render(false)));dialog=tree.root.findByType('dialog');
+dialog.props.onKeyDownCapture({key:'Escape',preventDefault:()=>prevented++});assert.equal(prevented,1,'installed pegs must not consume Escape');
+dialog.props.onCancel({preventDefault(){}});assert.equal(dismissed,1);
+await act(async()=>tree.unmount());assert.equal(closed,1);assert.equal(focused,1);assert.deepEqual(roots.map(r=>r.style.overflow),['clip','auto']);delete globalThis.document;
+const css=readFileSync('src/escape/campaign/episodes/music.css','utf8');
+for(const regex of [/max-height:\s*100dvh/,/overflow:\s*auto/,/overscroll-behavior:\s*contain/,/min-height:\s*44px/,/min-width:\s*687px/])assert.match(css,regex);
+const scene=readFileSync('src/escape/campaign/episodes/musicScene.tsx','utf8');
+for(const kind of ['chimes','roll','drum'])assert.match(scene,new RegExp(`<MusicDialog kind="${kind}"`));
+assert.match(scene,/music-apparatus-scroll/);
+console.log('Music close-ups: native lifecycle, held-object Escape, focus and scroll restoration, bounded layouts and minimum peg targets pass.');
+
+await build({stdin:{contents:"export {default as CampaignEpisode} from './src/escape/campaign/CampaignEpisode'; export {musicEpisode as def} from './src/escape/campaign/episodes/music'; export * from './src/escape/campaign/engine';",resolveDir:process.cwd()},outfile:'node_modules/.tmp-music-closeups-campaign.mjs',bundle:true,platform:'node',format:'esm',packages:'external',jsx:'automatic',loader:{'.css':'empty'},plugins:[{name:'health-double',setup(b){b.onResolve({filter:/store\/useStore$/},()=>({path:'store',namespace:'test'}));b.onLoad({filter:/.*/,namespace:'test'},()=>({contents:'export const useStore=fn=>fn({lock:globalThis.musicTestLock});'}));}}]});
+const A=await import('../node_modules/.tmp-music-closeups-campaign.mjs');
+globalThis.musicTestLock=null;
+const storage=new Map();globalThis.localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};
+const initial=A.def.initial();
+const ready=A.def.normalize({...initial,values:{...initial.values,paperFound:true,paperInstalled:true,handleFound:true,handleInstalled:true,curtainOpen:true,bars:[0,1,2],roll:0,pegs:[2,6,11,15],muted:true}});
+storage.set(A.episodeKey(A.def.id),A.serializeEpisode(A.def,ready));
+const campaign=()=>React.createElement(A.CampaignEpisode,{episode:A.def,onBack(){},onComplete(){}});
+const text=n=>typeof n==='string'?n:(n.children??[]).map(text).join('');
+const click=async label=>act(async()=>{const node=tree.root.findAll(n=>n.type==='button'&&text(n)===label)[0];assert.ok(node,label);node.props.onClick();});
+const realSet=globalThis.setTimeout,realClear=globalThis.clearTimeout,pending=new Map();let serial=0,popovers=0;
+globalThis.setTimeout=(f,delay,...args)=>{if(delay===450){const id=++serial;pending.set(id,()=>f(...args));return id;}return realSet(f,delay,...args);};
+globalThis.clearTimeout=id=>{if(pending.has(id))pending.delete(id);else realClear(id);};
+try {
+ await act(async()=>{tree=create(campaign(),{createNodeMock:n=>n.type==='dialog'?{showModal:()=>shown++,close:()=>closed++}:n.props.popover?{showPopover:()=>popovers++,matches:()=>true,hidePopover(){}}:null});});
+ await click('走到八音盒工作台');await click('打开八音盒');
+ await click('转动八音盒摇柄');
+ for(let beat=0;pending.size;beat++){
+  assert.ok(beat<7,'six-beat sweep is bounded');
+  assert.equal(tree.root.findByType('dialog').findAll(n=>n.type==='g'&&n.props.className==='music-hole').length,18,'all three rows remain in the focus scope during the sweep');
+  const [id,f]=pending.entries().next().value;pending.delete(id);await act(async()=>f());
+ }
+ assert.equal(tree.root.findAllByType('dialog').length,1,'success keeps the apparatus open');
+ assert.ok(tree.root.findByType('dialog').findAll(n=>n.type==='g'&&n.props['data-mechanism']==='played'&&n.props['data-mechanism-moving']==='true').length,'lighthouse unfolds inside the close-up');
+ assert.equal(popovers,1,'accepted cue is above the native dialog');
+ await click('转动八音盒摇柄');
+ const beforeLock=closed;
+ await act(async()=>{globalThis.musicTestLock='rest';tree.update(campaign());});
+ assert.equal(tree.root.findAllByType('dialog').length,0);assert.equal(closed,beforeLock+1);assert.equal(pending.size,0,'health lock cancels the playback timer');
+ await act(async()=>{globalThis.musicTestLock=null;tree.update(campaign());});assert.equal(tree.root.findAllByType('dialog').length,0,'resume returns to world');
+ await act(async()=>tree.unmount());
+ console.log('Music campaign integration: complete three-row sweep, in-dialog lighthouse motion, top-layer cue and health-lock playback cleanup pass. Browser geometry awaits actual retest.');
+} finally {globalThis.setTimeout=realSet;globalThis.clearTimeout=realClear;delete globalThis.musicTestLock;delete globalThis.localStorage;}

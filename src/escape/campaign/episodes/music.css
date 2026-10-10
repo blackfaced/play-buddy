@@ -1,0 +1,35 @@
+.music-room .signal-art{background:#a7765e}.music-room .signal-panel{background:#62483f;border-color:#e1bb83}.music-hole{cursor:pointer;outline:none}.music-hole:focus-visible>circle:first-child{stroke:#fff7bc;stroke-width:4}.music-vibrate{animation:music-vibrate .15s ease-in-out 4;transform-box:fill-box;transform-origin:center}.music-room button[aria-pressed=true]{background:#9b6e4b}.music-room .signal-memory{color:#fff2d0}@keyframes music-vibrate{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}@media(prefers-reduced-motion:reduce){.music-vibrate{animation:none;stroke:#fff0ad;stroke-width:5}}
+.music-selected>g>rect{stroke:#fff5b0;stroke-width:7;filter:drop-shadow(0 0 7px #e8be6c)}
+.music-room .signal-hotspot{touch-action:none;outline:none}.music-room .signal-hotspot:focus-visible>rect{stroke:#fff;stroke-width:6}
+
+/* Close-up bounds do not alter the world or the SVG pointer coordinate system. */
+.music-puzzle-dialog {
+ box-sizing: border-box; width: min(860px, 100vw); max-width: 100vw;
+ max-height: 100dvh; margin: auto; padding: 16px;
+ overflow: auto; overscroll-behavior: contain;
+ border: 1px solid #e1bb83; border-radius: 16px; background: #62483f; color: #f7e9cc;
+}
+.music-puzzle-dialog::backdrop { background: #201713eb; }
+.music-puzzle-dialog .signal-panel { border: 0; padding: 0; margin: 0; }
+.music-puzzle-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.music-puzzle-dialog h2 { margin: 0; font-size: 1.15rem; }
+.music-puzzle-dialog button { min-width: 44px; min-height: 44px; }
+.music-puzzle-dialog button:focus-visible { outline: 3px solid #fff2af; outline-offset: 2px; }
+.music-puzzle-dialog p { margin: 8px 0; font-size: .85rem; line-height: 1.5; }
+.music-puzzle-dialog .signal-toolbar { gap: 6px; margin: 8px 0; }
+.music-puzzle-dialog .signal-piece-row { gap: 6px; }
+.music-apparatus-scroll { overflow: auto; overscroll-behavior: contain; }
+/* Preserve square SVG targets >=44 CSS pixels rather than squeezing them at zoom. */
+.music-dialog-chimes .music-apparatus-scroll > svg { width: min(100%, 720px); min-width: 634px; height: auto; margin: auto; }
+.music-dialog-drum .music-apparatus-scroll > svg { width: min(100%, 780px); min-width: 687px; height: auto; margin: auto; }
+.music-dialog-roll .signal-panel > svg { width: min(100%, 650px); height: auto; margin: auto; }
+.music-puzzle-dialog .signal-knobs { margin-top: 4px; }
+.music-puzzle-dialog .signal-rotary > [role=slider] { width: 72px; margin-bottom: 4px; }
+.music-puzzle-dialog .signal-knob-buttons { margin-top: 4px; }
+.music-puzzle-dialog .completion-result-art { width: 118px; height: 80px; margin: 0 auto; }
+@media (max-width: 630px) {
+ .music-puzzle-dialog { padding: 10px; }
+ .music-puzzle-dialog header { align-items: flex-start; }
+ .music-puzzle-dialog header button { flex-shrink: 0; }
+ .music-puzzle-dialog .signal-piece-row button { font-size: .8rem; }
+}

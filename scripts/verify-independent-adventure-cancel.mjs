@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';import {build} from 'esbuild';import React from 'react';import {create,act} from 'react-test-renderer';import {MemoryRouter} from 'react-router';
+await build({stdin:{contents:`export {default as Adventure} from './src/escape/adventure/Adventure';export * from './src/escape/adventure/logic';`,resolveDir:process.cwd()},outfile:'node_modules/.tmp-independent-adventure-cancel.mjs',bundle:true,platform:'node',jsx:'automatic',format:'esm',packages:'external',loader:{'.css':'empty'},plugins:[{name:'health-double',setup(b){b.onResolve({filter:/store\/useStore$/},()=>({path:'store',namespace:'test'}));b.onLoad({filter:/.*/,namespace:'test'},()=>({contents:'export const useStore=selector=>selector({lock:null});'}));}}]});
+const A=await import('../node_modules/.tmp-independent-adventure-cancel.mjs');globalThis.IS_REACT_ACT_ENVIRONMENT=true;const storage=new Map();globalThis.localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};globalThis.window={location:{reload(){}}};
+const start={...A.initialAdventure(),started:true,room:'navigation',compassCaseOpen:true,manifestMoved:true,found:['key','battery','crank']};storage.set(A.ADVENTURE_KEY,A.serializeAdventure(start));
+let tree;await act(async()=>{tree=create(React.createElement(MemoryRouter,null,React.createElement(A.Adventure,{standalone:true})),{createNodeMock:e=>e.type==='dialog'?{showModal(){}}:null});});
+const text=n=>typeof n==='string'?n:(n.children??[]).map(text).join('');const label=s=>tree.root.findByProps({'aria-label':s});const button=s=>{const n=tree.root.findAllByType('button').find(n=>text(n)===s);assert.ok(n,'Missing '+s);return n;};const click=async n=>act(async()=>n.props.onClick());const saved=()=>A.parseAdventure(storage.get(A.ADVENTURE_KEY));
+for(const close of ['escape']){
+ await click(label('检查储物舱门'));await click(button('黄铜小钥匙'));
+ if(close==='button')await click(label('关闭近景'));else await act(async()=>{const d=tree.root.findByType('dialog');close==='escape'?d.props.onCancel():d.props.onClick({target:d,currentTarget:d});});
+ await click(label('检查储物舱门'));await click(label('检查储物舱门锁孔'));assert.equal(saved().storeroomOpen,false,close+' clears selected item before reopening');await click(label('关闭近景'));
+}
+await click(label('检查储物舱门'));await click(button('黄铜小钥匙'));await click(label('检查储物舱门锁孔'));assert.equal(saved().storeroomOpen,true);assert.ok(!tree.root.findAllByType('button').some(n=>text(n)==='黄铜小钥匙'),'consumed key removed from usable inventory');await act(async()=>tree.unmount());
+console.log('Independent adventure actual target handlers: Escape clears tool choice, fresh choice unlocks and consumes key.');

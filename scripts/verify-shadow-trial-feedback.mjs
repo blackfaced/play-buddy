@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {build} from 'esbuild';
+import React from 'react';
+import {create,act} from 'react-test-renderer';
+await build({stdin:{contents:"export {shadowEpisode as def} from './src/escape/campaign/episodes/shadow';",resolveDir:process.cwd()},outfile:'node_modules/.tmp-shadow-trial-feedback.mjs',bundle:true,platform:'node',format:'esm',packages:'external',jsx:'automatic',loader:{'.css':'empty'}});
+const {def}=await import('../node_modules/.tmp-shadow-trial-feedback.mjs');globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+let state=def.normalize({...def.initial(),values:{...def.initial().values,puppetsFound:true,puppetsMounted:true,lampHandle:true,lampOpen:true,pieces:[1,0,2],depths:[3,2,1],turns:[0,0,0]}}),tree,completed=0;
+const render=()=>React.createElement(def.Component,{state,mode:'challenge',update:p=>{state=def.normalize({...state,...p,values:{...state.values,...p.values}});tree.update(render());},announce(){},complete(){completed++;}});
+const text=n=>typeof n==='string'?n:(n?.children??[]).map(text).join('');
+const click=label=>act(async()=>{const n=tree.root.findAll(n=>typeof n.type==='string'&&(n.props.role==='button'||n.type==='button')).find(n=>n.props['aria-label']===label||text(n)===label);assert.ok(n,label);n.props.onClick();});
+await act(async()=>{tree=create(render(),{createNodeMock:n=>n.type==='dialog'?{showModal(){},close(){}}:null});});
+await click('走到放映廊');await click('查看灯后的舞台');
+const status=()=>tree.root.findByType('dialog').findByProps({'data-shadow-trial-result':true});
+const lever=()=>tree.root.findByProps({'data-shadow-lever-motion':true});
+assert.equal(text(status()),'','no unsolicited trial coaching');
+for(let n=1;n<=2;n++){await click('拉下演出灯杆');assert.ok(text(status()).includes('幕帘没有拉开'));assert.equal(lever().props['data-trial-attempt'],n,'every retry restarts mechanical acknowledgment');assert.equal(completed,0);assert.equal(state.values.lit,false);assert.ok(!/左|中|右|旋转|交换/.test(text(status())));}
+await act(async()=>{state={...state,values:{...state.values,lampOpen:false}};tree.update(render());});await click('拉下演出灯杆');assert.ok(text(status()).includes('灯闸挡住了光'));
+await act(async()=>{state={...state,values:{...state.values,lampOpen:true,puppetsMounted:false}};tree.update(render());});await click('拉下演出灯杆');assert.ok(text(status()).includes('空夹轨'));
+await act(async()=>{state={...state,values:{...state.values,puppetsMounted:true,turns:[3,1,2]}};tree.update(render());});await click('拉下演出灯杆');assert.equal(completed,1);assert.equal(state.values.lit,true);assert.ok(text(status()).includes('幕帘缓缓拉开'));const attempt=lever().props['data-trial-attempt'];await click('拉下演出灯杆');assert.equal(completed,1,'repeat success never repeats completion');assert.equal(lever().props['data-trial-attempt'],attempt+1);assert.ok(text(status()).includes('港湾仍然亮着'));
+await click('← 环顾四周');await click('查看灯后的舞台');assert.equal(text(status()),'','transient trial feedback does not replay on revisit');assert.equal(lever().props['data-trial-attempt'],0);await act(async()=>tree.unmount());
+const css=fs.readFileSync('src/escape/campaign/episodes/shadowExploration.css','utf8');assert.match(css,/@keyframes shadow-lever-pull/);assert.match(css,/@media\(prefers-reduced-motion:reduce\)[^}]*\{[^}]*\.shadow-lever-pull\{animation:none/);
+console.log('Shadow trial feedback: local dialog results, repeated mechanical acknowledgment, neutral failures, missing hardware, single completion, revisit and reduced-motion rule pass.');

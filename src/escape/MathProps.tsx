@@ -98,7 +98,7 @@ export function WoodenPicture({
           <LighthouseArt />
         </div>
         <p>
-          木条严丝合缝，灯塔旧景重现。图画已经收入手记，可以带去比对圆环匣。
+          木条严丝合缝。褪色的画里，灯塔映着月光，海平线伸向远方。图画已收入手记。
         </p>
       </>
     );
@@ -107,7 +107,7 @@ export function WoodenPicture({
       <p>
         海风打散了这幅木条画。航海员在每根木条上刻下数字，框边的小铜牌标着槽位编号。
       </p>
-      <p className="escape-instruction">
+      <p className="sr-only">
         先选木条，再点槽位放入；空手点已放的木条可以拿下。有木条在手时点击已占槽位，会把原木条放回下方。放满五格后按「确认整幅画」。也可以用 Tab 和回车操作。
       </p>
       <EasyGuidance><p>同一根木条上的数字，每次增加相同的数；补出的下一个数就是槽位编号。</p></EasyGuidance>
@@ -128,7 +128,7 @@ export function WoodenPicture({
           </button>;
         })}
       </div>
-      <p className="escape-selected-slat" role="status">
+      <p className="escape-selected-slat sr-only" role="status">
         {selected === null
           ? "先从下面拿起一根木条。"
           : `手中的木条：${SLATS[selected].join("、")}、？ 它应该放在哪个槽位？`}
@@ -154,7 +154,6 @@ export function WoodenPicture({
           ))}
       </div>
       <button className="escape-primary" disabled={!isPictureFull(state.slats)} onClick={onConfirm}>确认整幅画</button>
-      <p className="escape-instruction">确认前可随意调整。机关只会检查整幅画。</p>
     </>
   );
 }

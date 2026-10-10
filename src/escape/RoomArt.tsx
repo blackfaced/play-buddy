@@ -1,4 +1,6 @@
 import { useId } from "react";
+import { LandmarkSketch } from "./NavigationClues";
+import { LANDMARKS } from "./voyageData";
 import { NAVIGATION_GIVENS } from "./puzzleVisuals";
 
 /** Original, self-contained vector scenery. Interaction lives in the HTML layer. */
@@ -481,9 +483,9 @@ function DeskView({ id }: { id: string }) {
           stroke="#8d9c7b"
           strokeWidth="2"
         />
-        <path d="M-73 1h7M-63 29l13 2" stroke="#a8895b" strokeWidth="2" />
+        <path d="M-73 1h7M-63 29l13 2" stroke="#a8895b" strokeWidth="2" /><text x="-12" y="10" textAnchor="middle" fontSize="16" fill="#3b514b">航海日志</text>
       </g>
-      <g transform="translate(620 333)">
+      <g transform="translate(245 368)">
         <ellipse cy="33" rx="29" ry="8" fill="#493b2e" opacity=".3" />
         <path
           d="M-15 0H15L18 28Q0 42-18 28Z"
@@ -551,7 +553,7 @@ function CompassRose({
   );
 }
 
-function ChartView({ id }: { id: string }) {
+function ChartView({ id, clean }: { id: string; clean: boolean }) {
   return (
     <g>
       <path
@@ -593,40 +595,10 @@ function ChartView({ id }: { id: string }) {
           <path key={y} d={`M219 ${y}H621`} />
         ))}
       </g>
-      <path
-        d="M219 140l69-5 23 22-19 16 13 26-35 23 5 30-35 17-21-5M621 173l-38-5-20 27 18 20-12 19-43 5-18 37 21 31-8 34H621Z"
-        fill="#d8c493"
-        stroke="#8b8c65"
-        strokeWidth="2"
-      />
-      <path
-        d="M375 200l31-19 36 7 13 25-23 29-38-7-21-17ZM331 274l16-13 26 9-2 16-22 12-18-10Z"
-        fill="#dbca9c"
-        stroke="#8b8c65"
-        strokeWidth="2"
-      />
-      <path
-        d="M268 279C304 301 328 322 378 287S398 232 448 244S508 210 550 185"
-        fill="none"
-        stroke="#a16543"
-        strokeWidth="3"
-        strokeDasharray="7 8"
-        strokeLinecap="round"
-      />
-      <circle cx="268" cy="279" r="7" fill="#a16543" />
-      <circle cx="448" cy="244" r="5" fill="#a16543" />
-      <path
-        d="M542 177l16 16M558 177l-16 16"
-        stroke="#a16543"
-        strokeWidth="4"
-      />
-      <CompassRose x={567} y={291} scale={0.93} />
-      <path
-        d="M325 151h83M336 156h60M304 324h112"
-        stroke="#8d7950"
-        strokeWidth="2"
-        opacity=".75"
-      />
+      {LANDMARKS.map(point => <g key={point.id} transform={`translate(${280 + point.x * 125} ${290 - point.y * 105})`}><LandmarkSketch landmark={point.id} /></g>)}
+      <CompassRose x={588} y={166} scale={0.55} />
+      <text x="588" y="139" textAnchor="middle" fill="#284c50" fontSize="12">北</text>
+      {!clean && <g pointerEvents="none"><rect x="219" y="135" width="402" height="207" fill="#e9e7d7" opacity=".91" /><path d="M238 158L579 314M222 209L506 340M305 137L619 276M227 285L348 340" stroke="#fff9e8" strokeWidth="22" opacity=".75" /></g>}
       <path
         d="M213 126h12M212 348h12M614 126h12M614 348h12"
         stroke="#9a7046"
@@ -1418,7 +1390,7 @@ function DoorView({ id }: { id: string }) {
   );
 }
 
-export default function RoomArt({ view }: { view: 0 | 1 | 2 | 3 }) {
+export default function RoomArt({ view, chartClean = false }: { view: 0 | 1 | 2 | 3; chartClean?: boolean }) {
   const id = `cabin-${useId().replace(/:/g, "")}`;
   return (
     <svg
@@ -1433,7 +1405,7 @@ export default function RoomArt({ view }: { view: 0 | 1 | 2 | 3 }) {
       <SceneDefs id={id} />
       <RoomShell id={id} />
       {view === 0 && <DeskView id={id} />}
-      {view === 1 && <ChartView id={id} />}
+      {view === 1 && <ChartView id={id} clean={chartClean} />}
       {view === 2 && <ShipView id={id} />}
       {view === 3 && <DoorView id={id} />}
       <rect

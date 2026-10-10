@@ -20,7 +20,10 @@
     "test:e2e": "node --test e2e/*.test.js",
     "test:e2e:mul": "npm run build && node --test e2e/mul-drill.test.js",
     "verify:write": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-write.js",
-    "verify:escape": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-escape.js && node node_modules/.tmp-verify/scripts/verify-escape-math.js && node node_modules/.tmp-verify/scripts/verify-escape-art.js && node node_modules/.tmp-verify/scripts/verify-escape-guidance.js && node scripts/verify-escape-ui.mjs && node node_modules/.tmp-verify/scripts/verify-escape-adventure.js && node scripts/verify-escape-adventure-ui.mjs"
+    "verify:escape": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-escape.js && node node_modules/.tmp-verify/scripts/verify-escape-math.js && node node_modules/.tmp-verify/scripts/verify-escape-art.js && node node_modules/.tmp-verify/scripts/verify-escape-guidance.js && node scripts/verify-escape-ui.mjs && node node_modules/.tmp-verify/scripts/verify-escape-adventure.js && node scripts/verify-escape-adventure-ui.mjs && node scripts/verify-adventure-tool-targets.mjs && node scripts/verify-escape-scenes.mjs && node scripts/verify-escape-scenes-ui.mjs && npm run verify:escape:chapter && npm run verify:escape:campaign && npm run verify:escape:playability",
+    "verify:escape:chapter": "tsc -p tsconfig.verify.json && node node_modules/.tmp-verify/scripts/verify-escape-chapter.js && node node_modules/.tmp-verify/scripts/verify-escape-lens.js && node scripts/verify-escape-chapter-independent.mjs && node scripts/verify-escape-chapter-ui.mjs && node scripts/verify-escape-exploration-ui.mjs && node scripts/verify-escape-drop.mjs && node scripts/verify-escape-symbols.mjs",
+    "verify:escape:campaign": "node scripts/verify-escape-campaign.mjs && node scripts/verify-escape-campaign-ui.mjs && node scripts/verify-escape-campaign-registry.mjs && node scripts/verify-campaign-navigation.mjs && node scripts/verify-campaign-navigation-ui.mjs && node scripts/verify-campaign-signal.mjs && node scripts/verify-campaign-signal-ui.mjs && node scripts/verify-escape-campaign-selection.mjs && node scripts/verify-campaign-mechanical.mjs && node scripts/verify-campaign-mechanical-ui.mjs && node scripts/verify-object-row-pointer.mjs && node scripts/verify-clockwork-exploration.mjs && node scripts/verify-clockwork-gears-ui.mjs",
+    "verify:escape:playability": "node scripts/verify-shadow-exploration.mjs && node scripts/verify-greenhouse-exploration.mjs && node scripts/verify-escape-music-pointer.mjs && node scripts/verify-escape-radio-music-exploration.mjs && node scripts/verify-escape-cargo-observatory-physical.mjs && node scripts/verify-independent-exploration-migration.mjs && node scripts/verify-independent-cargo-events.mjs && node scripts/verify-independent-music-runtime.mjs && node scripts/verify-independent-adventure-cancel.mjs && node scripts/verify-independent-observatory-events.mjs && node scripts/verify-challenge-hotspot-guidance.mjs && node scripts/verify-clockwork-spatial.mjs && node scripts/verify-independent-clockwork-migration.mjs && node scripts/verify-independent-clockwork-routes.mjs && node scripts/verify-shadow-stage-workarea.mjs && node scripts/verify-completion-feedback.mjs && node scripts/verify-independent-success-lifecycle.mjs && node scripts/verify-independent-success-motion.mjs && node scripts/verify-independent-shadow-dialog.mjs && node scripts/verify-completion-motion.mjs && node scripts/verify-cabin-modal-scroll.mjs && node scripts/verify-clockwork-closeups.mjs && node scripts/verify-greenhouse-closeups.mjs && node scripts/verify-radio-closeups.mjs && node scripts/verify-music-closeups.mjs && node scripts/verify-observatory-closeups.mjs && node scripts/verify-shadow-physical-routes.mjs && node scripts/verify-campaign-play-viewport.mjs && node scripts/verify-shadow-journal.mjs && node scripts/verify-shadow-trial-feedback.mjs && node scripts/verify-shadow-scale-frames.mjs && node scripts/verify-greenhouse-touch-feedback.mjs && node scripts/verify-signal-direct-controls.mjs && node scripts/verify-puzzle-control-economy.mjs && node scripts/verify-late-chapter-coaching.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -61,9 +64,9 @@
     "lucide-react": "^0.562.0",
     "matter-js": "^0.20.0",
     "next-themes": "^0.4.6",
-    "react": "^19.2.0",
+    "react": "^19.3.0",
     "react-day-picker": "^9.13.0",
-    "react-dom": "^19.2.0",
+    "react-dom": "^19.3.0",
     "react-hook-form": "^7.70.0",
     "react-resizable-panels": "^4.2.2",
     "react-router": "^7.6.1",

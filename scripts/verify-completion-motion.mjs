@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import React from 'react';
+import { create, act } from 'react-test-renderer';
+await build({stdin:{contents:`export {CompletionMotionScope,CompletionMotion} from './src/escape/CompletionMotion';export {CompletionMechanism} from './src/escape/CompletionMechanism';export {CompletionFeedback} from './src/escape/CompletionFeedback';export {useCompletionFeedback} from './src/escape/useCompletionFeedback';`,resolveDir:process.cwd()},outfile:'node_modules/.tmp-completion-motion.mjs',bundle:true,platform:'node',format:'esm',packages:'external',jsx:'automatic',loader:{'.css':'empty'}});
+const A=await import('../node_modules/.tmp-completion-motion.mjs');
+globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+let api,tree;
+const item={id:'latch',label:'锁栓已退开'};
+function Harness({done=false,scope='standard',view=0}) {
+ api=A.useCompletionFeedback(done?[item]:[],scope);
+ return React.createElement(A.CompletionMotionScope,{event:api.event},React.createElement(A.CompletionFeedback,{event:api.event,completed:done?[item]:[]}),React.createElement(A.CompletionMechanism,{key:view,milestone:'latch',done,label:item.label}));
+}
+const draw=props=>React.createElement(Harness,props);
+const moving=()=>tree.root.findAll(n=>typeof n.type==='string'&&n.props['data-mechanism-moving']==='true');
+await act(async()=>{tree=create(draw({}));});assert.equal(moving().length,0);
+await act(async()=>{api.accept([],[item]);tree.update(draw({done:true}));});
+assert.equal(moving().length,1,'new accepted latch animates its existing SVG group');
+assert.ok(tree.root.findAllByType('g').some(n=>n.props.transform==='translate(-48 0)'),'actual bolt is withdrawn in persistent final pose');
+assert.equal(tree.root.findAll(n=>n.props['data-completion-milestone']==='latch').length,1);
+await act(async()=>tree.update(draw({done:true,view:1})));
+assert.equal(moving().length,0,'revisit during active cue does not replay physical motion');
+await act(async()=>tree.update(draw({done:true,view:1,scope:'challenge'})));
+assert.equal(tree.root.findAll(n=>n.props['data-completion-event']!==undefined).length,0,'mode clears transient cue');
+await act(async()=>tree.unmount());
+await act(async()=>{tree=create(draw({done:true}));});assert.equal(moving().length,0,'restored accepted state has final art without motion');
+await act(async()=>api.accept([],[item]));assert.equal(moving().length,0,'loaded accepted state is already remembered');
+await act(async()=>{api.reset();tree.update(draw({done:false}));});assert.equal(moving().length,0,'reset is silent');
+await act(async()=>{api.accept([],[item]);tree.update(draw({done:true}));});assert.equal(moving().length,1,'a fresh run can animate a newly earned latch');
+await act(async()=>tree.unmount());
+console.log('Actual shared SVG/component lifecycle: accepted latch motion, final withdrawn pose, persistent state, modal-independent cue, revisit/load/mode/reset boundaries pass.');

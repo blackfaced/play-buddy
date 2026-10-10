@@ -163,6 +163,18 @@ async function verifyHotspots(count, target) {
   await mode("standard");
 }
 await verifyHotspots(5, "检查航海桌的物件堆");
+for (const v of ["standard", "challenge", "easy"]) {
+  await mode(v);
+  await click(label("检查航海桌的物件堆"));
+  assert.equal(tree.root.findAllByProps({"aria-label":"本处待寻物件"}).length, v === "easy" ? 1 : 0, "Only easy mode may list hidden targets");
+  await click(label("检查航海笔记"));
+  assert.ok(label("检查航海笔记").props.className.includes("inspected"));
+  assert.ok(txt().includes("旧航线和修船日期"));
+  await click(label("检查航海笔记"));
+  assert.ok(!label("检查航海笔记").props.className.includes("inspected"));
+  await close();
+}
+await mode("standard");
 console.log("Hotspot CSS/markup: all modes, idle/hover/focus, readable labels and accessible clicks passed.");
 await click(label("检查航海桌的物件堆"));
 assert.equal(
@@ -180,13 +192,13 @@ await click(label("检查小电池组"));
 await click(label("检查曲柄"));
 await close();
 await click(label("检查储物舱门"));
-assert.equal(btn("使用选中的道具").props.disabled, true);
+assert.equal(label("检查储物舱门锁孔").type, "button");
 await click(btn("小电池组"));
-await click(btn("使用选中的道具"));
+await click(label("检查储物舱门锁孔"));
 assert.equal(saved().storeroomOpen, false);
 assert.ok(A.availableItems(saved()).includes("battery"));
 await click(btn("黄铜小钥匙"));
-await click(btn("使用选中的道具"));
+await click(label("检查储物舱门锁孔"));
 await click(btn("走进甲板储物舱 →"));
 await verifyHotspots(3, "检查栈桥控制板");
 await click(label("检查储物架的物件堆"));
@@ -200,7 +212,7 @@ await close();
 await click(btn("导航室"));
 await click(label("检查水深记录"));
 await click(btn("软毛刷"));
-await click(btn("使用选中的道具"));
+await click(label("检查记录纸面"));
 await close();
 await click(label("检查保险柜"));
 await act(async () =>
@@ -216,9 +228,13 @@ await close();
 await click(label("检查投影仪"));
 for (const n of ["小电池组", "圆镜片", "信号卡"]) {
   await click(btn(n));
-  await click(btn("使用选中的道具"));
+  await click(label(`检查投影仪${{"小电池组":"电池仓","圆镜片":"镜片座","信号卡":"卡片槽"}[n]}`));
 }
 assert.ok(saved().projectorOn);
+const sourceRecord = tree.root.findByProps({"aria-label":"光影中的行列数值记录"});
+assert.deepEqual(sourceRecord.findByType("thead").findAllByType("th").map(nt), ["2", "11", "5", "11", "2"]);
+assert.deepEqual(sourceRecord.findByType("tbody").findAllByType("th").map(nt), ["1", "1", "5", "1 · 1 · 1", "3"]);
+
 await close();
 // Revisit search after using battery: no resurrected target.
 await click(label("检查航海桌的物件堆"));
@@ -242,6 +258,15 @@ assert.equal(
 await mode("standard");
 await click(btn("甲板储物舱"));
 await click(label("检查栈桥控制板"));
+const panel = tree.root.findByProps({"aria-label":"五行五列栈桥控制板"});
+assert.equal(panel.findAllByType("th").length, 0, "Remote board never imports source clues");
+assert.equal(tree.root.findAllByProps({"data-record-frame":"notch-left-rivet-right"}).length, 1);
+await click(btn("夹上投影原照"));
+assert.equal(tree.root.findAllByProps({"data-record-frame":"notch-left-rivet-right"}).length, 2);
+assert.ok(txt().includes("投影原照"));
+const unsolved = storage.get(A.ADVENTURE_KEY);
+await click(btn("确认整张图"));
+assert.equal(storage.get(A.ADVENTURE_KEY), unsolved, "Wrong whole confirmation preserves board and inventory");
 for (let i = 0; i < 25; i++)
   if (A.ANCHOR[i])
     await click(label(`第${Math.floor(i / 5) + 1}行第${(i % 5) + 1}列，暗格`));
@@ -251,13 +276,37 @@ await close();
 await click(label("检查绞盘与栈桥"));
 for (const n of ["曲柄", "吊钩"]) {
   await click(btn(n));
-  await click(btn("使用选中的道具"));
+  await click(label(n === "曲柄" ? "检查绞盘方形轴孔" : "检查吊索末端"));
 }
 await click(btn("转动绞盘"));
+assert.equal(tree.root.findAllByProps({className:"adventure-winch-mechanism lowered"}).length, 1, "Physical bridge and wheel reflect operation");
 assert.equal(saved().complete, false);
 await click(btn("走向观星甲板 →"));
 assert.equal(saved().complete, true);
 assert.ok(txt().includes("星光，就在前面。"));
+assert.ok(txt().includes("本章已完成"));
+const completedExpedition = storage.get(A.ADVENTURE_KEY);
+const originalCabin = storage.get(A.SAVE_KEY);
+await mode("challenge");
+await act(async () => tree.unmount());
+await mount();
+assert.ok(txt().includes("继续探索：雾灯工坊"), "Old completed save exposes onward chapter immediately");
+const completionSection = tree.root.findByProps({className:"adventure-complete"});
+const onwardIndex = completionSection.children.findIndex(node => node.type === "button");
+const artIndex = completionSection.children.findIndex(node => typeof node.type === "function" && node.type.name === "DeckScene");
+assert.ok(onwardIndex >= 0 && artIndex > onwardIndex, "Completion and continuation precede the deck art");
+await click(btn("继续探索：雾灯工坊 →"));
+assert.equal(tree.root.findByType("select").props.value,"challenge");
+assert.ok(txt().includes("归航之光"));
+assert.equal(storage.get(A.ADVENTURE_KEY), completedExpedition);
+assert.equal(storage.get(A.SAVE_KEY), originalCabin);
+await mode("standard");
+await click(btn("← 回到观星甲板"));
+assert.equal(tree.root.findByType("select").props.value,"standard", "Shared guidance survives chapter return");
+assert.equal(storage.get(A.ADVENTURE_KEY), completedExpedition);
+assert.equal(storage.get(A.SAVE_KEY), originalCabin);
+console.log("Completed expedition save: above-art onward entry, new chapter and return, shared mode and untouched old saves passed.");
+
 await click(btn("随身手记"));
 globalThis.__reviewLock = "rest";
 await act(async () => tree.update(wrap()));

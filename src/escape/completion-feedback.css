@@ -1,0 +1,35 @@
+.completion-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.completion-cue, .completion-cue:popover-open {
+  position: fixed; inset: auto 16px max(28px, env(safe-area-inset-bottom)) auto; margin: 0;
+  display: flex; align-items: center; gap: 12px; width: max-content; max-width: min(470px, calc(100vw - 32px));
+  border: 2px solid #e7cf91; border-radius: 16px; padding: 14px 19px; background: #203e3b; color: #fff7d9;
+  box-shadow: 0 7px 28px #071d2966; font: 600 16px/1.5 system-ui, sans-serif;
+  pointer-events: none; z-index: 10000; animation: completion-arrive 500ms ease-out both;
+}
+.completion-cue::backdrop { background: transparent; pointer-events: none; }
+.completion-seal { flex: 0 0 42px; width: 42px; height: 42px; fill: none; stroke: #f0da98; stroke-width: 3; }
+.completion-seal path { stroke-dasharray: 45; animation: completion-mark 600ms ease-out both; }
+.completion-record { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 14px; color: #f6ebca; background: #25423f; border: 1px solid #9b966d; border-radius: 9px; font: 500 13px/1.6 system-ui,sans-serif; margin: 10px 0; }
+.completion-record span { opacity: 1; }
+@keyframes completion-arrive { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes completion-mark { from { stroke-dashoffset: 45; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .completion-cue, .completion-seal path { animation: none; } }
+/* Applied only to art already mounted when an accepted action occurs. Final SVG pose remains authoritative. */
+.completion-motion { transform-box: fill-box; transform-origin: center; }
+.completion-motion-lift { animation: mechanism-lift 1100ms cubic-bezier(.2,.7,.2,1) both; }
+.completion-motion-unfold { transform-origin: bottom center; animation: mechanism-unfold 1100ms ease-out both; }
+.completion-motion-light { animation: mechanism-light 1000ms ease-out both; }
+.completion-motion-water { transform-origin: bottom center; animation: mechanism-water 1200ms ease-out both; }
+.completion-motion-sail { animation: mechanism-sail 1500ms ease-out both; }
+@keyframes mechanism-lift { from { transform: translateY(65px); } to { transform: translateY(0); } }
+@keyframes mechanism-unfold { from { transform: scaleY(.12); } to { transform: scaleY(1); } }
+@keyframes mechanism-light { from { opacity: .15; } to { opacity: 1; } }
+@keyframes mechanism-water { from { transform: scaleY(.05); } to { transform: scaleY(1); } }
+@keyframes mechanism-sail { from { transform: translateX(-170px); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .completion-motion { animation: none; } }
+.completion-local { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 65px; padding: 6px 0 12px; color: #284b40; font: 650 14px/1.5 system-ui,sans-serif; }
+.completion-local svg { flex: 0 0 auto; width: 150px; height: auto; max-width: 45%; }
+.completion-motion-unlock { animation: mechanism-unlock 900ms ease-out both; }
+@keyframes mechanism-unlock { from { transform: translateX(48px); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .completion-motion-unlock { animation: none; } }
+.signal-room svg.completion-result-art { width: 180px; max-width: 45%; height: auto; margin: 12px auto 4px; }

@@ -884,7 +884,7 @@ function Crate({
   );
 }
 
-function ControlCabinet({ id }: { id: string }) {
+function ControlCabinet({ id, cells }: { id: string; cells?: boolean[] }) {
   return (
     <g transform="translate(485 216)" filter={`url(#${id}-shadow)`}>
       <path
@@ -923,7 +923,7 @@ function ControlCabinet({ id }: { id: string }) {
           width="29"
           height="29"
           rx="3"
-          fill={(i + Math.floor(i / 5)) % 2 ? "#6d8370" : "#81907a"}
+          fill={cells?.[i] ? "#ecd69b" : "#3d5953"}
           stroke="#b7b18a"
           strokeWidth="1.3"
         />
@@ -1041,7 +1041,7 @@ function Winch({ id }: { id: string }) {
   );
 }
 
-function StoreroomScene({ id }: { id: string }) {
+function StoreroomScene({ id, cells }: { id: string; cells?: boolean[] }) {
   return (
     <g>
       <RoomShell id={id} warm />
@@ -1103,7 +1103,7 @@ function StoreroomScene({ id }: { id: string }) {
       />
       <Prop kind="lantern" x={274} y={231} size={66} />
       <Prop kind="shell" x={338} y={265} size={47} />
-      <ControlCabinet id={id} />
+      <ControlCabinet id={id} cells={cells} />
       <Crate id={id} x={70} y={386} w={173} h={148} />
       <Crate id={id} x={105} y={294} w={132} h={92} />
       <Crate id={id} x={245} y={446} w={169} h={107} />
@@ -1138,7 +1138,7 @@ function StoreroomScene({ id }: { id: string }) {
 }
 
 /** Decorative room illustration; HTML buttons own all discovery and puzzle interaction. */
-export function RoomScene({ room }: { room: "navigation" | "storeroom" }) {
+export function RoomScene({ room, cells }: { room: "navigation" | "storeroom"; cells?: boolean[] }) {
   const id = `room-${useId().replace(/:/g, "")}`;
   return (
     <svg
@@ -1153,7 +1153,7 @@ export function RoomScene({ room }: { room: "navigation" | "storeroom" }) {
       {room === "navigation" ? (
         <NavigationScene id={id} />
       ) : (
-        <StoreroomScene id={id} />
+        <StoreroomScene id={id} cells={cells} />
       )}
     </svg>
   );

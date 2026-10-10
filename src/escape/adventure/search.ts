@@ -360,3 +360,26 @@ export const storageProps: SearchProp[] = [
     item: "hook",
   },
 ];
+
+/** Neutral tactile observations; these never identify a puzzle target or next step. */
+export function inspectProp(kind: string, returned: boolean): string {
+  if (returned) return "把物件轻轻放回刚才的位置。";
+  const observations: Record<string, string> = {
+    book: "翻开书页，纸边起了毛，里面记着旧航线和修船日期。",
+    compass: "拨了一下铜圈，罗盘针晃动几次，又指向北方。",
+    bottle: "转过瓶身，玻璃底留着一圈干掉的墨迹。",
+    mug: "把杯子侧过来，杯底是蓝色的船厂印章。",
+    rope: "松开最外面一圈绳子，下面仍是粗糙的木面。",
+    shell: "翻过贝壳，内侧光滑，边沿有一道细小裂纹。",
+    feather: "提起羽毛，几根细羽随气流轻轻摆动。",
+    box: "掀开小匣盖，里面只有一片旧衬布。",
+    starfish: "转动标本底座，背面贴着褪色的采集标签。",
+    lantern: "提起灯环，灯芯已经干了，玻璃罩还很完整。",
+    cloth: "折起帆布一角，粗线缝过的补丁露了出来。",
+    spool: "线轴滚了半圈，松散的线头拖在木板上。",
+    buoy: "扶正浮标，软木表面留着几道海水的白痕。",
+    boot: "倾斜雨靴，几粒干沙落到了架子上。",
+    anchor: "木锚靠向一旁，背后的挂绳还牢牢系着。",
+  };
+  return observations[kind] ?? "移动物件，木板轻轻响了一声。";
+}

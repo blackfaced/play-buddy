@@ -1,0 +1,50 @@
+.observatory-art-target { cursor: pointer; outline: none; touch-action: manipulation; }
+.observatory-art-target:focus-visible { outline: 3px solid #f7df9d; outline-offset: 5px; filter: drop-shadow(0 0 5px #f0d391); }
+.observatory-operation { line-height: 1.65; padding: .5rem .2rem; }
+.observatory-exploration .navigation-controls button { min-height: 44px; }
+.observatory-exploration .navigation-chart { touch-action: none; }
+
+/* Native top-layer close-ups: keep the world clue and reversible controls together. */
+.observatory-puzzle-dialog {
+ box-sizing: border-box; width: min(980px, 100vw); max-width: 100vw;
+ max-height: 100dvh; margin: auto; padding: 12px;
+ overflow: auto; overscroll-behavior: contain;
+ border: 1px solid #b4a47c; border-radius: 14px;
+ background: #213b40; color: #f3e7c9; font: 14px/1.5 system-ui;
+}
+.observatory-puzzle-dialog::backdrop { background: #081a21e8; }
+.observatory-puzzle-dialog > header {
+ position: sticky; top: -12px; z-index: 2; background: #213b40;
+ display: flex; justify-content: space-between; align-items: center; gap: 8px;
+ padding: 4px 0 10px;
+}
+.observatory-puzzle-dialog h2 { font-size: 1.15rem; margin: 0; }
+.observatory-puzzle-dialog button { min-height: 44px; min-width: 44px; margin: 0; }
+.observatory-workarea {
+ display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(260px, 1fr);
+ align-items: center; gap: 10px;
+}
+.observatory-workarea > svg {
+ grid-column: 1; grid-row: 1 / span 5; display: block; width: 100%;
+ height: min(420px, calc(100dvh - 100px)); max-height: min(420px, calc(100dvh - 100px));
+ min-height: 180px;
+}
+.observatory-workarea > :not(svg) { grid-column: 2; min-width: 0; }
+.observatory-workarea p { margin: 0; }
+.observatory-workarea .navigation-controls { margin: 0; gap: 6px; }
+.observatory-workarea .navigation-sky-controls { grid-template-columns: 1fr; gap: 8px; }
+.observatory-workarea .navigation-sky-controls > div { padding: 6px; }
+.observatory-workarea .navigation-sky-controls > div > div { display: flex; justify-content: center; gap: 6px; margin-top: 4px; }
+.observatory-workarea .navigation-chart { user-select: none; -webkit-user-select: none; touch-action: none; }
+.observatory-closeup-result { min-height: 3em; color: #f5d994; }
+@media (max-width: 620px) {
+ .observatory-workarea { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+ .observatory-workarea > svg { grid-row: auto; height: min(260px, 36dvh); max-height: min(260px, 36dvh); min-height: 150px; }
+ .observatory-workarea > :not(svg) { grid-column: 1; }
+ .observatory-workarea .navigation-sky-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+ .observatory-workarea button { padding: 8px; }
+}
+/* At high zoom or very short heights, retain readable art and scroll inside the dialog. */
+@media (max-height: 420px) {
+ .observatory-workarea > svg { min-height: 180px; }
+}

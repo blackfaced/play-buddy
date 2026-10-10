@@ -1,0 +1,8 @@
+.cargo-art-target { cursor: pointer; touch-action: manipulation; outline: none; }
+.cargo-art-target:focus-visible { filter: drop-shadow(0 0 5px #fff0a6); outline: 3px solid #ffe2a0; outline-offset: 4px; }
+.cargo-art-target[aria-disabled="true"] { cursor: default; }
+.cargo-art-target[aria-pressed="true"] { filter: drop-shadow(0 0 6px #ffdd81); }
+.cargo-operation, .cargo-feedback { line-height: 1.65; padding: .5rem .2rem; }
+.cargo-exploration .navigation-controls button { min-height: 44px; }
+.cargo-exploration details { margin-block: .8rem; }
+.cargo-exploration summary { cursor: pointer; min-height: 44px; }

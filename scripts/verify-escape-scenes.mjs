@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+await build({ entryPoints: ['src/escape/scenes.ts'], outfile: 'node_modules/.tmp-scenes.mjs', bundle: true, platform: 'node', format: 'esm' });
+const S = await import('../node_modules/.tmp-scenes.mjs');
+const fresh = S.sceneProgress(null, null, null, null);
+assert.deepEqual(fresh.completed, []);
+assert.equal(S.sceneUnlocked(fresh, 'cabin'), true);
+assert.equal(S.sceneUnlocked(fresh, 'expedition'), false);
+assert.equal(S.sceneUnlocked(fresh, 'foglight'), false);
+const old = S.sceneProgress(null, null, JSON.stringify({version:1,state:{started:true}}), null);
+assert.equal(S.sceneUnlocked(old, 'cabin'), true);
+const earned = S.completeScene(fresh, 'expedition');
+assert.equal(S.sceneUnlocked(earned, 'foglight'), true);
+const replay = S.sceneProgress(JSON.stringify(earned), null, null, null);
+assert.equal(S.sceneUnlocked(replay, 'foglight'), true);
+assert.deepEqual(S.sceneProgress('{', null, null, null), fresh);
+console.log('Scene progress: fresh locks, earned unlock retention, malformed save passed.');
