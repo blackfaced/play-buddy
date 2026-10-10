@@ -241,11 +241,15 @@ test("complete room: exploration, errors, inventory combination, reload, notes, 
     1,
   );
   await page.getByRole("button", { name: "本场景已完成 · 选择下一场景 →" }).click();
+  await page.locator('.scene-library').waitFor();
   assert.equal(await page.locator('.scene-library').count(), 1);
   await page.getByRole("button", { name: "进入航海员的钥匙", exact: true }).click();
+  await page.locator('.escape-finale').waitFor();
   assert.equal(await page.locator('.escape-finale').count(), 1);
   await page.getByRole("button", { name: "回船舱看看", exact: true }).click();
+  await turn(page, "甲板舱门");
   await page.getByRole("button", { name: "检查圆环匣", exact: true }).click();
+  await page.getByText("圆环匣打开了", { exact: false }).waitFor();
   assert.equal(await page.getByText("圆环匣打开了", { exact: false }).count(), 1);
   await close(page);
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem("play-buddy:escape:starlight:v1")).state.escaped), true);
