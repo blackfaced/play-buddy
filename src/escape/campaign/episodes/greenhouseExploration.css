@@ -22,31 +22,45 @@
 .gh-dialog-pipes .mech-bench > svg { max-height: min(420px, calc(100dvh - 230px)); min-height: 220px; }
 .gh-dialog-pipes .mech-tools { display: grid; grid-template-columns: repeat(3, 1fr); }
 .gh-dialog-pipes .mech-tools button:last-child { grid-column: 1 / -1; }
-.gh-card-help { margin: 0 0 8px; font-size: .85rem; line-height: 1.5; }
 .gh-dialog-growth .gh-growth-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .gh-dialog-growth .mech-plant-row { margin: 0; min-width: 0; }
 .gh-dialog-growth .mech-plant-row h3 { font-size: .95rem; }
 .gh-dialog-growth .mech-object-row { margin: 4px 0; }
-.gh-dialog-growth .mech-object-help { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .gh-dialog-growth .mech-object-row > svg { max-height: 160px; max-width: 480px; margin: auto; }
-.gh-dialog-growth .mech-object-status { margin: 4px 0; font-size: .8rem; line-height: 1.5; min-height: 3em; }
-.gh-dialog-growth .mech-slot-controls { gap: 4px; margin-top: 4px; }
-.gh-dialog-growth .mech-slot-controls button { font-size: .8rem; }
 .gh-dialog-bench { width: min(780px, 100vw); }
 .gh-dialog-bench .mech-bench > svg { max-height: 230px; }
 .gh-dialog-bench .mech-object-row { margin: 6px 0; }
 .gh-dialog-bench .mech-object-row > svg { max-height: 140px; max-width: 420px; margin: auto; }
-.gh-dialog-bench .mech-object-help, .gh-dialog-bench .mech-object-status { margin: 4px 0; }
 @media (max-width: 700px) {
  .gh-puzzle-dialog { padding: 10px; }
  .gh-puzzle-dialog .mech-bench > header h2 { font-size: 1rem; }
  .gh-dialog-growth .gh-growth-grid { grid-template-columns: 1fr; gap: 6px; }
  .gh-dialog-growth .mech-object-row > svg { max-height: 110px; max-width: 330px; }
- .gh-dialog-growth .mech-object-status { min-height: 1.5em; }
- .gh-dialog-growth .mech-slot-controls button { min-height: 44px; }
  .gh-dialog-bench .mech-bench > svg { max-height: 200px; }
 }
 @media (prefers-reduced-motion: reduce) {
  .gh-puzzle-dialog .mech-water { animation: none; }
  .gh-puzzle-dialog .mech-paper { transition: none; }
+}
+
+/* Small physical acknowledgments stay on the touched object, without puzzle coaching. */
+.gh-touch-decoration { pointer-events: none; }
+.gh-glass-touch { animation: gh-glass-touch 1.4s ease-out both; }
+.gh-cabinet-tug { animation: gh-cabinet-tug .55s ease-out; }
+@keyframes gh-glass-touch {
+ 0% { opacity: .2; transform: translateY(-3px); }
+ 20%, 65% { opacity: 1; transform: translateY(0); }
+ 100% { opacity: 0; transform: translateY(5px); }
+}
+@keyframes gh-cabinet-tug {
+ 0%, 100% { transform: translateX(0); }
+ 20% { transform: translateX(-7px); }
+ 40% { transform: translateX(-2px); }
+ 60% { transform: translateX(-6px); }
+ 80% { transform: translateX(-1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+ .gh-glass-touch, .gh-cabinet-tug { animation: none; }
+ .gh-glass-touch { opacity: 1; }
+ .gh-cabinet-tug { transform: translateX(-5px); }
 }

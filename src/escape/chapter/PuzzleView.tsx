@@ -84,7 +84,7 @@ export default function PuzzleView({
                   </button>
                 ))}
             </div>}
-            {!progress.solved && <p className="chapter-controls-note">
+            {!progress.solved && <p className="chapter-controls-note chapter-sr-only">
               先选图形，再点位置。已放下的图形可以换位置；选中格子里的图形后，可用下方按钮移回托盘。
             </p>}
             {puzzle.grid ? <div className="chapter-maker-frame" aria-label="左上斜切角、右下双铆钉的纹片铜框"><div className="chapter-pattern-grid">
@@ -358,7 +358,7 @@ export default function PuzzleView({
                 </button>
               ))}
             </div>}
-            {!progress.solved && <p className="chapter-controls-note">
+            {!progress.solved && <p className="chapter-controls-note chapter-sr-only">
               选一个空格，再点数字。键盘也可输入 1–4，Delete
               擦除；整张棋盘一起检查。
             </p>}

@@ -21,9 +21,9 @@ await act(async()=>{tree=create(render());});await act(async()=>tree.root.findAl
 const click=async name=>act(async()=>tree.root.findAllByType('button').find(n=>text(n)===name).props.onClick());
 let before=[...state.values.bars];
 await act(async()=>tube(0).props.onPointerDown(event(110)));await act(async()=>board().props.onPointerMove(event(160)));assert.equal(board().findAll(n=>n.type==='g'&&n.props.pointerEvents==='none').length,1,'drag ghost is visible');await act(async()=>board().props.onPointerCancel());assert.deepEqual(state.values.bars,before);
-await click('拿起燕鸥铜管');await act(async()=>tree.root.findByType('section').props.onKeyDown({key:'Escape'}));assert.ok(tree.root.findAllByType('button').find(n=>text(n)==='挂到左钩').props.disabled);
+await act(async()=>tube(0).props.onKeyDown({key:'Enter',preventDefault(){}}));await act(async()=>tree.root.findByType('section').props.onKeyDown({key:'Escape'}));assert.equal(board().findAll(n=>n.props['aria-pressed']===true).length,0);
 await act(async()=>tube(0).props.onPointerDown(event(110)));await act(async()=>board().props.onPointerUp(event(650)));assert.deepEqual(state.values.bars,before,'outside release does not clamp into a destination');
 await act(async()=>tube(0).props.onPointerDown(event(110)));await act(async()=>board().props.onPointerMove(event(420)));await act(async()=>board().props.onPointerUp(event(430)));assert.deepEqual(state.values.bars,[before[2],before[1],before[0]]);
 before=[...state.values.bars];await act(async()=>tube(0).props.onKeyDown({key:'Enter',preventDefault(){}}));await act(async()=>tube(1).props.onKeyDown({key:' ',preventDefault(){}}));assert.deepEqual(state.values.bars,[before[1],before[0],before[2]]);
-await click('拿起燕鸥铜管');await click('收起近景');await click('掀开风铃帘');assert.ok(tree.root.findAllByType('button').find(n=>text(n)==='挂到左钩').props.disabled,'navigation cancels held source');
+await act(async()=>tube(0).props.onKeyDown({key:'Enter',preventDefault(){}}));await click('收起近景');await click('掀开风铃帘');assert.equal(board().findAll(n=>n.props['aria-pressed']===true).length,0,'navigation cancels held source');
 assert.deepEqual(A.musicNormalize(JSON.parse(JSON.stringify(state))).values.bars,state.values.bars);await act(async()=>tree.unmount());console.log('Music drag ghost, cancel, Escape, outside drop, keyboard, navigation and reload passed.');

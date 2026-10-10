@@ -81,7 +81,7 @@ export default function LensMap({puzzle,input,onChange}:{puzzle:FilterPuzzle;inp
       <div className="chapter-lenses" aria-label="转动镜盘">
         {puzzle.lenses.map(lens=><button key={lens.id} disabled={!active} aria-label={`转到${lens.name}镜片`} aria-pressed={input.lens===lens.id} onClick={()=>onChange({...input,lens:lens.id,position})}><span style={{color:lens.color}}>{lens.symbol}</span> {lens.name}</button>)}
       </div>
-      <p id={`${clip}-instructions`}>拖动镜框，或点纸面移动。键盘：方向键移动，空格拿起／放回。</p>
+      <p className="chapter-sr-only" id={`${clip}-instructions`}>拖动镜框，或点纸面移动。键盘：方向键移动，空格拿起／放回。</p>
     </div>
     <p className="chapter-sr-only" aria-live="polite">{visible.map(clue=>`${clue.label}：${clue.text}`).join('；') || '镜下没有清晰刻记'}</p>
   </div>;

@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { ReactNode, PointerEvent } from 'react';
 import {swapAt} from './clockworkState';
 import './clockworkShared.css';
 /** The artwork and its keyboard controls share the same pick/place operation. */
 export function ObjectRow({items,onChange,render,label,slotLabels,disabled=false}:{items:number[];onChange:(next:number[])=>void;render:(item:number,slot:number)=>ReactNode;label:string;slotLabels?:string[];disabled?:boolean}){
+ const instructionsId=useId();
  const [selected,setSelected]=useState<number|null>(null);
  const [drag,setDrag]=useState<{index:number,x:number,y:number}|null>(null);
  const gesture=useRef<{index:number,pointerId:number,startX:number,startY:number,moved:boolean,cancelled:boolean,touch:boolean}|null>(null);
@@ -40,9 +41,9 @@ export function ObjectRow({items,onChange,render,label,slotLabels,disabled=false
   if(e.currentTarget.hasPointerCapture?.(g.pointerId))e.currentTarget.releasePointerCapture(g.pointerId);
  };
  return <div className="mech-object-row" onKeyDown={e=>{if(e.key==='Escape'){cancel();setSelected(null);}}}>
- <p className="mech-object-help">点一下拿起物件，再点另一格交换；也可横向拖动。再点原格或按 Esc 放回。</p>
- <svg role="group" aria-label={label} viewBox={`0 0 ${items.length*150} 150`} onPointerMove={move} onPointerUp={end} onPointerCancel={cancel} onLostPointerCapture={cancel}>
- {items.map((item,i)=><g key={i} role="button" tabIndex={disabled?-1:0} aria-disabled={disabled} aria-pressed={selected===i} aria-label={`${selected===null?'拿起':selected===i?'放回':'放到'}${name(i)}`} className="mech-object-slot" transform={`translate(${i*150},0)`}
+ <p id={instructionsId} className="mech-object-help mech-sr">点一下拿起物件，再点另一格交换；也可横向拖动。键盘用 Tab 选择格子，Enter 或空格拿起、交换。再点原格或按 Esc 放回。</p>
+ <svg role="group" aria-label={label} aria-describedby={instructionsId} viewBox={`0 0 ${items.length*150} 150`} onPointerMove={move} onPointerUp={end} onPointerCancel={cancel} onLostPointerCapture={cancel}>
+ {items.map((item,i)=><g key={i} role="button" tabIndex={disabled?-1:0} aria-disabled={disabled} aria-describedby={instructionsId} aria-pressed={selected===i} aria-label={`${selected===null?'拿起':selected===i?'放回':'放到'}${name(i)}`} className="mech-object-slot" data-drop-target={selected!==null&&selected!==i&&!disabled} transform={`translate(${i*150},0)`}
  onPointerDown={e=>{
   if(disabled||e.isPrimary===false||(e.button!==undefined&&e.button!==0)||gesture.current)return;
   e.currentTarget.ownerSVGElement?.setPointerCapture(e.pointerId);
@@ -50,11 +51,11 @@ export function ObjectRow({items,onChange,render,label,slotLabels,disabled=false
  }}
  onClick={e=>{if(e.detail===0)pick(i);}}
  onKeyDown={e=>{if(e.key==='Escape'){cancel();setSelected(null);}else if((e.key==='Enter'||e.key===' ')&&!e.repeat){e.preventDefault();pick(i);}}}>
- <rect x="5" y="5" width="140" height="140" rx="15" fill={selected===i?'#fff1bf':'#fff8e6'} stroke={selected===i?'#f7bd5b':'#907351'} strokeWidth={selected===i?5:3}/>
- <g className="mech-grabbable" transform={drag?.index===i?`translate(${drag.x},${drag.y})`:selected===i?'translate(0,-4)':undefined}>{render(item,i)}</g>
+ <rect className="mech-object-frame" x="5" y="5" width="140" height="140" rx="15" fill={selected===i?'#fff1bf':'#fff8e6'} stroke={selected===i?'#f7bd5b':'#907351'} strokeWidth={selected===i?5:3}/>
+ <g pointerEvents="none" className="mech-grabbable" transform={drag?.index===i?`translate(${drag.x},${drag.y})`:selected===i?'translate(0,-4)':undefined}>{render(item,i)}</g>
+ <rect data-object-hit={true} x="0" y="0" width="150" height="150" fill="transparent" pointerEvents="all"/>
  </g>)}
- </svg><p className="mech-object-status" role="status">{selected===null?'尚未拿起物件':`已拿起${name(selected)}的物件，请点要放入的格子。`}</p>
- <div className="mech-slot-controls" style={{gridTemplateColumns:`repeat(${items.length},1fr)`}}>{items.map((item,i)=><button key={i} type="button" aria-pressed={selected===i} onClick={()=>pick(i)} disabled={disabled}>{selected===null||selected===i?`拿起${name(i)}`:`放到${name(i)}`}<span className="mech-sr">，物件 {item}{selected===i?'，已拿起，再按放回':''}</span></button>)}</div></div>;
+ </svg><p className="mech-sr" role="status" aria-live="polite" aria-atomic="true">{selected===null?'尚未拿起物件':`已拿起${name(selected)}的物件，请点要放入的格子。`}</p></div>;
 }
 export function Workbench({title,children,onBack}:{title:string;children:ReactNode;onBack:()=>void}){return <section className="mech-bench" aria-label={title}><header><h2>{title}</h2><button onClick={onBack}>← 环顾四周</button></header>{children}</section>;}
 export function TickRing({cx=75,cy=75,r=52}:{cx?:number;cy?:number;r?:number}){return <g>{Array.from({length:12},(_,i)=>{const a=i*Math.PI/6;return <path key={i} d={`M${cx+Math.sin(a)*(r-6)} ${cy-Math.cos(a)*(r-6)}L${cx+Math.sin(a)*r} ${cy-Math.cos(a)*r}`} stroke="#5a432e" strokeWidth={i===0?4:2}/>;})}<path d={`M${cx-4} ${cy-r-10}h8l-4 5z`} fill="#8c392c"/></g>;}

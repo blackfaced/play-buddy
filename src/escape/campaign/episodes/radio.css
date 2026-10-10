@@ -41,3 +41,10 @@
 .radio-circuit { user-select: none; -webkit-user-select: none; }
 /* Painted wires must not intercept the larger source hit rectangles beneath them. */
 .radio-circuit > g > path { pointer-events: none; }
+
+/* Keep direct circuit targets at least 44px even in a narrow close-up. */
+.radio-apparatus-scroll { overflow: auto; overscroll-behavior: contain; }
+.radio-puzzle-dialog .radio-circuit { min-width: 330px; }
+.radio-circuit [role=button] { outline: none; }
+.radio-circuit [role=button]:focus-visible { outline: 3px solid #fff2af; outline-offset: 2px; }
+.radio-circuit .radio-drop-target { stroke: #f4dda4; stroke-width: 2; stroke-dasharray: 5 5; }

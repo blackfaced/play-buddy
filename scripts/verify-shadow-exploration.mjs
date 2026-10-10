@@ -31,7 +31,7 @@ await click('查看箱盖里的拓印');
 for(const [name,n] of [['月亮',1],['小船',3],['飞鸟',2]])for(let i=0;i<n;i++)await click(`${name}纸偶 ↻`);
 assert.ok(state.solved.includes('traces'));await back();
 await click('走到观众席');await click('查看幕布配重');await click('试拉幕绳');assert.equal(state.values.curtainRaised,false);
-const choose=async(from,to)=>{const bs=()=>tree.root.findAllByType('button').filter(n=>/^拿起|^放到/.test(text(n)));await act(async()=>bs()[from].props.onClick());await act(async()=>bs()[to].props.onClick());};
+const choose=async(from,to)=>{const bs=()=>{const puppets=tree.root.findAll(n=>n.type==='g'&&n.props['data-pickup']);return puppets.length?puppets:tree.root.findAllByProps({className:'mech-object-slot'});};await act(async()=>bs()[from].props.onKeyDown({key:'Enter',repeat:false,preventDefault(){}}));await act(async()=>bs()[to].props.onKeyDown({key:' ',repeat:false,preventDefault(){}}));};
 await choose(0,2);await click('试拉幕绳');assert.equal(state.values.curtainRaised,true);await choose(0,2);assert.equal(state.values.curtainRaised,true,'earned raised curtain remains latched');await back();
 await click('走到放映廊');await click('查看灯闸的方孔');assert.equal(state.values.lampOpen,false);await click('选择灯闸柄');await key('把灯闸柄装入方孔',' ');assert.equal(state.values.lampOpen,true);
 await click('查看灯后的舞台');await click('选择纸偶托盘');await key('把纸偶托盘放上轨道');assert.equal(state.values.puppetsMounted,true);
@@ -42,5 +42,5 @@ for(let i=0;i<3;i++){const sliders=tree.root.findAllByType('input').filter(n=>n.
 const interrupted=roundtrip();await act(async()=>tree.unmount());state=interrupted;await act(async()=>{tree=create(React.createElement(M.shadowEpisode.Component,props()));});await click('走到放映廊');await click('查看灯后的舞台');await click('拉下演出灯杆');assert.equal(completed,1);assert.ok(M.shadowEpisode.isComplete(state));roundtrip();
 assert.equal(tree.root.findAllByProps({className:'mech-rules'}).length,0);
 await back();await click('走到道具侧翼');await click('查看箱盖里的拓印');
-for(const variant of ['easy','standard','challenge']){mode=variant;await act(async()=>tree.update(React.createElement(M.shadowEpisode.Component,props())));assert.ok(tree.root.findAllByProps({className:'shadow-operation'}).length);assert.equal(tree.root.findAll(n=>n.props.style?.opacity<1).length,0);assert.equal(tree.root.findAllByProps({className:'mech-rules'}).length,variant==='easy'?1:0);}
+for(const variant of ['easy','standard','challenge']){mode=variant;await act(async()=>tree.update(React.createElement(M.shadowEpisode.Component,props())));assert.equal(tree.root.findAllByProps({className:'shadow-operation'}).length,0);assert.equal(tree.root.findAll(n=>n.props.style?.opacity<1).length,0);assert.equal(tree.root.findAllByProps({className:'mech-rules'}).length,variant==='easy'?1:0);}
 await act(async()=>tree.unmount());console.log('Shadow exploration: physical discovery/use, keyboard scene targets, reversible boards, original ending, reload and legacy migration pass.');

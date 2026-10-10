@@ -19,7 +19,7 @@ const move=async(x,y,extra={})=>act(async()=>board().props.onPointerMove(evt(x,y
 const up=async(x,y,extra={})=>act(async()=>board().props.onPointerUp(evt(x,y,extra)));
 const click=async(i)=>act(async()=>slots()[i].props.onClick?.({detail:1}));
 const tap=async i=>{await down(i);await up(i*150+75,75);await click(i);};
-await tap(0);assert.equal(slots()[0].props['aria-pressed'],true,'actual SVG tap selects artwork');assert.equal(changes,0);
+await tap(0);assert.equal(slots()[0].props['aria-pressed'],true,'actual SVG tap selects artwork');assert.equal(changes,0);assert.equal(slots()[0].props['data-drop-target'],false);assert.equal(slots()[1].props['data-drop-target'],true,'other slots show a non-answer drop affordance');
 await tap(2);assert.deepEqual(items,[2,1,0]);assert.equal(changes,1,'pointerup + click swaps exactly once');assert.equal(slots()[2].props['aria-pressed'],false);
 await down(0);await move(230,75);await up(230,75);await click(0);assert.deepEqual(items,[1,2,0]);assert.equal(changes,2);
 await down(0);await move(230,75);await move(75,75);await up(75,75);await click(0);assert.equal(changes,2,'drag returning to origin is not tap');assert.equal(slots()[0].props['aria-pressed'],false);
@@ -31,7 +31,12 @@ await down(0,75,75,{pointerType:'touch'});await move(230,78,{pointerType:'touch'
 const key=async(i,key)=>act(async()=>slots()[i].props.onKeyDown({key,repeat:false,preventDefault(){}}));
 await key(0,'Enter');assert.equal(slots()[0].props['aria-pressed'],true);await key(2,' ');assert.equal(changes,4);await key(1,'Enter');await key(1,'Escape');assert.equal(slots()[1].props['aria-pressed'],false);
 await tap(0);await tap(0);assert.equal(changes,4,'same-slot second tap puts back without change');
-assert.ok(tree.root.findByProps({className:'mech-object-help'}).children.length);
+assert.equal(tree.root.findAllByType('button').length,0,'artwork is the sole pickup/drop control');
+assert.equal(tree.root.findAllByProps({className:'mech-slot-controls'}).length,0);
+assert.ok(tree.root.findByProps({className:'mech-object-help mech-sr'}).children.length,'keyboard instructions remain screen-reader accessible');
+assert.equal(tree.root.findByProps({role:'status'}).props.className,'mech-sr','idle and pickup narration must not duplicate the artwork');
+assert.equal(tree.root.findAllByProps({'data-object-hit':true}).length,items.length,'each complete slot has a transparent hit area');
+for(const slot of slots()) { assert.equal(slot.props.tabIndex,0); assert.ok(slot.props['aria-describedby']); }
 assert.ok(tree.root.findAllByType('path').length>0,'source bird artwork is rendered');
 await act(async()=>tree.update(React.createElement(M.ObjectRow,{...props(),disabled:true})));await tap(0);assert.equal(changes,4);
 await act(async()=>tree.unmount());
@@ -48,7 +53,8 @@ for(const [def,label] of [[M.shadowEpisode,'查看幕布配重'],[M.greenhouseEp
  if(label==='展开生长画片')await activate('走进工具间');
  if(label==='查看接雨花盆')await activate('沿小径走到雨棚');
  await activate(label);
- assert.ok(tree.root.findAllByProps({className:'mech-object-help'}).length);
+ assert.ok(tree.root.findAllByProps({className:'mech-object-help mech-sr'}).length);
+ assert.equal(tree.root.findAllByProps({className:'mech-slot-controls'}).length,0);
  assert.equal(tree.root.findAll(n=>n.props.style?.opacity<1).length,0);
  const row=()=>tree.root.findAllByType(M.ObjectRow)[0];
  const initial=[...row().props.items];
@@ -66,4 +72,4 @@ for(const [def,label] of [[M.shadowEpisode,'查看幕布配重'],[M.greenhouseEp
 }
 const css=readFileSync('src/escape/campaign/episodes/clockworkShared.css','utf8');
 assert.match(css,/touch-action:\s*pan-y pinch-zoom/);assert.match(css,/\.mech-object-row>svg[^}]*overflow:\s*hidden/);
-console.log('ObjectRow real artwork event sequences: two taps, click suppression, drag, outside/cancel/capture loss, touch scroll, keyboard, disabled and all-mode help pass.');
+console.log('ObjectRow real artwork event sequences: two taps, click suppression, drag, outside/cancel/capture loss, touch scroll, keyboard, disabled and accessible artwork-only controls in all modes pass.');

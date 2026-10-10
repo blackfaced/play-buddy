@@ -185,7 +185,6 @@ export function SearchPile({
         {navigation
           ? "航海桌上叠着海图、旧书和船具。"
           : "储物架上挤着缆绳、帆布和用过的船具。"}
-        点击想检查的物件，可以随时离开再回来。
       </p>
       {mode === "easy" && <ul className="adventure-find-list" aria-label="本处待寻物件">
         {targets.map((item) => (
@@ -259,9 +258,6 @@ export function SearchPile({
           })}
         </div>
       </div>
-      <p className="adventure-scroll-tip">
-        可以移动、翻开或拿起近景里的物件。
-      </p>
       {mode === "easy" && (
         <p data-guidance="rule">
           一些物件在纸张、盒盖或帆布下面。先移动遮挡，再点击露出来的物件。

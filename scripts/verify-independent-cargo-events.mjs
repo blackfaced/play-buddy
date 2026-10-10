@@ -17,7 +17,7 @@ await click('前往小船甲板');
 await click('拿起贝壳箱');slots([-1,-1,-1,-1]);await click('货舱第1格',true);slots([0,-1,-1,-1]);
 await click('拿起树叶箱',true);await click('货舱第2格');slots([0,1,-1,-1]);
 await click('货舱第1格');await click('货舱第2格');slots([1,0,-1,-1]);
-await click('货舱第2格');await click('取消拿取');await click('货舱第3格');slots([1,0,-1,-1]);
+await click('货舱第2格');await click('货舱第2格');await click('货舱第3格');slots([1,0,-1,-1]);
 await click('货舱第1格');await click('前往货物码头');await click('前往小船甲板');await click('货舱第3格');slots([1,0,-1,-1]);
 await click('货舱第2格');await click('码头放回区',true);slots([1,-1,-1,-1]);
 await click('前往下游水闸');const before=structuredClone(state.values.slots);await click('扳动水闸把手');assert.deepEqual(state.values.slots,before);assert.equal(state.values.gate,false);

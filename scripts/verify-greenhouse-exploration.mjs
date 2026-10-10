@@ -27,7 +27,7 @@ assert.equal(state.values.floatRaised,false,'correct pipe arrangement alone cann
 await key('转动第1段弯管');assert.equal(state.values.floatRaised,true,'remote latch remains raised after reconfiguration');await key('转动第1段弯管');await key('转动第1段弯管');await key('转动第1段弯管');
 await click('← 环顾四周');await click('走进工具间');assert.ok(tree.root.findAllByProps({'data-water-level':'filled'}).length);
 const floated=M.parseEpisode(d,M.serializeEpisode(d,state)).state;await act(async()=>tree.unmount());state=floated;await mount();assert.equal(state.values.floatRaised,true);await key('拉开矮柜');await click('取出柜中的生长画片');assert.equal(state.values.cards,true);await click('展开生长画片');
-const choose=async(a,b)=>{const bs=()=>tree.root.findAllByType('button').filter(n=>/^拿起|^放到/.test(text(n)));await act(async()=>bs()[a].props.onClick());await act(async()=>bs()[b].props.onClick());};
+const choose=async(a,b)=>{const slots=()=>tree.root.findAllByProps({className:'mech-object-slot'});await act(async()=>slots()[a].props.onKeyDown({key:'Enter',repeat:false,preventDefault(){}}));await act(async()=>slots()[b].props.onKeyDown({key:' ',repeat:false,preventDefault(){}}));};
 for(let row=0;row<3;row++)for(let dest=0;dest<3;dest++){const from=state.values[['sun','bell','fern'][row]].indexOf(dest);if(from!==dest)await choose(row*3+from,row*3+dest);}
 assert.ok(state.solved.includes('growth'));
 await click('← 环顾四周');await click('返回玻璃门廊');await click('沿小径走到雨棚');await click('查看接雨花盆');await click('摇动雨水泵');assert.equal(done,0);

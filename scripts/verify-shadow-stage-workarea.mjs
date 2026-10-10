@@ -14,6 +14,8 @@ const slot=i=>tree.root.findByProps({'data-stage-slot':i});
 const shadow=i=>slot(i).findByProps({'data-projected-shadow':true});
 const puppet=i=>slot(i).findByProps({'data-physical-puppet':true});
 const serial=n=>JSON.stringify(n.children.map(c=>({type:c.type,props:c.props})));
+assert.equal(tree.root.findAllByProps({className:'shadow-pickup'}).length,0,'no wordy pickup button row');
+assert.equal(tree.root.findAllByProps({className:'shadow-rail-input'}).length,3,'native sliders live directly on the physical rails');
 const beforeShadow=serial(shadow(0)),beforePuppet=serial(puppet(0));
 await act(async()=>slot(0).findAllByType('button').find(n=>n.props['aria-label']==='左轨纸偶顺时针旋转').props.onClick());
 assert.notEqual(serial(shadow(0)),beforeShadow,'rotation changes projected geometry');
@@ -31,7 +33,7 @@ for(let track=0;track<3;track++)for(const endpoint of [1,2,3,1]){
  assert.equal(normalizeShadow(saved).values.depths[track],endpoint,'both slider endpoints survive normalization');
 }
 assert.equal(tree.root.findAllByType('input').length,3,'only actual puppet sliders remain; no separate demo slider');
-const select=i=>slot(i).findAllByType('button').find(n=>n.props['data-pickup']===true);
+const select=i=>slot(i).findByProps({'data-pickup':true});
 await act(async()=>select(0).props.onClick());assert.equal(select(0).props['aria-pressed'],true);
 await act(async()=>select(0).props.onClick());assert.equal(select(0).props['aria-pressed'],false);
 await act(async()=>select(0).props.onClick());
@@ -58,6 +60,27 @@ await act(async()=>select(0).props.onPointerUp({clientX:250,clientY:200,pointerI
 assert.deepEqual(value.pieces,[beforeDrag[2],beforeDrag[1],beforeDrag[0]],'horizontal pointer drop swaps physical tracks');
 await act(async()=>select(0).props.onClick());assert.equal(select(0).props['aria-pressed'],false,'synthetic click after drag is suppressed');
 const pointer=(x,y,extra={})=>({clientX:x,clientY:y,pointerId:1,button:0,isPrimary:true,currentTarget:{setPointerCapture(){}},...extra});
+// The owning pointer alone may finish a swap; feedback follows the real destination.
+const ownedBefore=[...value.pieces];
+await act(async()=>visual(0).props.onPointerDown(pointer(50,200)));
+await act(async()=>visual(0).props.onPointerMove(pointer(250,200)));
+assert.ok(slot(2).props.className.includes('is-drop-target'));
+await act(async()=>visual(0).props.onPointerUp(pointer(250,200,{pointerId:2})));
+assert.deepEqual(value.pieces,ownedBefore,'foreign pointer cannot finish owned drag');
+await act(async()=>visual(0).props.onPointerCancel(pointer(250,200,{pointerId:2})));
+assert.ok(slot(2).props.className.includes('is-drop-target'),'foreign cancellation cannot erase owned feedback');
+await act(async()=>visual(0).props.onPointerCancel(pointer(250,200)));
+assert.ok(!slot(2).props.className.includes('is-drop-target'));
+const rail=()=>slot(0).findByType('input');
+for(const end of ['cancel','escape']) {
+ await act(async()=>rail().props.onChange({target:{value:'1'}}));
+ await act(async()=>rail().props.onPointerDown(pointer(82,264)));
+ await act(async()=>rail().props.onChange({target:{value:'3'}}));
+ assert.equal(shadow(0).props['data-scale'],3,'rail drag projects live');
+ if(end==='cancel') await act(async()=>rail().props.onPointerCancel(pointer(146,264)));
+ else await act(async()=>tree.root.findByProps({'data-shadow-workarea':true}).props.onKeyDown({key:'Escape',preventDefault(){},stopPropagation(){}}));
+ assert.equal(value.depths[0],1,'cancelled rail manipulation restores original position');
+}
 for(const [x,y] of [[-20,200],[320,200],[150,-20],[150,600],[55,260]]){
  const before=[...value.pieces];
  await act(async()=>visual(0).props.onPointerDown(pointer(50,200)));

@@ -13,7 +13,7 @@ const text=n=>typeof n==='string'?n:(n.children??[]).map(text).join('');
 const find=label=>{const b=tree.root.findAll(n=>n.type==='button'||n.props.role==='button').find(n=>text(n).trim()===label||n.props['aria-label']===label);assert.ok(b,`missing ${label}`);return b;};
 const click=async label=>act(async()=>find(label).props.onClick());
 const walk=async target=>{const place=()=>text(tree.root.findByProps({className:'cw-location'}));let current=place().includes('检修夹层')?'service':place().includes('工作台')?'bench':place().includes('配重井')?'shaft':'room';if(current===target)return;if(current==='service'){await click('从检修洞回配重井');current='shaft';}if(current!=='room'){await click(current==='bench'?'穿过木门回阁楼':'沿楼梯回到阁楼');}if(target!=='room')await click(target==='bench'?'穿过木门到工作间':'沿楼梯下到配重井');};
-const choose=async (from,to)=>{const bs=()=>tree.root.findAllByType('button').filter(b=>/^拿起|^放到/.test(text(b)));await act(async()=>bs()[from].props.onClick());await act(async()=>bs()[to].props.onClick());};
+const choose=async (from,to)=>{const slots=()=>tree.root.findAllByProps({className:'mech-object-slot'});await act(async()=>slots()[from].props.onKeyDown({key:'Enter',repeat:false,preventDefault(){}}));await act(async()=>slots()[to].props.onKeyDown({key:' ',repeat:false,preventDefault(){}}));};
 const mount=async(d,s=d.initial())=>{def=d;state=s;await act(async()=>{tree=create(React.createElement(d.Component,props()));});};
 const unmount=async()=>act(async()=>tree.unmount());
 const roundtrip=()=>assert.deepEqual(M.parseEpisode(def,M.serializeEpisode(def,state)).state,state);

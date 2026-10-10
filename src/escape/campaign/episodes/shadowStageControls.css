@@ -1,0 +1,16 @@
+/* The artwork is the control surface; native rail sliders retain keyboard/touch semantics. */
+.shadow-direct-stage .shadow-rail-art{position:relative;line-height:0}
+.shadow-direct-stage .shadow-rail-art>svg{display:block;width:100%;height:auto}
+.shadow-direct-stage .shadow-rail-input{position:absolute;box-sizing:border-box;left:calc(39.0476% - 22px);top:calc(90.411% - 22px);width:calc(30.4762% + 44px);height:44px;margin:0;padding:0;appearance:none;-webkit-appearance:none;background:transparent;cursor:ew-resize;touch-action:pan-y;z-index:2;border:0;border-radius:5px}
+.shadow-direct-stage .shadow-rail-input::-webkit-slider-runnable-track{height:44px;background:transparent;border:0}
+.shadow-direct-stage .shadow-rail-input::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:44px;height:44px;background:transparent;border:0}
+.shadow-direct-stage .shadow-rail-input::-moz-range-track{height:44px;background:transparent;border:0}
+.shadow-direct-stage .shadow-rail-input::-moz-range-thumb{width:44px;height:44px;background:transparent;border:0}
+.shadow-direct-stage .shadow-rail-input:focus-visible{outline:2px solid #ffe393;outline-offset:0;background:#ffe39312}
+.shadow-direct-stage .shadow-turns{display:flex;justify-content:center;gap:0;padding:0 0 3px}
+.mech-bench .shadow-direct-stage .shadow-turns button{box-sizing:border-box;flex:0 0 44px;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;margin:0;border:0;border-radius:50%;font-size:1.65rem;background:transparent;color:#f5d494}
+.mech-bench .shadow-direct-stage .shadow-turns button:hover{background:#f5d49420}
+.shadow-direct-stage .shadow-stage-column.is-drop-target{box-shadow:inset 0 0 0 3px #79e5e1;background:#79e5e120}
+.shadow-direct-stage .shadow-stage-column.is-selected .shadow-puppet-target{cursor:grabbing}
+.shadow-direct-stage .shadow-stage-status.mech-sr{position:absolute;width:1px;height:1px;min-height:0;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+.shadow-stage-dialog .shadow-direct-stage{width:min(100%,max(280px,calc((100dvh - 250px)*2.15)));max-width:650px}

@@ -24,9 +24,9 @@ for(const mode of ['easy','standard','challenge']){
  await click('从检修洞回配重井');await click('沿楼梯回到阁楼');await click('穿过木门到工作间');sceneCheck();
  await click('拉开工作台抽屉');await click('查看拉开的抽屉');await click('查看拉开的抽屉');assert.equal(state.values.foundGears.filter(n=>n===24).length,1);
  await click('拿起桌边的短摇柄');await click('查看工作台上的残画');await button('把拾回的画片放进画框');
- // Use actual keyboard-compatible slot controls, including Escape cancellation.
- await button('拿起第1格');await act(async()=>tree.root.findByProps({className:'mech-object-row'}).props.onKeyDown({key:'Escape'}));assert.deepEqual(state.values.mural,[2,0,1,3]);
- await button('拿起第1格');await button('放到第2格');await button('拿起第2格');await button('放到第4格');await button('拿起第3格');await button('放到第4格');assert.deepEqual(state.values.mural,[0,3,2,1]);
+ // Operate the actual SVG slots with keyboard, including Escape cancellation.
+ await key('拿起第1格');await act(async()=>tree.root.findByProps({className:'mech-object-row'}).props.onKeyDown({key:'Escape'}));assert.deepEqual(state.values.mural,[2,0,1,3]);
+ await key('拿起第1格');await key('放到第2格');await key('拿起第2格');await key('放到第4格');await key('拿起第3格');await key('放到第4格');assert.deepEqual(state.values.mural,[0,3,2,1]);
  await button('← 环顾四周');await click('穿过木门回阁楼');await click('沿楼梯下到配重井');await click('把短摇柄装上起重器并转动');await click('钻进窗下的检修洞');await click('取出配重下面的齿轮');assert.deepEqual(state.values.foundGears,[24,36,48]);
  await click('从检修洞回配重井');await click('沿楼梯回到阁楼');await click('掀起齿轮笼的布');await click('查看齿轮笼');if(mode==='challenge')assert.equal(text(tree.root.findByProps({className:'cw-gear-status'})),'','fresh challenge hides solving instructions');await button('摇动曲柄一圈 ↻');assert.equal(state.values.upperOpen,false);
  for(const [t,axis] of [[24,'芦苇'],[36,'海浪'],[48,'松树']]){await button(`${t} 齿 · 托盘`);await button(`装到${axis}轴`);}
