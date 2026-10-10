@@ -25,3 +25,8 @@
 .cw-gear-ticks path[stroke] { stroke: #cbb68b; }
 .cw-gear-ticks path[fill] { fill: #ffd591; }
 .cw-gear-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.cw-physical-control,.cw-tray-control { outline:none; }
+.cw-physical-control:focus-visible > circle[fill="transparent"] { stroke:#8ce5df; stroke-width:4; }
+.cw-tray-control { cursor:pointer; }
+.cw-tray-control:focus-visible > rect { stroke:#8ce5df; stroke-width:4; }
+.cw-physical-control:hover { filter:brightness(1.08); }

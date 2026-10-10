@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent } from 'react';
+import { useId, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent, PointerEvent } from 'react';
 import { GEAR_TEETH, SOCKET_DISTANCES, gearReadings, gearsMesh, placeClockworkGear } from './clockworkLogic';
 import { Habitat, TickRing } from './clockworkShared';
 import './clockworkGears.css';
@@ -23,6 +23,7 @@ function Wheel({ teeth, angle = 0, animate = false }: { teeth: number; angle?: n
  </g>;
 }
 export function ClockworkGears({ mode = 'standard', gears, testedGears, foundGears, crank, onChange, onCrank }: Props) {
+ const helpId=useId();
  const [selected, setSelected] = useState<number | null>(null);
  const [drag, setDrag] = useState<Drag | null>(null);
  const signature = gears.join(',');
@@ -51,6 +52,7 @@ export function ClockworkGears({ mode = 'standard', gears, testedGears, foundGea
   if (next.join(',') !== signature) onChange(next);
   setSelected(null);
  };
+ const keyboard = (event: KeyboardEvent<SVGGElement>, action: () => void) => { if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) { event.preventDefault(); suppressClick.current=false; action(); } };
  const choose = (tooth: number) => setSelected(selected === tooth ? null : tooth);
  const mountClick = (i: number) => { if (selected !== null) place(i); else if (gears[i] > 0) choose(gears[i]); };
  const click = (action: () => void) => { if (suppressClick.current) { suppressClick.current = false; return; } action(); };
@@ -78,8 +80,8 @@ export function ClockworkGears({ mode = 'standard', gears, testedGears, foundGea
  }} onClickCapture={e => {
   if (suppressClick.current) { suppressClick.current = false; e.preventDefault(); e.stopPropagation(); }
  }} onKeyDown={e => { if (e.key === 'Escape') { if (drag !== null || selected !== null) e.preventDefault?.(); cancel(); setSelected(null); } else if (e.key === 'Enter' || e.key === ' ') suppressClick.current = false; }}>
-  <p className="cw-gear-instructions">拖动齿轮到转轴；也可以先点齿轮，再点转轴。装好的轮子可以交换，或放回托盘。摇动曲柄试转。Esc 取消拿取。</p>
-  <svg ref={svg} className="cw-gear-board" viewBox="0 0 600 490" aria-label="齿轮工作台：十二齿主动轮、三个转轴和下方的零件托盘" onPointerMove={e => {
+  <p id={helpId} data-gear-help className={mode==='challenge'?'cw-gear-sr':'cw-gear-instructions'}>拖动齿轮到转轴；也可以先点齿轮，再点转轴。装好的轮子可以交换，或放回托盘。键盘用 Tab 移动，Enter 或空格拿起与放置，Esc 取消拿取。摇动曲柄试转。</p>
+  <svg ref={svg} className="cw-gear-board" aria-describedby={helpId} viewBox="0 0 600 490" aria-label="齿轮工作台：十二齿主动轮、三个转轴和下方的零件托盘" onPointerMove={e => {
    if (!drag || drag.pointer !== e.pointerId) return;
    const p = point(e.clientX, e.clientY);
    setDrag({ ...drag, ...p, moved: drag.moved || Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 7 });
@@ -94,7 +96,7 @@ export function ClockworkGears({ mode = 'standard', gears, testedGears, foundGea
     {hover === i && <circle className="cw-drop-target" cx={p.x} cy={p.y} r={Math.max(28, (gears[i] || 24) * 1.5 + 9)} />}
     <g transform={`translate(${[300, 470, 98][i]} ${[45, 188, 183][i]})`}><Habitat kind={i} scale={.4} /><text y={i === 0 ? -25 : 27} className="cw-art-label">{HABITATS[i]}轴</text></g>
    </g>)}
-   {MOUNTS.map((p, i) => <g key={i} transform={`translate(${p.x} ${p.y})`} className="cw-physical-control" onPointerDown={e => { if (gears[i] > 0) start(e, gears[i]); }} onClick={() => click(() => mountClick(i))}>
+   {MOUNTS.map((p, i) => <g key={i} transform={`translate(${p.x} ${p.y})`} className="cw-physical-control" role="button" tabIndex={0} aria-label={selected===null?`${HABITATS[i]}轴：${gears[i]>0?`${gears[i]} 齿`:'空'}`:`装到${HABITATS[i]}轴`} aria-pressed={gears[i]>0&&selected===gears[i]} onKeyDown={e=>keyboard(e,()=>mountClick(i))} onPointerDown={e => { if (gears[i] > 0) start(e, gears[i]); }} onClick={() => click(() => mountClick(i))}>
     <circle r={Math.max(54, (gears[i] || 0) * 1.5 + 5)} fill="transparent" />
     {gears[i] > 0 && <g opacity={drag?.moved && drag.tooth === gears[i] ? .18 : 1}>
      <Wheel key={`${crank}-${signature}-${i}`} teeth={gears[i]} angle={connected ? -360 * 12 / gears[i] : 0} animate={connected} />
@@ -105,26 +107,22 @@ export function ClockworkGears({ mode = 'standard', gears, testedGears, foundGea
    <g transform={`translate(${HUB.x} ${HUB.y})`}><Wheel key={`hub-${crank}-${signature}`} teeth={12} angle={experiment ? 360 : 0} animate={experiment} /></g>
    <text x="415" y="265" className="cw-art-label">中心轮 · 12 齿</text>
    <path d="M388 258L326 170" stroke="#ba9a61" fill="none" />
-   <rect x="12" y="321" width="576" height="164" rx="17" fill="#675039" stroke={hover === -1 ? '#8ce5df' : '#ad8859'} strokeWidth={hover === -1 ? 4 : 2} />
-   <text x="28" y="345" className="cw-art-heading">零件托盘</text>
+   <g className="cw-tray-control" role="button" tabIndex={0} aria-label="放回托盘" onClick={()=>click(()=>place(-1))} onKeyDown={e=>keyboard(e,()=>place(-1))}><rect x="12" y="321" width="576" height="164" rx="17" fill="#675039" stroke={hover === -1 ? '#8ce5df' : '#ad8859'} strokeWidth={hover === -1 ? 4 : 2} /></g>
+   <text data-tray-decoration pointerEvents="none" x="28" y="345" className="cw-art-heading">零件托盘</text>
    {GEAR_TEETH.map(t => {
     const found = foundGears.includes(t), mounted = gears.includes(t), available = found && !mounted;
     return <g key={t} transform={`translate(${trayX(t)} 402)`}>
-     <ellipse cy="3" rx={t * 1.5 + 8} ry={t * 1.5 + 5} fill="#493c2f" stroke="#997a51" strokeDasharray="3 5" />
-     {available && <g className="cw-physical-control" onPointerDown={e => start(e, t)} onClick={() => click(() => choose(t))} opacity={drag?.moved && drag.tooth === t ? .18 : 1}>
+     <ellipse data-tray-decoration pointerEvents="none" cy="3" rx={t * 1.5 + 8} ry={t * 1.5 + 5} fill="#493c2f" stroke="#997a51" strokeDasharray="3 5" />
+     {available && <g className="cw-physical-control" role="button" tabIndex={0} aria-label={`${t} 齿 · 托盘`} aria-pressed={selected===t} onKeyDown={e=>keyboard(e,()=>choose(t))} onPointerDown={e => start(e, t)} onClick={() => click(() => choose(t))} opacity={drag?.moved && drag.tooth === t ? .18 : 1}>
       <circle r={Math.max(54, t * 1.5 + 5)} fill="transparent" /><Wheel teeth={t} />{selected === t && <circle r={t * 1.5 + 7} className="cw-selected-ring" />}
      </g>}
-     {!available && <text y="4" className="cw-art-label">{mounted ? '已装上' : '尚未找到'}</text>}
-     <rect x="-29" y="58" width="58" height="21" rx="5" fill="#322c25" /><text y="73" className="cw-art-label">{t} 齿</text>
+     {!available && <text data-tray-decoration pointerEvents="none" y="4" className="cw-art-label">{mounted ? '已装上' : '尚未找到'}</text>}
+     <rect data-tray-decoration pointerEvents="none" x="-29" y="58" width="58" height="21" rx="5" fill="#322c25" /><text data-tray-decoration pointerEvents="none" y="73" className="cw-art-label">{t} 齿</text>
     </g>;
    })}
    {drag?.moved && <g transform={`translate(${drag.x} ${drag.y})`} pointerEvents="none" opacity=".93"><Wheel teeth={drag.tooth} /><circle r={drag.tooth * 1.5 + 7} className="cw-selected-ring" /></g>}
   </svg>
-  <div className="cw-gear-controls" aria-label="键盘和点按装配控制">
-   <div className="cw-control-row">{GEAR_TEETH.map(t => <button key={t} type="button" disabled={!foundGears.includes(t)} aria-pressed={selected === t} onClick={() => choose(t)}>{t} 齿{!foundGears.includes(t) ? ' · 未找到' : selected === t ? ' · 已拿起' : gears.includes(t) ? ' · 在轴上' : ' · 托盘'}</button>)}</div>
-   <div className="cw-control-row">{MOUNTS.map((_, i) => <button key={i} type="button" onClick={() => mountClick(i)} disabled={selected === null && !(gears[i] > 0)}>{selected === null ? `${HABITATS[i]}轴：${gears[i] > 0 ? `${gears[i]} 齿` : '空'}` : `装到${HABITATS[i]}轴`}</button>)}</div>
-   <div className="cw-gear-actions"><button type="button" disabled={selected === null || !gears.includes(selected)} onClick={() => place(-1)}>放回托盘</button><button type="button" disabled={selected === null} onClick={() => setSelected(null)}>取消拿取</button><button className="cw-crank-button" type="button" onClick={() => { setSelected(null); onCrank(); }}>摇动曲柄一圈 ↻</button></div>
-  </div>
-  <p className="cw-gear-status" aria-live="polite">{selected !== null ? `拿起了 ${selected} 齿轮。请选择转轴；点同一齿轮可放下。` : connected ? (guidancePolicy(mode).hints ? '试转结束。观察停稳的白色刻线，记住它们相对起点的位置。' : '试转结束。') : experiment ? '曲柄转了一圈，传动架没有带起整组轮子。' : (guidancePolicy(mode).hints ? '齿轮顶端的白色刻线随轮子转动。最上方的短刻线是起点。' : '')}{connected && <span className="cw-gear-sr">刻线停在：{HABITATS.map((name, i) => `${name} ${readings[i]} 格`).join('，')}。</span>}</p>
+  <div className="cw-gear-controls"><button className="cw-crank-button" type="button" onClick={() => { setSelected(null); onCrank(); }}>摇动曲柄一圈 ↻</button></div>
+  <p className="cw-gear-status" aria-live="polite">{selected !== null ? (mode==='challenge'?`拿起了 ${selected} 齿轮。`:`拿起了 ${selected} 齿轮。请选择转轴；点同一齿轮可放下。`) : connected ? (guidancePolicy(mode).hints ? '试转结束。观察停稳的白色刻线，记住它们相对起点的位置。' : '试转结束。') : experiment ? '曲柄转了一圈，传动架没有带起整组轮子。' : (guidancePolicy(mode).hints ? '齿轮顶端的白色刻线随轮子转动。最上方的短刻线是起点。' : '')}{connected && <span className="cw-gear-sr">刻线停在：{HABITATS.map((name, i) => `${name} ${readings[i]} 格`).join('，')}。</span>}</p>
  </div>;
 }

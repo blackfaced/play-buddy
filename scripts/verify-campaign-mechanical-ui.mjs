@@ -25,9 +25,9 @@ await click('查看上层栅门');assert.equal(state.values.upperOpen,false);
 await click('掀起齿轮笼的布');assert.equal(state.values.cloth,true);snapshot('clockwork-uncovered');
 await click('查看齿轮笼');await click('摇动曲柄一圈 ↻');assert.deepEqual(state.solved,[]);snapshot('clockwork-empty-gears');
 await click('← 环顾四周');await walk('shaft');await click('查看缺了摇柄的起重器');assert.equal(state.values.hoist,false);snapshot('clockwork-shaft-stalled');
-await walk('bench');await click('拉开工作台抽屉');snapshot('clockwork-open-drawer');await click('查看拉开的抽屉');await click('拿起桌边的短摇柄');
+await walk('bench');await click('拉开工作台抽屉');snapshot('clockwork-open-drawer');await click('拿起抽屉里的小齿轮');await click('拿起抽屉里的赭红画片');await walk('room');await click('打开摆柜的木门');await click('把钟摆移到侧边的挂钩');await click('拿起摆柜里的短摇柄');
 assert.deepEqual(state.values.foundGears,[24]);assert.ok(state.inventory.includes('短摇柄'));roundtrip();
-await walk('shaft');await click('扶起倒下的窗板');snapshot('clockwork-open-shutter');await click('查看窗板后的凹槽');await click('把短摇柄装上起重器并转动');snapshot('clockwork-hoist-crack');assert.equal(state.values.upperOpen,false);await click('钻进窗下的检修洞');await click('取出配重下面的齿轮');await click('拿起检修架上的画片');roundtrip();
+await walk('shaft');await click('扶起倒下的窗板');snapshot('clockwork-open-shutter');await click('拿起窗槽里的大齿轮');await click('把短摇柄装上起重器并转动');snapshot('clockwork-hoist-crack');assert.equal(state.values.upperOpen,false);await click('钻进窗下的检修洞');await click('取出配重下面的齿轮');await click('拿起检修架上的画片');roundtrip();
 // Interrupt after discovery; restored physical props and inventory remain usable.
 const interrupted=M.parseEpisode(def,M.serializeEpisode(def,state)).state;await unmount();await mount(M.clockworkEpisode,interrupted);
 await click('查看齿轮笼');for(const [t,axis] of [[24,'芦苇'],[36,'海浪'],[48,'松树']]){await click(`${t} 齿 · 托盘`);await click(`装到${axis}轴`);}
@@ -40,7 +40,7 @@ await import('./verify-shadow-exploration.mjs');
 await import('./verify-greenhouse-exploration.mjs');
 assert.equal(completions,1); // Clockwork above; each focused suite verifies its own ending.
 // Direct pointer dragging moves artwork; cancellation leaves the physical board intact.
-await mount(M.clockworkEpisode);await walk('bench');await click('拉开工作台抽屉');await click('查看拉开的抽屉');await walk('shaft');await click('扶起倒下的窗板');await click('查看窗板后的凹槽');await click('钻进窗下的检修洞');await click('拿起检修架上的画片');await walk('bench');await click('查看工作台上的残画');await click('把拾回的画片放进画框');
+await mount(M.clockworkEpisode);await walk('bench');await click('拉开工作台抽屉');await click('拿起抽屉里的小齿轮');await click('拿起抽屉里的赭红画片');await walk('shaft');await click('扶起倒下的窗板');await click('拿起窗槽里的大齿轮');await click('钻进窗下的检修洞');await click('拿起检修架上的画片');await walk('bench');await click('查看工作台上的残画');await click('把拾回的画片放进画框');
 const board=tree.root.findAllByType('svg').find(n=>n.props.onPointerUp);
 const draggable=tree.root.findAllByType('g').find(n=>n.props.onPointerDown);
 await act(async()=>draggable.props.onPointerDown({pointerId:1,clientX:75,clientY:75,currentTarget:{ownerSVGElement:{setPointerCapture(){}}}}));

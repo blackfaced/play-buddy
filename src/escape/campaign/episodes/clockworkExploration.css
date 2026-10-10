@@ -27,17 +27,60 @@
 .cw-dialog-gears .cw-gear-status { margin-top: 8px; min-height: 2.8em; font-size: 13px; line-height: 1.5; }
 .cw-dialog-gears .cw-gear-controls { margin-top: 8px; gap: 6px; }
 .cw-dialog-gears .cw-gear-controls button { padding: 7px 4px; font-size: 13px; }
-@media (min-width: 760px) {
- .cw-dialog-gears .cw-gears { display: grid; grid-template-columns: minmax(0, 1fr) 290px; grid-template-rows: auto auto 1fr; column-gap: 20px; align-items: start; }
- .cw-dialog-gears .cw-gear-board { grid-column: 1; grid-row: 1 / 4; max-height: min(490px, calc(100dvh - 150px)); }
- .cw-dialog-gears .cw-gear-instructions { grid-column: 2; grid-row: 1; }
- .cw-dialog-gears .cw-gear-controls { grid-column: 2; grid-row: 2; }
- .cw-dialog-gears .cw-gear-status { grid-column: 2; grid-row: 3; }
- .cw-dialog-gears .cw-gear-actions { display: grid; grid-template-columns: 1fr 1fr; }
- .cw-dialog-gears .cw-crank-button { grid-column: 1 / -1; }
-}
 @media (max-width: 480px) {
  .cw-puzzle-dialog { padding: 8px; }
  .cw-puzzle-dialog .mech-bench > header h2 { font-size: 1rem; }
  .cw-dialog-gears .cw-gear-controls button { font-size: 12px; }
 }
+
+/* A stopped mechanism lives in a moving room: very slow dust, steady lamplight.
+   Challenge feedback changes only the material, never labels or clue content. */
+.cw-spot { touch-action:manipulation; transition:filter .18s ease; }
+.cw-challenge .cw-spot:hover { filter:brightness(1.09); }
+.cw-spot:active { filter:brightness(1.18); }
+.cw-pendulum,.cw-cabinet-door { transition:transform .65s cubic-bezier(.22,.7,.25,1); }
+.cw-cabinet-door { filter:drop-shadow(7px 6px 4px #0005); }
+.cw-dust { animation:cw-dust-drift 14s ease-in-out infinite alternate; }
+.cw-lamp-glow { animation:cw-lamp-breathe 7s ease-in-out infinite alternate; }
+@keyframes cw-dust-drift { to { transform:translate(8px,-12px); opacity:.55; } }
+@keyframes cw-lamp-breathe { to { opacity:.75; } }
+
+/* Keep the stair, carried props and consequence line on the same desktop view.
+   This is chapter-local; short screens/text zoom fall back to normal scrolling. */
+@media (min-width:761px) and (min-height:721px) {
+ .campaign-clockwork { height:100dvh; min-height:0; display:flex; flex-direction:column; gap:6px; padding:8px max(12px,calc((100vw - 1280px)/2)); overflow:auto; }
+ .campaign-clockwork > * { flex-shrink:0; }
+ .campaign-clockwork .campaign-top { order:-3; }
+ .campaign-clockwork .campaign-heading { order:-2; padding:0; }
+ .campaign-clockwork .campaign-heading > div { display:flex; align-items:baseline; gap:12px; }
+ .campaign-clockwork .campaign-heading h1 { margin:0; font-size:28px; }
+ .campaign-clockwork .campaign-heading p { margin:0; }
+ .campaign-clockwork .completion-record { margin:0; padding:4px 10px; }
+ .campaign-clockwork .campaign-playfield { display:block; flex:1 1 auto; min-height:360px; }
+ .campaign-clockwork .cw-world { height:100%; display:flex; flex-direction:column; max-width:none; }
+ .campaign-clockwork .cw-location { flex:none; padding:4px 8px; }
+ .campaign-clockwork .cw-world > svg { flex:1 1 0; min-height:290px; width:100%; height:100%; box-shadow:none; border-radius:12px; }
+ .campaign-clockwork .cw-operation { flex:none; margin:3px 0; }
+ .campaign-clockwork .campaign-inventory { margin:0; padding:4px 10px; gap:6px; }
+ .campaign-clockwork .campaign-item { padding:2px 8px; }
+ .campaign-clockwork .campaign-tools { margin:0; }
+ .campaign-clockwork .campaign-status { margin:0; min-height:24px; }
+}
+@media (prefers-reduced-motion:reduce) {
+ .cw-spot,.cw-pendulum,.cw-cabinet-door { transition:none; }
+ .cw-dust,.cw-lamp-glow { animation:none; }
+}
+/* The board itself now owns keyboard/tap controls; no parallel object menu. */
+@media (min-width:760px) {
+ .cw-dialog-gears { width:min(800px,100vw); }
+ .cw-dialog-gears .cw-gears { display:block; max-width:660px; }
+ .cw-dialog-gears .cw-gear-board { max-height:min(490px,calc(100dvh - 205px)); }
+ .cw-dialog-gears .cw-gear-controls { display:flex; justify-content:center; }
+ .cw-dialog-gears .cw-crank-button { flex:0 1 280px; }
+ .cw-dialog-gears .cw-gear-status { text-align:center; }
+}
+
+.campaign-clockwork .campaign-success { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 10px; margin-top:0; }
+.campaign-clockwork .campaign-success h2 { font-size:1rem; margin:0; }
+.campaign-clockwork .campaign-success p { display:none; }
+@media(max-width:600px) { .campaign-clockwork .campaign-success { flex-wrap:wrap; } }

@@ -17,10 +17,10 @@ const click=async label=>act(async()=>{const node=tree.root.findAll(n=>n.type===
 assert.equal(state.values.explorationVersion,3);
 assert.equal(tree.root.findAllByProps({className:'cw-walk'}).length,0,'no primary tab navigation');
 assert.equal(tree.root.findAllByType('title').length,0,'challenge has no native hover labels');
-await click('穿过木门到工作间');snapshot('bench');await click('拉开工作台抽屉');await click('查看拉开的抽屉');await click('拿起桌边的短摇柄');
+await click('穿过木门到工作间');snapshot('bench');await click('拉开工作台抽屉');await click('拿起抽屉里的小齿轮');await click('拿起抽屉里的赭红画片');await click('穿过木门回阁楼');await click('打开摆柜的木门');await click('把钟摆移到侧边的挂钩');await click('拿起摆柜里的短摇柄');await click('穿过木门到工作间');
 await click('穿过木门回阁楼');await click('沿楼梯下到配重井');
 assert.equal(tree.root.findAll(n=>n.props['data-exit']==='service').length,0,'shutter physically conceals passage');
-snapshot('shaft-before');await click('扶起倒下的窗板');snapshot('shaft-open');await click('查看窗板后的凹槽');assert.deepEqual(state.values.foundGears,[24,48]);assert.deepEqual(state.values.foundStrips,[0,1,2]);
+snapshot('shaft-before');await click('扶起倒下的窗板');snapshot('shaft-open');await click('拿起窗槽里的大齿轮');assert.deepEqual(state.values.foundGears,[24,48]);assert.deepEqual(state.values.foundStrips,[0,1,2]);
 await click('钻进窗下的检修洞');snapshot('service-before');await click('查看配重背面的铜齿轮');assert.ok(!state.values.foundGears.includes(36),'weight blocks extraction');
 await click('从检修洞回配重井');await click('把短摇柄装上起重器并转动');await click('钻进窗下的检修洞');snapshot('service-raised');await click('取出配重下面的齿轮');await click('拿起检修架上的画片');
 snapshot('service-collected');assert.deepEqual(state.values.foundGears,[24,36,48]);assert.deepEqual(state.values.foundStrips,[0,1,2,3]);

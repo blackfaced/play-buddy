@@ -28,7 +28,7 @@ assert.match(css,/max-height:\s*100dvh/);
 assert.match(css,/overflow:\s*auto/,'bounded fallback scrolling must remain possible at 200% zoom');
 assert.match(css,/overscroll-behavior:\s*contain/);
 assert.match(css,/\.cw-dialog-cams[^{}]*\.mech-dial-grid[^{}]*svg[^{}]*\{[^}]*max-height:\s*200px/);
-assert.match(css,/\.cw-dialog-gears[^{}]*\.cw-gears[^{}]*\{[^}]*grid-template-columns:/,'wide gears keep whole board beside controls');
+assert.match(css,/\.cw-dialog-gears[^{}]*\.cw-gears[^{}]*\{[^}]*display:block/,'gear artwork owns controls without a duplicate side menu');
 assert.match(css,/@media\s*\(min-width:\s*760px\)/);
 const scene=readFileSync('src/escape/campaign/episodes/clockworkScene.tsx','utf8');
 for(const kind of ['gears','mural','cams']) assert.match(scene,new RegExp(`<ClockworkDialog kind="${kind}"`));

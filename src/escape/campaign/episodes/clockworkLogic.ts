@@ -16,7 +16,7 @@ export function placeClockworkGear(gears:number[],teeth:number,destination:numbe
  if(source>=0)next[source]=next[destination];
  next[destination]=teeth;return next;
 }
-export const initialClockwork=()=>fresh({explorationVersion:3,gears:[0,0,0],testedGears:[0,0,0],foundGears:[],mural:[2,0,1,3],foundStrips:[0,2],cams:[0,0,0],crank:0,cloth:false,released:false,drawer:false,shutter:false,handle:false,hoist:false,upperOpen:false,stripMounted:false});
+export const initialClockwork=()=>fresh({explorationVersion:3,gears:[0,0,0],testedGears:[0,0,0],foundGears:[],mural:[2,0,1,3],foundStrips:[0,2],cams:[0,0,0],crank:0,cloth:false,released:false,drawer:false,shutter:false,cabinetOpen:false,pendulumAside:false,handle:false,hoist:false,upperOpen:false,stripMounted:false});
 export function normalizeClockwork(s:EpisodeState):EpisodeState{
  const v=s.values,legacy=v.explorationVersion!==2&&v.explorationVersion!==3;
  const rawGears:unknown[]=Array.isArray(v.foundGears)?v.foundGears:[],rawStrips:unknown[]=Array.isArray(v.foundStrips)?v.foundStrips:[];
@@ -31,5 +31,5 @@ export function normalizeClockwork(s:EpisodeState):EpisodeState{
  // Old players keep their access and earned ending. New exploration never rewrites campaign unlocks.
  const upperOpen=legacy||v.upperOpen===true;
  const released=v.released===true&&camRelease(cams)&&upperOpen;
- return {values:{explorationVersion:3,gears,testedGears,foundGears,mural,foundStrips,cams,crank,cloth:v.cloth===true,released,drawer:legacy||v.drawer===true,shutter:legacy||v.shutter===true,handle:legacy||v.handle===true,hoist:legacy||v.hoist===true,upperOpen,stripMounted},solved,inventory:[...foundGears.filter(t=>!gears.includes(t)).map(t=>`${t} 齿轮`),...(v.handle===true||legacy?['短摇柄']:[]),...(!stripMounted?foundStrips.filter(p=>p===1||p===3).map(p=>p===1?'赭红画片':'海色画片'):[]),...(solved.includes('mural')?['完整的鸟画']:[])],inspected:s.inspected.filter(x=>['room','bench','shaft','service','gears','mural','cams','drawer','shutter','hoist'].includes(x))};
+ return {values:{explorationVersion:3,gears,testedGears,foundGears,mural,foundStrips,cams,crank,cloth:v.cloth===true,released,drawer:legacy||v.drawer===true,shutter:legacy||v.shutter===true,cabinetOpen:v.cabinetOpen===true,pendulumAside:v.pendulumAside===true,handle:legacy||v.handle===true,hoist:legacy||v.hoist===true,upperOpen,stripMounted},solved,inventory:[...foundGears.filter(t=>!gears.includes(t)).map(t=>`${t} 齿轮`),...(v.handle===true||legacy?['短摇柄']:[]),...(!stripMounted?foundStrips.filter(p=>p===1||p===3).map(p=>p===1?'赭红画片':'海色画片'):[]),...(solved.includes('mural')?['完整的鸟画']:[])],inspected:s.inspected.filter(x=>['room','bench','shaft','service','gears','mural','cams','drawer','shutter','hoist'].includes(x))};
 }
