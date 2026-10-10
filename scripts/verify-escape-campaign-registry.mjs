@@ -15,7 +15,7 @@ for (const e of A.CAMPAIGN_EPISODES) {
   assert.equal(e.hints(initial).length,3);
   const html=renderToStaticMarkup(React.createElement(e.Component,{state:initial,update(){},complete(){},announce(){},mode:'standard',openDetail(){},closeDetail(){}}));
   assert.ok(html.includes('<svg'),`${e.id} must render a real physical scene`);
-  assert.ok((html.match(/<button/g)??[]).length >= 2,`${e.id} has independent exploration targets`);
+  assert.ok((html.match(/<button\b|<g\b[^>]*role="button"/g)??[]).length >= 2,`${e.id} has independent exploration targets`);
   assert.ok(!/coming soon|敬请期待|施工中/i.test(html));
 }
 console.log('All ten entries and seven actual independent physical episode components passed.');

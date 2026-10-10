@@ -353,6 +353,7 @@
   padding: 25px 32px 30px;
   width: min(540px, calc(100vw - 28px));
   max-height: 87dvh;
+  overscroll-behavior: contain;
   box-shadow: 0 25px 100px #001416aa;
   overflow: auto;
 }
@@ -1277,3 +1278,31 @@
 .escape-modal .escape-dirty-chart { background: repeating-linear-gradient(25deg, #dedcc8, #e8e4d5 8px, #d4d5c5 12px); border: 8px solid #97754b; color: #475e53; }
 .escape-modal .escape-dirty-chart span { color: #384e43; font-size: 15px; }
 .escape-modal .escape-cloth-target { color: #fff4db; }
+
+/* The ring and its lock belong to one work surface. Keep the full-size picture
+   beside the controls on laptops; narrow screens retain one scrollable column. */
+.escape-modal.escape-ring-dialog {
+  width: min(740px, calc(100vw - 28px));
+  padding: 16px 24px;
+}
+.escape-ring-dialog h2 { margin: 4px 0 8px; }
+.escape-ring-dialog .completion-local { min-height: 48px; padding: 0 0 4px; }
+.escape-ring-dialog .escape-modal-inventory { padding: 6px 0; margin-bottom: 8px; }
+.escape-ring-dialog p { margin: 8px 0; }
+.escape-ring-workarea {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+}
+.escape-ring-workarea .escape-rings { margin: 8px auto; }
+.escape-ring-controls { min-width: 0; }
+.escape-ring-controls .escape-ring-buttons { flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.escape-ring-controls .escape-ring-buttons button { padding: 10px 12px; }
+.escape-ring-controls > .escape-primary { width: 100%; }
+.escape-ring-controls .escape-reference { margin: 8px 0 0; }
+.escape-ring-dialog .escape-modal-status { margin-top: 12px !important; padding-top: 8px; }
+@media (max-width: 650px) {
+  .escape-modal.escape-ring-dialog { padding: 16px; }
+  .escape-ring-workarea { grid-template-columns: 1fr; gap: 8px; }
+}

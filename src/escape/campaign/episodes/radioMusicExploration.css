@@ -1,1 +1,4 @@
 .radio-exploration-stage{position:relative}.radio-exploration-targets{position:absolute;inset:0;pointer-events:none}.radio-exploration-targets button{position:absolute;pointer-events:auto;max-width:28%;min-height:44px;background:#172e33eb;border:2px solid #e0c091;color:#fff1d0;border-radius:10px;padding:8px;box-shadow:0 4px 12px #0005;font-size:clamp(.65rem,1.5vw,.95rem)}.music-room .radio-exploration-targets button{background:#593d31ed}.radio-exploration-targets button:focus-visible{outline:4px solid #fff;outline-offset:3px}.radio-room .signal-hotspot{touch-action:none}@media(max-width:560px){.radio-exploration-targets button{padding:4px;max-width:28%;font-size:.65rem}}
+
+/* Keep hit areas and accessible names, but do not paint action-label overlays in challenge. */
+.radio-exploration-targets.unmarked button { color:transparent; background:transparent; border-color:transparent; box-shadow:none; }

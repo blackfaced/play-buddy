@@ -1,1 +1,43 @@
-.cw-world{overflow:hidden}.cw-location{display:flex;align-items:baseline;justify-content:space-between;gap:15px;padding:12px 4px}.cw-location>span{font-size:1.2rem;font-weight:750;white-space:nowrap}.cw-location small{color:#dfcbae;line-height:1.6}.cw-walk{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0}.cw-walk button[aria-current]{background:#d2a35f;box-shadow:inset 0 0 0 2px #684321}.cw-spot{cursor:pointer;outline:none}.cw-spot:hover{filter:drop-shadow(0 0 7px #efbe7470)}.cw-spot:focus-visible{filter:drop-shadow(0 0 7px #72e6ff)}.cw-spot:focus-visible>rect[fill=transparent]{stroke:#72e6ff;stroke-width:5}.cw-operation{font-size:.92rem;line-height:1.6;text-align:center;color:#e7d4b7;margin:14px auto}.cw-weight,.cw-gate,.cw-shutter{transition:transform 1.2s ease-in-out}@media(max-width:600px){.cw-location{display:block;padding:8px 3px}.cw-location small{display:block;margin-top:4px;font-size:.8rem}.cw-walk{gap:6px}.cw-walk button{flex:1 1 95px;padding:8px 4px;font-size:.82rem}.cw-operation{font-size:.82rem}}@media(prefers-reduced-motion:reduce){.cw-weight,.cw-gate,.cw-shutter{transition:none}}
+.cw-world{overflow:hidden}.cw-location{display:flex;align-items:baseline;justify-content:space-between;gap:15px;padding:12px 4px}.cw-location>span{font-size:1.2rem;font-weight:750;white-space:nowrap}.cw-location small{color:#dfcbae;line-height:1.6}.cw-walk{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0}.cw-walk button[aria-current]{background:#d2a35f;box-shadow:inset 0 0 0 2px #684321}.cw-spot{cursor:pointer;outline:none}.cw-world:not(.cw-challenge) .cw-spot:hover{filter:drop-shadow(0 0 7px #efbe7470)}.cw-spot:focus-visible{filter:drop-shadow(0 0 7px #72e6ff)}.cw-spot:focus-visible>rect[fill=transparent]{stroke:#72e6ff;stroke-width:5}.cw-operation{font-size:.92rem;line-height:1.6;text-align:center;color:#e7d4b7;margin:14px auto}.cw-weight,.cw-gate,.cw-shutter{transition:transform 1.2s ease-in-out}@media(max-width:600px){.cw-location{display:block;padding:8px 3px}.cw-location small{display:block;margin-top:4px;font-size:.8rem}.cw-walk{gap:6px}.cw-walk button{flex:1 1 95px;padding:8px 4px;font-size:.82rem}.cw-operation{font-size:.82rem}}@media(prefers-reduced-motion:reduce){.cw-weight,.cw-gate,.cw-shutter{transition:none}}
+
+/* Close-ups use the viewport, rather than adding another tall page section.
+   At high zoom the dialog itself scrolls; the room never scrolls behind it. */
+.cw-puzzle-dialog {
+ box-sizing: border-box; width: min(1000px, 100vw); max-width: 100vw;
+ max-height: 100dvh; margin: auto; border: 0; border-radius: 16px;
+ padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+ background: #211f29; color: #fbefda; overflow: auto; overscroll-behavior: contain;
+}
+.cw-puzzle-dialog::backdrop { background: #08121de8; }
+.cw-puzzle-dialog .mech-bench { border: 0; padding: 4px; max-width: none; }
+.cw-puzzle-dialog .mech-bench > header { margin-bottom: 10px; gap: 10px; }
+.cw-puzzle-dialog .mech-bench > header h2 { font-size: 1.1rem; }
+.cw-puzzle-dialog .mech-caption, .cw-puzzle-dialog .cw-operation { margin: 8px auto 0; font-size: .85rem; line-height: 1.5; }
+.cw-puzzle-dialog .mech-rules { margin: 8px 0 0; padding: 6px 10px; font-size: .85rem; }
+.cw-puzzle-dialog button { min-height: 44px; }
+.cw-puzzle-dialog button:focus-visible { outline: 3px solid #73dfff; outline-offset: 2px; }
+.cw-dialog-cams, .cw-dialog-mural { width: min(760px, 100vw); }
+.cw-dialog-cams .mech-bench > svg { max-height: 100px; margin: 0 auto 6px; }
+.cw-dialog-cams .mech-dial-grid svg { max-height: 200px; }
+.cw-dialog-cams .mech-tools { margin: 10px 0 0; }
+.cw-dialog-mural .mech-object-row { margin: 8px 0; }
+.cw-dialog-mural .mech-object-row > svg { max-height: 180px; }
+.cw-dialog-gears .cw-gears { max-width: none; }
+.cw-dialog-gears .cw-gear-instructions { margin: 0 0 8px; font-size: 13px; line-height: 1.5; }
+.cw-dialog-gears .cw-gear-status { margin-top: 8px; min-height: 2.8em; font-size: 13px; line-height: 1.5; }
+.cw-dialog-gears .cw-gear-controls { margin-top: 8px; gap: 6px; }
+.cw-dialog-gears .cw-gear-controls button { padding: 7px 4px; font-size: 13px; }
+@media (min-width: 760px) {
+ .cw-dialog-gears .cw-gears { display: grid; grid-template-columns: minmax(0, 1fr) 290px; grid-template-rows: auto auto 1fr; column-gap: 20px; align-items: start; }
+ .cw-dialog-gears .cw-gear-board { grid-column: 1; grid-row: 1 / 4; max-height: min(490px, calc(100dvh - 150px)); }
+ .cw-dialog-gears .cw-gear-instructions { grid-column: 2; grid-row: 1; }
+ .cw-dialog-gears .cw-gear-controls { grid-column: 2; grid-row: 2; }
+ .cw-dialog-gears .cw-gear-status { grid-column: 2; grid-row: 3; }
+ .cw-dialog-gears .cw-gear-actions { display: grid; grid-template-columns: 1fr 1fr; }
+ .cw-dialog-gears .cw-crank-button { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+ .cw-puzzle-dialog { padding: 8px; }
+ .cw-puzzle-dialog .mech-bench > header h2 { font-size: 1rem; }
+ .cw-dialog-gears .cw-gear-controls button { font-size: 12px; }
+}

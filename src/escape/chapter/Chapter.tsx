@@ -1,3 +1,8 @@
+import { CompletionMechanism } from '../CompletionMechanism';
+import { CompletionMotionScope } from '../CompletionMotion';
+import { useCompletionFeedback } from '../useCompletionFeedback';
+import { CompletionFeedback } from '../CompletionFeedback';
+import { chapterMilestones } from '../acceptedMilestones';
 import { RouteArt } from './PatternArt';
 import { lensClues } from "./lens";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -172,6 +177,7 @@ export default function Chapter({
   }, [state.complete, onComplete]);
   const scene = CHAPTER.scenes.find((s) => s.id === state.scene)!;
   const puzzle = CHAPTER.puzzles.find((p) => p.id === detail);
+  const feedback = useCompletionFeedback(chapterMilestones(state), `${mode}:${lock}`);
   const installed = (item: string) => CHAPTER.tools.some(tool => tool.item === item && tool.installsItem && state.usedTools.includes(tool.id));
   const selectedItem =
     selected && state.found.includes(selected) && !installed(selected) ? selected : null;
@@ -185,13 +191,15 @@ export default function Chapter({
   function act(action: ChapterAction) {
     if (lock !== null || (futureSave && action.type !== "resetChapter")) return;
     const next = reduceChapter(CHAPTER, state, action);
+    if (action.type === "resetChapter") feedback.reset();
+    if (action.type === "confirm" || action.type === "collect") feedback.accept(chapterMilestones(state), chapterMilestones(next));
     setState(next);
     if (action.type === "confirm") {
       const definition = CHAPTER.puzzles.find((p) => p.id === action.id)!;
       setMessage(
         next.puzzles[action.id].solved
           ? definition.success
-          : "机关还没有连通，再看看线索吧。",
+          : (mode === "challenge" ? "机关还没有连通。" : "机关还没有连通，再看看线索吧。"),
       );
       if (next.complete && !state.complete) {
         setDetail(null);
@@ -356,10 +364,11 @@ export default function Chapter({
     <Link to="/escape">← 回到探险</Link>
   );
   return (
-    <main
+    <CompletionMotionScope event={lock === null ? feedback.event : null}><main
       className={`chapter-app chapter-room-${state.scene}`}
       inert={lock !== null}
     >
+      <CompletionFeedback event={lock === null ? feedback.event : null} completed={chapterMilestones(state)} />
       <header className="chapter-top">
         {back}
         <div>
@@ -534,6 +543,7 @@ export default function Chapter({
           }
           onClose={() => setDetail(null)}
         >
+          {puzzle && <CompletionMechanism milestone={puzzle.id} done={state.puzzles[puzzle.id].solved} label={chapterMilestones(state).find(item => item.id === puzzle.id)?.label ?? '机关已解开'} light={puzzle.kind === 'search' || puzzle.id === 'foglight-console'} />}
           {detail === "search" ? (
             search()
           ) : detail === "journal" ? (
@@ -634,7 +644,7 @@ export default function Chapter({
               ) : (
                 <div className="chapter-locked">
                   <p>
-                    装置还未转动。可以检查上面的实物与接口。
+                    {mode === "challenge" ? "装置还未转动。" : "装置还未转动。可以检查上面的实物与接口。"}
                   </p>
                 </div>
               )}
@@ -659,6 +669,6 @@ export default function Chapter({
           <p className="chapter-status" role="status" aria-live="polite">{message}</p>
         </Closeup>
       )}
-    </main>
+    </main></CompletionMotionScope>
   );
 }

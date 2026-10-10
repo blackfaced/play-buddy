@@ -35,8 +35,10 @@ assert.ok(tree.root.findByProps({className:'mech-object-help'}).children.length)
 assert.ok(tree.root.findAllByType('path').length>0,'source bird artwork is rendered');
 await act(async()=>tree.update(React.createElement(M.ObjectRow,{...props(),disabled:true})));await tap(0);assert.equal(changes,4);
 await act(async()=>tree.unmount());
+// Stage 05 now owns its unified SVG/rail workarea; equivalent real-art pointer,
+// cancellation, primary ownership and keyboard coverage lives in verify-shadow-stage-workarea.mjs.
 // Exercise each actual shared scene in every difficulty; help is independent of answer hints.
-for(const [def,label] of [[M.shadowEpisode,'查看幕布配重'],[M.shadowEpisode,'查看灯后的舞台'],[M.greenhouseEpisode,'展开生长画片'],[M.greenhouseEpisode,'查看接雨花盆']])for(const mode of ['easy','standard','challenge']){
+for(const [def,label] of [[M.shadowEpisode,'查看幕布配重'],[M.greenhouseEpisode,'展开生长画片'],[M.greenhouseEpisode,'查看接雨花盆']])for(const mode of ['easy','standard','challenge']){
  // Focus this test on mounted ObjectRow event behavior; full discovery is covered separately.
  let state=M.updateEpisode(def,def.initial(),{values:def.id==='shadow'?{chest:true,puppetsFound:true,puppetsMounted:true,lampHandle:true,lampOpen:true}:{cloth:true,wiped:true,floatRaised:true,cabinet:true,cards:true}}); const p=()=>({state,mode,update:patch=>{state=M.updateEpisode(def,state,patch);tree.update(React.createElement(def.Component,p()));},announce(){},complete(){},openDetail(){},closeDetail(){}});
  await act(async()=>{tree=create(React.createElement(def.Component,p()));});

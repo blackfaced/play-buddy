@@ -4,3 +4,40 @@
 .signal-piece-row button,.signal-room svg:has(.signal-hotspot){touch-action:none}
 
 .radio-current{stroke-dasharray:14 700;stroke-dashoffset:14;animation:radio-current 1.4s linear forwards}@keyframes radio-current{to{stroke-dashoffset:-650}}@media(prefers-reduced-motion:reduce){.radio-current{animation:none;stroke-dasharray:5 12;stroke-dashoffset:0}}
+
+/* Radio close-ups keep the whole circuit and its controls in a native focus scope. */
+.radio-puzzle-dialog {
+ box-sizing: border-box; width: min(900px, 100vw); max-width: 100vw;
+ max-height: 100dvh; margin: auto; padding: 16px;
+ overflow: auto; overscroll-behavior: contain;
+ border: 1px solid #9a865f; border-radius: 16px; background: #17343d; color: #f7e9cc;
+}
+.radio-puzzle-dialog::backdrop { background: #081b20e8; }
+.radio-puzzle-dialog .signal-panel { border: 0; padding: 0; margin: 0; }
+.radio-puzzle-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.radio-puzzle-dialog h2 { margin: 0; font-size: 1.15rem; }
+.radio-puzzle-dialog button { min-width: 44px; min-height: 44px; }
+.radio-puzzle-dialog button:focus-visible { outline: 3px solid #fff2af; outline-offset: 2px; }
+.radio-puzzle-dialog p { margin: 8px 0; font-size: .85rem; line-height: 1.5; }
+.radio-puzzle-dialog .signal-toolbar { gap: 6px; margin: 8px 0; }
+.radio-puzzle-dialog .signal-piece-row { gap: 6px; }
+.radio-puzzle-dialog .radio-circuit { width: min(100%, 605px, max(330px, calc((100dvh - 330px) * 1.833333))); max-height: 330px; height: auto; margin: 0 auto 8px; }
+.radio-puzzle-dialog .radio-scopes > div > svg { max-height: 210px; }
+.radio-puzzle-dialog .signal-rotary > [role=slider] { width: 72px; margin-bottom: 4px; }
+.radio-puzzle-dialog .signal-knob-buttons { margin-top: 4px; }
+.radio-puzzle-dialog .radio-feedback { min-height: 1.5em; color: #fff0ba; }
+.radio-puzzle-dialog .radio-transmission-result { width: 320px; max-width: 100%; height: 54px; margin: 6px auto; }
+@media (max-width: 630px) {
+ .radio-puzzle-dialog { padding: 10px; }
+ .radio-puzzle-dialog header { align-items: flex-start; }
+ .radio-puzzle-dialog header button { flex-shrink: 0; }
+ .radio-puzzle-dialog .radio-scopes { gap: 8px; }
+ .radio-puzzle-dialog .radio-scopes > div > svg { min-width: 0; width: calc(100% - 130px); }
+ .radio-puzzle-dialog .signal-rotary { width: 118px; }
+ .radio-puzzle-dialog .signal-rotary svg { width: 100%; min-width: 0; }
+ .radio-puzzle-dialog .signal-piece-row button { font-size: .8rem; }
+}
+
+.radio-circuit { user-select: none; -webkit-user-select: none; }
+/* Painted wires must not intercept the larger source hit rectangles beneath them. */
+.radio-circuit > g > path { pointer-events: none; }

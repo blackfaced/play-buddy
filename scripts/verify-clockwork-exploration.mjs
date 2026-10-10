@@ -5,7 +5,7 @@ const M=await import('../node_modules/.tmp-clockwork-exploration.mjs');
 const start=M.initialClockwork();
 assert.deepEqual(start.values.gears,[0,0,0],'new game begins with empty axles');
 assert.deepEqual(start.values.foundGears,[]);
-assert.equal(start.values.explorationVersion,2);
+assert.equal(start.values.explorationVersion,3);
 assert.deepEqual(M.placeClockworkGear([0,0,0],24,1),[0,24,0]);
 assert.deepEqual(M.placeClockworkGear([24,36,48],24,2),[48,36,24]);
 assert.deepEqual(M.placeClockworkGear([24,36,0],24,-1),[0,36,0]);

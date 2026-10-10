@@ -319,7 +319,7 @@
 .adventure-search-prop.easy span {
   opacity: 1;
 }
-.adventure-search-prop:hover {
+.adventure-search-prop:not(.unmarked):hover {
   filter: drop-shadow(3px 4px 3px #121913);
 }
 .adventure-find-list {

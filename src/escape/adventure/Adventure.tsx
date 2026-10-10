@@ -1,3 +1,8 @@
+import { CompletionMechanism } from '../CompletionMechanism';
+import { CompletionMotionScope } from '../CompletionMotion';
+import { useCompletionFeedback } from '../useCompletionFeedback';
+import { CompletionFeedback } from '../CompletionFeedback';
+import { adventureMilestones } from '../acceptedMilestones';
 import { useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import EscapeRoom from "../EscapeRoom";
@@ -217,7 +222,7 @@ export function SearchPile({
             return (
               <button
                 key={object.id}
-                className={`adventure-search-prop${mode === "easy" ? " easy" : ""}${moved.includes(object.id) ? " inspected" : ""}`}
+                className={`adventure-search-prop${mode === "challenge" ? " unmarked" : ""}${mode === "easy" ? " easy" : ""}${moved.includes(object.id) ? " inspected" : ""}`}
                 style={{
                   left: `${object.x}%`,
                   top: `${object.y}%`,
@@ -449,6 +454,7 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
   const [mode, setMode] = useState<GuidanceMode>(() =>
     parseMode(readSaved(MODE_KEY)),
   );
+  const feedback = useCompletionFeedback(adventureMilestones(state), `${mode}:${lock}`);
   const [detail, setDetail] = useState<Detail>(null);
   const [showFoglight, setShowFoglight] = useState(false);
   const [selected, setSelected] = useState<ExpeditionItem | null>(null);
@@ -485,19 +491,21 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
     if (next === "hints") setHintLevel(0);
   }
   function act(action: AdventureAction, success: string) {
+    if (lock !== null) return;
     const next = reduceAdventure(state, action);
     if (next === state) {
       setMessage(
         action.type === "safe"
-          ? "锁芯没有转动，再检查记录中的线索。"
+          ? (mode === "challenge" ? "锁芯没有转动。" : "锁芯没有转动，再检查记录中的线索。")
           : action.type === "confirmPanel"
             ? "整张图还没有让锁扣松开。可以继续调整。"
             : action.type === "operateWinch"
-              ? "绞盘还不能转动，检查轴孔、吊索和控制锁扣。"
+              ? (mode === "challenge" ? "绞盘还不能转动。" : "绞盘还不能转动，检查轴孔、吊索和控制锁扣。")
               : "这件东西放在这里暂时没有作用。",
       );
       return;
     }
+    feedback.accept(adventureMilestones(state), adventureMilestones(next));
     dispatch(action);
     setMessage(success);
   }
@@ -572,7 +580,8 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
       />
     );
   return (
-    <main className="adventure-app" inert={lock !== null}>
+    <CompletionMotionScope event={lock === null ? feedback.event : null}><main className="adventure-app" inert={lock !== null}>
+      <CompletionFeedback event={lock === null ? feedback.event : null} completed={adventureMilestones(state)} />
       <header className="adventure-top">
         <div>
           {onSceneSelect ? <button onClick={onSceneSelect}>← 场景选择</button> : <Link to="/">← 回游戏大厅</Link>}
@@ -759,11 +768,16 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
         </div>
       )}
       <div className="adventure-message" role="status" aria-live="polite">
-        {message || "慢慢看，线索就在船上的物件与记录里。"}
+        {message || (mode === "challenge" ? "" : "慢慢看，线索就在船上的物件与记录里。")}
       </div>
       {detail && lock === null && (
         <Dialog title={titles[detail]} onClose={() => setDetail(null)} onCancel={() => { setSelected(null); setDetail(null); setMessage("已取消操作，物件放回背包。"); }}>
-          <p className="adventure-detail-message" role="status" aria-live="polite">{message || "观察近景中的物件。"}</p>
+          {(['safe', 'projector', 'door', 'panel', 'winch'] as string[]).includes(detail) && (() => {
+            const id = ({safe:'safeOpen',projector:'projectorOn',door:'storeroomOpen',panel:'panelOpen',winch:'gangwayDown'} as Record<string,string>)[detail];
+            const accepted = adventureMilestones(state).find(item => item.id === id);
+            return <CompletionMechanism milestone={id} done={!!accepted} label={accepted?.label ?? ''} light={id === 'projectorOn'} />;
+          })()}
+          <p className="adventure-detail-message" role="status" aria-live="polite">{message || (mode === "challenge" ? "" : "观察近景中的物件。")}</p>
           {detail === "search" && (
             <SearchPile
               state={state}
@@ -998,7 +1012,7 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
                 <button
                   className="adventure-primary"
                   onClick={() => {
-                    dispatch({ type: "resetChapter" });
+                    feedback.reset(); dispatch({ type: "resetChapter" });
                     setDetail(null);
                     setSelected(null);
                     setSafeCode("");
@@ -1018,6 +1032,6 @@ export default function Adventure({ onSceneSelect, onNextScene, onComplete, stan
           )}
         </Dialog>
       )}
-    </main>
+    </main></CompletionMotionScope>
   );
 }

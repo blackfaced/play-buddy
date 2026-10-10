@@ -1,3 +1,5 @@
+import { CompletionMotionScope } from '../CompletionMotion';
+import { useCompletionFeedback } from '../useCompletionFeedback';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '../../store/useStore';
 import { guidancePolicy, MODE_KEY, parseMode, type GuidanceMode } from '../guidancePolicy';
@@ -5,6 +7,8 @@ import { episodeKey, parseEpisode, serializeEpisode, updateEpisode } from './eng
 import type { EpisodeDefinition, EpisodeState, EpisodeProps } from './types';
 import { DetailModal } from './components';
 import './campaign.css';
+import { CompletionFeedback } from '../CompletionFeedback';
+import { campaignMilestones } from '../acceptedMilestones';
 function read(key: string) { try { return localStorage.getItem(key); } catch { return null; } }
 export default function CampaignEpisode({ episode, onBack, onComplete }: { episode: EpisodeDefinition; onBack: () => void; onComplete: () => void }) {
   const lock = useStore(s => s.lock);
@@ -25,6 +29,10 @@ export default function CampaignEpisode({ episode, onBack, onComplete }: { episo
     }
   }, [lock]);
   const [mode, setMode] = useState<GuidanceMode>(() => parseMode(read(MODE_KEY)));
+  const [modeVersion, setModeVersion] = useState(0);
+  const modeEpoch = useRef(0);
+  const feedback = useCompletionFeedback(campaignMilestones(episode.id, state), `${generation}:${mode}:${lock}`);
+  const { accept } = feedback;
   const [detail, setDetail] = useState<{title:string;content:ReactNode | ((props: EpisodeProps) => ReactNode)} | null>(null);
   const [hints, setHints] = useState(-1);
   const [replay, setReplay] = useState(false);
@@ -37,32 +45,34 @@ export default function CampaignEpisode({ episode, onBack, onComplete }: { episo
     try { localStorage.setItem(episodeKey(episode.id), serializeEpisode(episode, next)); } catch { setWarning(true); }
   }, [episode, protectedSave]);
   const update = useCallback((patch: Partial<EpisodeState>) => {
-    if (!mountedRef.current || lockRef.current !== null || protectedSave || generation !== epochRef.current) return;
+    if (!mountedRef.current || lockRef.current !== null || protectedSave || generation !== epochRef.current || modeVersion !== modeEpoch.current) return;
     const previous = stateRef.current;
     const next = updateEpisode(episode, previous, patch);
     if (JSON.stringify(next) === JSON.stringify(previous)) return;
+    accept(campaignMilestones(episode.id, previous), campaignMilestones(episode.id, next));
     setHistory(items => [...items.slice(-39), previous]);
     stateRef.current = next; setState(next); save(next);
-  }, [episode, generation, protectedSave, save]);
+  }, [episode, generation, protectedSave, save, modeVersion, accept]);
   useEffect(() => { if (completed && !protectedSave) onComplete(); }, [completed, onComplete, protectedSave]);
   const complete = () => {
-    if (!mountedRef.current || lockRef.current !== null || protectedSave || generation !== epochRef.current) return;
+    if (!mountedRef.current || lockRef.current !== null || protectedSave || generation !== epochRef.current || modeVersion !== modeEpoch.current) return;
     if (episode.isComplete(stateRef.current)) { onComplete(); setMessage('出口已开启，这一幕的通行记录已保存。'); }
     else setMessage('机关还没有形成完整的通路。再看看房间里留下的线索。');
   };
   const changeMode = (next: GuidanceMode) => {
     if (lock !== null) return;
-    setMode(next); setHints(-1);
+    modeEpoch.current += 1; setModeVersion(modeEpoch.current); setMode(next); feedback.clear(); setHints(-1);
     try { localStorage.setItem(MODE_KEY, next); } catch { setWarning(true); }
   };
   const goBack = () => { if (lock === null) onBack(); };
   const Content = episode.Component;
   const DetailContent = typeof detail?.content === 'function' ? detail.content : null;
-  const episodeProps: EpisodeProps = { state, update, complete, announce: setMessage, mode,
+  const episodeProps: EpisodeProps = { state, update, complete, announce: (message) => { if (mountedRef.current && lockRef.current === null && !protectedSave && generation === epochRef.current && modeVersion === modeEpoch.current) setMessage(message); }, mode,
     openDetail: (title, content) => { if (lock === null) setDetail({title, content}); },
     closeDetail: () => setDetail(null),
   };
-  return <main className={`campaign campaign-${episode.id} campaign-mode-${mode}`} inert={lock !== null}>
+  return <CompletionMotionScope event={lock === null ? feedback.event : null}><main className={`campaign campaign-${episode.id} campaign-mode-${mode}`} inert={lock !== null}>
+    <CompletionFeedback event={lock === null ? feedback.event : null} completed={campaignMilestones(episode.id, state)} />
     <header className="campaign-top"><button onClick={goBack}>← 场景选择</button><span>THE STARLIGHT · 十幕航行</span><button onClick={() => { if (lock === null) setReplay(true); }} disabled={protectedSave}>重新探索</button></header>
     <div className="campaign-heading"><div><p>{episode.place}</p><h1>{episode.title}</h1></div><label>探索模式 <select value={mode} onChange={e => changeMode(e.target.value as GuidanceMode)}><option value="easy">简单</option><option value="standard">标准</option><option value="challenge">挑战</option></select></label></div>
     {protectedSave ? <section className="campaign-protected" role="status"><h2>这份进度来自更新版本</h2><p>为保护已保存的探索，本版本不会覆盖它。请更新游戏后继续。</p><button onClick={goBack}>返回场景选择</button></section> : <>
@@ -76,6 +86,6 @@ export default function CampaignEpisode({ episode, onBack, onComplete }: { episo
     {loaded.status === 'invalid' && <p role="status">旧记录无法读取。原记录保留到你开始操作为止。</p>}
     {lock === null && detail && <DetailModal title={detail.title} onClose={() => setDetail(null)}>{DetailContent ? <DetailContent {...episodeProps} /> : typeof detail.content === 'function' ? null : detail.content}</DetailModal>}
     {lock === null && hints >= 0 && guidancePolicy(mode).hints && <DetailModal title="航行提示" onClose={() => setHints(-1)}><p>先给方向，再解释规律。最后一步会明确揭晓答案。</p>{episode.hints(state).slice(0, hints + 1).map((line, index) => <p key={index}>{index + 1}. {line}</p>)}<button disabled={hints >= 2} onClick={() => setHints(x => x + 1)}>{hints === 0 ? '解释规律' : hints === 1 ? '揭晓答案（含完整解法）' : '已显示答案'}</button></DetailModal>}
-    {lock === null && replay && <DetailModal title="重新探索这一幕？" onClose={() => setReplay(false)}><p>只清空这一幕的机关和物品。已经解锁的后续场景仍然保留。</p><button onClick={() => { if (lock !== null || protectedSave) return; const fresh = episode.initial(); stateRef.current = fresh; setState(fresh); epochRef.current += 1; setGeneration(epochRef.current); setHistory([]); save(fresh); setReplay(false); setDetail(null); setMessage('这一幕已重新开始。'); }}>确认重新探索这一幕</button><button onClick={() => setReplay(false)}>保留进度</button></DetailModal>}
-  </main>;
+    {lock === null && replay && <DetailModal title="重新探索这一幕？" onClose={() => setReplay(false)}><p>只清空这一幕的机关和物品。已经解锁的后续场景仍然保留。</p><button onClick={() => { if (lock !== null || protectedSave) return; feedback.reset(); const fresh = episode.initial(); stateRef.current = fresh; setState(fresh); epochRef.current += 1; setGeneration(epochRef.current); setHistory([]); save(fresh); setReplay(false); setDetail(null); setMessage('这一幕已重新开始。'); }}>确认重新探索这一幕</button><button onClick={() => setReplay(false)}>保留进度</button></DetailModal>}
+  </main></CompletionMotionScope>;
 }

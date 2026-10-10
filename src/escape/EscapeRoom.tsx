@@ -1,3 +1,8 @@
+import { CompletionMechanism } from './CompletionMechanism';
+import { CompletionMotionScope } from './CompletionMotion';
+import { useCompletionFeedback } from './useCompletionFeedback';
+import { CompletionFeedback } from './CompletionFeedback';
+import { cabinMilestones } from './acceptedMilestones';
 import { useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import {
@@ -91,19 +96,32 @@ function Modal({
   title,
   children,
   onClose,
+  ringCloseup = false,
 }: {
+  ringCloseup?: boolean;
   title: string;
   children: ReactNode;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    ref.current?.showModal();
+    const dialog = ref.current;
+    // Native modal focus trapping does not lock the document's scroll viewport.
+    // Scope the lock to this mounted close-up and preserve any existing styles.
+    const scrollRoots = typeof document === "undefined" ? [] :
+      [document.documentElement, document.body].filter(element => element?.style);
+    const previousOverflow = scrollRoots.map(element => element.style.overflow);
+    scrollRoots.forEach(element => { element.style.overflow = "hidden"; });
+    dialog?.showModal();
+    return () => {
+      dialog?.close?.();
+      scrollRoots.forEach((element, index) => { element.style.overflow = previousOverflow[index]; });
+    };
   }, []);
   return (
     <dialog
       ref={ref}
-      className="escape-modal"
+      className={`escape-modal${ringCloseup ? " escape-ring-dialog" : ""}`}
       aria-labelledby="escape-dialog-title"
       onCancel={onClose}
       onClick={(e) => {
@@ -160,6 +178,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
   const { hintLevel } = guidance;
   const detail = visibleDetail(mode, guidance.detail);
   const assistance = guidancePolicy(mode);
+  const feedback = useCompletionFeedback(cabinMilestones(s), `${mode}:${lock}`);
   const setDetail = (detail: Detail) => setGuidance(current => ({ ...current, detail }));
   const setHintLevel = (hintLevel: number) => setGuidance(current => ({ ...current, hintLevel }));
   const changeMode = (next: GuidanceMode) => {
@@ -215,7 +234,9 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
     }
   };
   const act = (action: Action, success: string, failure?: string) => {
+    if (lock !== null) return;
     const next = reduceEscape(s, action);
+    feedback.accept(cabinMilestones(s), cabinMilestones(next));
     dispatch(action);
     if (next !== s) {
       if (selected && !inventory(next).includes(selected)) setSelected(null);
@@ -228,7 +249,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
     if (d === "hints" && !assistance.hints) return;
     if (d === "hints") setHintLevel(0);
     setDetail(d);
-    setMessage("仔细观察，线索就在舱室里。");
+    setMessage(mode === "challenge" ? "" : "仔细观察，线索就在舱室里。");
     if (d === "flags" || (d === "postcard" && s.picture))
       dispatch({ type: "observe", clue: d });
     if (d === "chart" && s.chart) dispatch({ type: "observe", clue: "chart" });
@@ -249,7 +270,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
   };
   const move = (delta: number) => {
     setView(((view + delta + 4) % 4) as View);
-    setMessage("换个角度，也许会有新的发现。");
+    setMessage(mode === "challenge" ? "已切换视角。" : "换个角度，也许会有新的发现。");
   };
   const hotspot = (
     d: Detail,
@@ -282,7 +303,8 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
   const held = (item: Item) => selected === item;
   return (
     <GuidanceProvider mode={mode}>
-    <main className="escape-app" inert={lock !== null}>
+    <CompletionMotionScope event={lock === null ? feedback.event : null}><main className="escape-app" inert={lock !== null}>
+      <CompletionFeedback event={lock === null ? feedback.event : null} completed={cabinMilestones(s)} />
       <header className="escape-topbar">
         {onSceneSelect ? <button className="escape-back" onClick={onSceneSelect}><ArrowLeft size={17} /> 场景选择</button> : <Link to="/" className="escape-back"><ArrowLeft size={17} /> 游戏大厅</Link>}
         <span>THE STARLIGHT</span>
@@ -449,7 +471,12 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
         </button>}
       </footer>
       {detail && lock === null && (
-        <Modal key={detail} title={titles[detail]} onClose={close}>
+        <Modal key={detail} title={titles[detail]} onClose={close} ringCloseup={detail === "safe"}>
+          {(['postcard', 'drawer', 'cabinet', 'safe', 'door'] as string[]).includes(detail) && (() => {
+            const id = detail === 'postcard' ? 'picture' : detail === 'door' ? 'escaped' : detail;
+            const accepted = cabinMilestones(s).find(item => item.id === id);
+            return <CompletionMechanism milestone={id} done={!!accepted} label={accepted?.label ?? ''} light={id === 'picture'} />;
+          })()}
           {!["intro", "notes", "hints", "reset"].includes(detail) && inventory(s).length > 0 && <nav className="escape-modal-inventory" aria-label="近景随身物品">{inventory(s).map(item => <button key={item} aria-label={`选用${props[item].name}`} aria-pressed={selected === item} onClick={() => pick(item)}><span aria-hidden="true">{props[item].icon}</span>{props[item].name}</button>)}</nav>}
           {detail === "intro" && (
             <>
@@ -534,7 +561,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                       act(
                         { type: "drawer", code },
                         "咔哒！获得马蹄磁铁和日光徽章。",
-                        "锁芯没有转动。再看看递推算图与锁上的符号顺序。",
+                        mode === "challenge" ? "锁芯没有转动。" : "锁芯没有转动。再看看递推算图与锁上的符号顺序。",
                       )
                     }
                   >
@@ -684,40 +711,44 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
               ) : (
                 <>
                   <p>三道图环可以分别转动。匣上刻着：「双光齐至，旧景重现。」</p>
-                  <PictureRings rings={s.rings} />
-                  <div className="escape-ring-buttons">
-                    {["外环", "中环", "内环"].map((r, i) => (
+                  <div className="escape-ring-workarea">
+                    <PictureRings rings={s.rings} />
+                    <div className="escape-ring-controls">
+                      <div className="escape-ring-buttons">
+                        {["外环", "中环", "内环"].map((r, i) => (
+                          <button
+                            key={r}
+                            onClick={() =>
+                              dispatch({ type: "rotate", ring: i as 0 | 1 | 2 })
+                            }
+                          >
+                            <RotateCw size={15} />
+                            {r}
+                          </button>
+                        ))}
+                      </div>
                       <button
-                        key={r}
+                        className="escape-primary"
                         onClick={() =>
-                          dispatch({ type: "rotate", ring: i as 0 | 1 | 2 })
+                          act(
+                            { type: "align" },
+                            "灯塔的光连成一线。圆环匣打开，获得甲板钥匙！",
+                            s.picture
+                              ? (assistance.automaticRules ? "还有画面没有接上。看看灯塔、海平面与右上方的月亮。" : "锁扣没有松开，图画还没有复原。")
+                              : "锁扣没有松开。刻字写着：旧景重现。",
+                          )
                         }
                       >
-                        <RotateCw size={15} />
-                        {r}
+                        按下中央锁扣
                       </button>
-                    ))}
+                      {s.seen.includes("postcard") && (
+                        <details className="escape-reference">
+                          <summary>展开手记里的木条画</summary>
+                          <LighthouseArt />
+                        </details>
+                      )}
+                    </div>
                   </div>
-                  <button
-                    className="escape-primary"
-                    onClick={() =>
-                      act(
-                        { type: "align" },
-                        "灯塔的光连成一线。圆环匣打开，获得甲板钥匙！",
-                        s.picture
-                          ? (assistance.automaticRules ? "还有画面没有接上。看看灯塔、海平面与右上方的月亮。" : "锁扣没有松开，图画还没有复原。")
-                          : "锁扣没有松开。刻字写着：旧景重现。",
-                      )
-                    }
-                  >
-                    按下中央锁扣
-                  </button>
-                  {s.seen.includes("postcard") && (
-                    <details className="escape-reference">
-                      <summary>展开手记里的木条画</summary>
-                      <LighthouseArt />
-                    </details>
-                  )}
                 </>
               )}
             </>
@@ -793,7 +824,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                 <button
                   className="escape-primary"
                   onClick={() => {
-                    dispatch({ type: "reset" });
+                    feedback.reset(); dispatch({ type: "reset" });
                     setRevisiting(false);
                     setCupMoved(false);
                     setSelected(null);
@@ -819,7 +850,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
           )}
         </Modal>
       )}
-    </main>
+    </main></CompletionMotionScope>
     </GuidanceProvider>
   );
 }

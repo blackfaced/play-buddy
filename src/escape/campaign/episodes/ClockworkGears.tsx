@@ -3,8 +3,9 @@ import type { CSSProperties, PointerEvent } from 'react';
 import { GEAR_TEETH, SOCKET_DISTANCES, gearReadings, gearsMesh, placeClockworkGear } from './clockworkLogic';
 import { Habitat, TickRing } from './clockworkShared';
 import './clockworkGears.css';
+import { guidancePolicy, type GuidanceMode } from '../../guidancePolicy';
 
-type Props = { gears: number[]; testedGears: number[]; foundGears: number[]; crank: number; onChange: (gears: number[]) => void; onCrank: () => void };
+type Props = { mode?: GuidanceMode; gears: number[]; testedGears: number[]; foundGears: number[]; crank: number; onChange: (gears: number[]) => void; onCrank: () => void };
 type Drag = { tooth: number; pointer: number; startX: number; startY: number; x: number; y: number; moved: boolean };
 const HUB = { x: 300, y: 157 };
 const MOUNTS = SOCKET_DISTANCES.map((d, i) => { const a = (-90 + i * 120) * Math.PI / 180; return { x: HUB.x + Math.cos(a) * d * 3, y: HUB.y + Math.sin(a) * d * 3 }; });
@@ -21,7 +22,7 @@ function Wheel({ teeth, angle = 0, animate = false }: { teeth: number; angle?: n
   <circle r="7" fill="#d8bc7b" stroke="#55412e" strokeWidth="2" />
  </g>;
 }
-export function ClockworkGears({ gears, testedGears, foundGears, crank, onChange, onCrank }: Props) {
+export function ClockworkGears({ mode = 'standard', gears, testedGears, foundGears, crank, onChange, onCrank }: Props) {
  const [selected, setSelected] = useState<number | null>(null);
  const [drag, setDrag] = useState<Drag | null>(null);
  const signature = gears.join(',');
@@ -76,7 +77,7 @@ export function ClockworkGears({ gears, testedGears, foundGears, crank, onChange
   if (e.isPrimary !== false && drag === null) suppressClick.current = false;
  }} onClickCapture={e => {
   if (suppressClick.current) { suppressClick.current = false; e.preventDefault(); e.stopPropagation(); }
- }} onKeyDown={e => { if (e.key === 'Escape') { cancel(); setSelected(null); } else if (e.key === 'Enter' || e.key === ' ') suppressClick.current = false; }}>
+ }} onKeyDown={e => { if (e.key === 'Escape') { if (drag !== null || selected !== null) e.preventDefault?.(); cancel(); setSelected(null); } else if (e.key === 'Enter' || e.key === ' ') suppressClick.current = false; }}>
   <p className="cw-gear-instructions">拖动齿轮到转轴；也可以先点齿轮，再点转轴。装好的轮子可以交换，或放回托盘。摇动曲柄试转。Esc 取消拿取。</p>
   <svg ref={svg} className="cw-gear-board" viewBox="0 0 600 490" aria-label="齿轮工作台：十二齿主动轮、三个转轴和下方的零件托盘" onPointerMove={e => {
    if (!drag || drag.pointer !== e.pointerId) return;
@@ -124,6 +125,6 @@ export function ClockworkGears({ gears, testedGears, foundGears, crank, onChange
    <div className="cw-control-row">{MOUNTS.map((_, i) => <button key={i} type="button" onClick={() => mountClick(i)} disabled={selected === null && !(gears[i] > 0)}>{selected === null ? `${HABITATS[i]}轴：${gears[i] > 0 ? `${gears[i]} 齿` : '空'}` : `装到${HABITATS[i]}轴`}</button>)}</div>
    <div className="cw-gear-actions"><button type="button" disabled={selected === null || !gears.includes(selected)} onClick={() => place(-1)}>放回托盘</button><button type="button" disabled={selected === null} onClick={() => setSelected(null)}>取消拿取</button><button className="cw-crank-button" type="button" onClick={() => { setSelected(null); onCrank(); }}>摇动曲柄一圈 ↻</button></div>
   </div>
-  <p className="cw-gear-status" aria-live="polite">{selected !== null ? `拿起了 ${selected} 齿轮。请选择转轴；点同一齿轮可放下。` : connected ? '试转结束。观察停稳的白色刻线，记住它们相对起点的位置。' : experiment ? '曲柄转了一圈，传动架没有带起整组轮子。' : '齿轮顶端的白色刻线随轮子转动。最上方的短刻线是起点。'}{connected && <span className="cw-gear-sr">刻线停在：{HABITATS.map((name, i) => `${name} ${readings[i]} 格`).join('，')}。</span>}</p>
+  <p className="cw-gear-status" aria-live="polite">{selected !== null ? `拿起了 ${selected} 齿轮。请选择转轴；点同一齿轮可放下。` : connected ? (guidancePolicy(mode).hints ? '试转结束。观察停稳的白色刻线，记住它们相对起点的位置。' : '试转结束。') : experiment ? '曲柄转了一圈，传动架没有带起整组轮子。' : (guidancePolicy(mode).hints ? '齿轮顶端的白色刻线随轮子转动。最上方的短刻线是起点。' : '')}{connected && <span className="cw-gear-sr">刻线停在：{HABITATS.map((name, i) => `${name} ${readings[i]} 格`).join('，')}。</span>}</p>
  </div>;
 }
