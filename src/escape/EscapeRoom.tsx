@@ -826,7 +826,7 @@ export default function EscapeRoom({ renderCompletion, mode: controlledMode, onM
                         { type: "align" },
                         "灯塔的光连成一线。圆环匣打开，获得甲板钥匙！",
                         s.picture
-                          ? (assistance.automaticRules ? "还有画面没有接上。看看灯塔、海平面与右上方的月亮。" : "锁扣没有松开，图画还没有复原。")
+                          ? (assistance.automaticRules ? "还有画面没有接上。看看灯塔、海平面与右上方的月亮。" : "锁扣没有松开，还有画面没有接上。")
                           : "锁扣没有松开。刻字写着：旧景重现。",
                       )
                     }
