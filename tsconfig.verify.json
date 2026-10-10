@@ -11,9 +11,17 @@
     "types": [
       "node"
     ],
-    "moduleResolution": "node10"
+    "moduleResolution": "node10",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": [
+    "scripts/verify-health-cap.ts",
+    "src/store/useStore.ts",
+    "src/lib/storage.ts",
+    "src/lib/diag.ts",
     "scripts/verify-towers.ts",
     "scripts/tune-salt.ts",
     "scripts/grid-exp.ts",
